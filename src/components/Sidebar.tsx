@@ -26,11 +26,21 @@ import {
 
 interface SidebarProps {
   currentTeamId?: string;
+  currentFolderId?: string | null;
   onTeamChange?: (teamId: string) => void;
+  onFolderChange?: (folderId: string | null) => void;
   onFolderDrop?: (folderId: string | null) => void;
+  onNewPrompt?: () => void;
 }
 
-export function Sidebar({ currentTeamId, onTeamChange, onFolderDrop }: SidebarProps) {
+export function Sidebar({
+  currentTeamId,
+  currentFolderId,
+  onTeamChange,
+  onFolderChange,
+  onFolderDrop,
+  onNewPrompt,
+}: SidebarProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -117,7 +127,11 @@ export function Sidebar({ currentTeamId, onTeamChange, onFolderDrop }: SidebarPr
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-2">
           <Link to="/app">
-            <Button variant="ghost" className="w-full justify-start">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => onFolderChange?.(null)}
+            >
               <Home className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
@@ -137,7 +151,9 @@ export function Sidebar({ currentTeamId, onTeamChange, onFolderDrop }: SidebarPr
                   folder={folder}
                   expanded={expandedFolders.has(folder.id)}
                   onToggle={() => toggleFolder(folder.id)}
+                  active={currentFolderId === folder.id}
                   isDropTarget={dropTargetFolder === folder.id}
+                  onSelect={onFolderChange}
                   onDrop={onFolderDrop}
                   onDragOver={() => setDropTargetFolder(folder.id)}
                   onDragLeave={() => setDropTargetFolder(null)}
@@ -149,6 +165,10 @@ export function Sidebar({ currentTeamId, onTeamChange, onFolderDrop }: SidebarPr
       </ScrollArea>
 
       <div className="border-t p-2 space-y-1">
+        <Button className="w-full justify-start" onClick={onNewPrompt}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Prompt
+        </Button>
         <Link to="/app/settings">
           <Button variant="ghost" className="w-full justify-start">
             <Settings className="mr-2 h-4 w-4" />
@@ -172,7 +192,9 @@ function FolderItem({
   folder,
   expanded,
   onToggle,
+  active = false,
   isDropTarget = false,
+  onSelect,
   onDrop,
   onDragOver,
   onDragLeave,
@@ -180,7 +202,9 @@ function FolderItem({
   folder: FolderType;
   expanded: boolean;
   onToggle: () => void;
+  active?: boolean;
   isDropTarget?: boolean;
+  onSelect?: (folderId: string | null) => void;
   onDrop?: (folderId: string | null) => void;
   onDragOver?: () => void;
   onDragLeave?: () => void;
@@ -189,6 +213,7 @@ function FolderItem({
 
   const handleClick = () => {
     onToggle();
+    onSelect?.(folder.id);
     navigate(`/app/f/${folder.id}`);
   };
 
@@ -220,7 +245,7 @@ function FolderItem({
       }`}
     >
       <Button
-        variant="ghost"
+        variant={active ? 'secondary' : 'ghost'}
         className="w-full justify-start"
         onClick={handleClick}
       >

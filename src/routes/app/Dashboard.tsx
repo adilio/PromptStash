@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileText, Filter, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,13 +24,21 @@ import type { PromptWithTags, Folder, Tag } from '@/lib/types';
 
 interface ContextType {
   currentTeamId?: string;
+  currentFolderId?: string | null;
+  setCurrentFolderId?: (folderId: string | null) => void;
   setFolderDropHandler?: (handler: ((folderId: string | null) => void) | undefined) => void;
 }
 
 const EMPTY_PROMPTS: PromptWithTags[] = [];
 
 export function Dashboard() {
-  const { currentTeamId, setFolderDropHandler } = useOutletContext<ContextType>();
+  const { folderId } = useParams<{ folderId: string }>();
+  const {
+    currentTeamId,
+    currentFolderId,
+    setCurrentFolderId,
+    setFolderDropHandler,
+  } = useOutletContext<ContextType>();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [deletePromptId, setDeletePromptId] = useState<string | null>(null);
@@ -111,11 +119,22 @@ export function Dashboard() {
     });
   }, [prompts, selectedFolder, selectedTags]);
 
+  const navigateToNewPrompt = () => {
+    const activeFolderId = selectedFolder ?? currentFolderId;
+    const search = activeFolderId ? `?folder=${encodeURIComponent(activeFolderId)}` : '';
+    navigate(`/app/prompts/new${search}`);
+  };
+
+  const handleFolderFilterChange = (nextFolderId: string | null) => {
+    setSelectedFolder(nextFolderId);
+    setCurrentFolderId?.(nextFolderId);
+  };
+
   // Keyboard shortcuts
   useKeyboardShortcut({
     key: 'n',
     ctrlKey: true,
-    callback: () => navigate('/app/p/new'),
+    callback: navigateToNewPrompt,
   });
 
   useKeyboardShortcut({
@@ -134,6 +153,12 @@ export function Dashboard() {
       });
     }
   }, [promptsQuery.error, toast]);
+
+  useEffect(() => {
+    const nextFolderId = folderId ?? null;
+    setSelectedFolder(nextFolderId);
+    setCurrentFolderId?.(nextFolderId);
+  }, [folderId, setCurrentFolderId]);
 
   useEffect(() => {
     if (currentTeamId) {
@@ -331,7 +356,7 @@ export function Dashboard() {
             >
               {bulkMode ? 'Cancel' : 'Select'}
             </Button>
-            <Button onClick={() => navigate('/app/p/new')}>
+            <Button onClick={navigateToNewPrompt}>
               <Plus className="mr-2 h-4 w-4" />
               New Prompt
             </Button>
@@ -364,7 +389,7 @@ export function Dashboard() {
                   <Badge
                     variant={selectedFolder === null ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => setSelectedFolder(null)}
+                    onClick={() => handleFolderFilterChange(null)}
                   >
                     All Folders
                   </Badge>
@@ -373,7 +398,7 @@ export function Dashboard() {
                       key={folder.id}
                       variant={selectedFolder === folder.id ? "default" : "outline"}
                       className="cursor-pointer"
-                      onClick={() => setSelectedFolder(folder.id)}
+                      onClick={() => handleFolderFilterChange(folder.id)}
                     >
                       {folder.name}
                     </Badge>
@@ -413,7 +438,7 @@ export function Dashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setSelectedFolder(null);
+                    handleFolderFilterChange(null);
                     setSelectedTags([]);
                   }}
                   className="w-full"
@@ -450,7 +475,7 @@ export function Dashboard() {
             description="Create your first prompt to get started"
             action={{
               label: 'New Prompt',
-              onClick: () => navigate('/app/p/new'),
+              onClick: navigateToNewPrompt,
             }}
           />
         ) : (

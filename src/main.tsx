@@ -26,6 +26,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
             <Route path="/app" element={<AppLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="f/:folderId" element={<Dashboard />} />
+              <Route path="prompts/new" element={<PromptEditor />} />
               <Route path="p/new" element={<PromptEditor />} />
               <Route path="p/:promptId" element={<PromptView />} />
               <Route path="p/:promptId/edit" element={<PromptEditor />} />

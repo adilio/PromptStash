@@ -83,12 +83,12 @@ Notes: The live body column is `body_md`, so search now uses PostgREST full-text
 
 ### 5. Persistent "New Prompt" button + keyboard shortcut
 
-- [ ] Add a visible "New Prompt" button to the main app layout (top bar or sidebar footer) that is present on all authenticated routes
-- [ ] The button navigates to `/app/prompts/new` with the current folder pre-selected if one is active
-- [ ] Add a keyboard shortcut: pressing `N` (when not focused in an input) triggers the same navigation
-- [ ] Run `npm run build` — confirm no errors
+- [x] Add a visible "New Prompt" button to the main app layout (top bar or sidebar footer) that is present on all authenticated routes
+- [x] The button navigates to `/app/prompts/new` with the current folder pre-selected if one is active
+- [x] Add a keyboard shortcut: pressing `N` (when not focused in an input) triggers the same navigation
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Added persistent sidebar "New Prompt" action, `/app/prompts/new` route, active folder tracking via dashboard/sidebar context, `?folder=` preselection for prompt creation, and unmodified `N` shortcut outside editable fields. Verified with `npm run lint` and `npm run build`.
 
 ---
 

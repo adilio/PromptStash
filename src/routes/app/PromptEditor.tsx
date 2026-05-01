@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ type UpdatePromptPatch = Parameters<typeof updatePrompt>[1];
 
 export function PromptEditor() {
   const { promptId } = useParams<{ promptId: string }>();
+  const [searchParams] = useSearchParams();
   const { currentTeamId } = useOutletContext<ContextType>();
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
@@ -40,6 +41,7 @@ export function PromptEditor() {
   const initialLoadRef = useRef(true);
 
   const isNew = !promptId || promptId === 'new';
+  const initialFolderId = searchParams.get('folder');
   const debouncedTitle = useDebounce(title, 2000);
   const debouncedBody = useDebounce(body, 2000);
   const promptQuery = useQuery({
@@ -199,6 +201,7 @@ export function PromptEditor() {
       if (isNew) {
         const created = await createPromptMutation.mutateAsync({
           team_id: currentTeamId!,
+          folder_id: initialFolderId ?? undefined,
           title,
           body_md: body,
         });
@@ -251,7 +254,15 @@ export function PromptEditor() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(isNew ? '/app' : `/app/p/${promptId}`)}
+              onClick={() =>
+                navigate(
+                  isNew
+                    ? initialFolderId
+                      ? `/app/f/${initialFolderId}`
+                      : '/app'
+                    : `/app/p/${promptId}`
+                )
+              }
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
