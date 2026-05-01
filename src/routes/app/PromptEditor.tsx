@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -44,6 +44,14 @@ export function PromptEditor() {
   const initialFolderId = searchParams.get('folder');
   const debouncedTitle = useDebounce(title, 2000);
   const debouncedBody = useDebounce(body, 2000);
+  const debouncedStatsBody = useDebounce(body, 300);
+  const bodyStats = useMemo(() => {
+    const trimmedBody = debouncedStatsBody.trim();
+    const wordCount = trimmedBody ? trimmedBody.split(/\s+/).length : 0;
+    const tokenCount = Math.ceil(debouncedStatsBody.length / 4);
+
+    return { tokenCount, wordCount };
+  }, [debouncedStatsBody]);
   const promptQuery = useQuery({
     queryKey: promptKeys.detail(promptId),
     queryFn: () => getPrompt(promptId!),
@@ -305,6 +313,10 @@ export function PromptEditor() {
             onTagsChange={handleTagsChange}
             onCreateTag={handleCreateTag}
           />
+
+          <p className="text-sm text-muted-foreground">
+            ~{bodyStats.tokenCount} tokens · {bodyStats.wordCount} words
+          </p>
 
           <Tabs defaultValue="edit" className="flex-1">
             <TabsList>

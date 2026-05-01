@@ -129,13 +129,13 @@ Notes: Prompt cards now use ~120 char body previews, render tags as secondary pi
 
 ### 9. Token count in editor
 
-- [ ] Add a token count display to the prompt editor (below or beside the word count)
-- [ ] Use a simple approximation: `Math.ceil(body.length / 4)` tokens — no external tokenizer needed
-- [ ] Display format: `~340 tokens · 85 words`
-- [ ] Update live as the user types (debounce 300ms)
-- [ ] Run `npm run build` — confirm no errors
+- [x] Add a token count display to the prompt editor (below or beside the word count)
+- [x] Use a simple approximation: `Math.ceil(body.length / 4)` tokens — no external tokenizer needed
+- [x] Display format: `~340 tokens · 85 words`
+- [x] Update live as the user types (debounce 300ms)
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Added debounced editor stats using `Math.ceil(body.length / 4)` and whitespace word count, displayed as `~N tokens · N words`. Verified with `npm run lint` and `npm run build`.
 
 ---
 
