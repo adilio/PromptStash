@@ -119,11 +119,11 @@ Notes: Added local fontsource DM Sans and Lora latin faces, wired Tailwind font 
 
 ### 8. Prompt card improvements
 
-- [ ] Update the prompt list card to show: title, first ~120 chars of body (truncated, muted), tags as pills
-- [ ] Add a "Copy" button that appears on card hover and copies the full prompt body to clipboard
-- [ ] Run `npm run build` — confirm no errors
+- [x] Update the prompt list card to show: title, first ~120 chars of body (truncated, muted), tags as pills
+- [x] Add a "Copy" button that appears on card hover and copies the full prompt body to clipboard
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Prompt cards now use ~120 char body previews, render tags as secondary pills when present, and show a hover/focus copy button that copies the full prompt body with toast feedback. Verified with `npm run lint`, `npm run build`, and `npm test -- src/tests/components/PromptCard.test.tsx --run`.
 
 ---
 
