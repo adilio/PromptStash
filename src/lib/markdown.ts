@@ -1,7 +1,15 @@
-import sanitizeHtml from 'sanitize-html';
+import DOMPurify, { type Config } from 'dompurify';
 
-export const sanitizeOptions: sanitizeHtml.IOptions = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+export const sanitizeOptions: Config = {
+  ALLOWED_TAGS: [
+    'a',
+    'b',
+    'blockquote',
+    'br',
+    'code',
+    'del',
+    'div',
+    'em',
     'h1',
     'h2',
     'h3',
@@ -9,23 +17,32 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
     'h5',
     'h6',
     'img',
+    'li',
+    'ol',
+    'p',
+    'pre',
+    'span',
+    'strong',
+    'ul',
     'table',
     'thead',
     'tbody',
+    'tfoot',
     'tr',
     'th',
     'td',
-    'code',
-    'pre',
-  ]),
-  allowedAttributes: {
-    a: ['href', 'name', 'target', 'rel'],
-    img: ['src', 'alt'],
-    code: ['class'],
+  ],
+  ALLOWED_ATTR: ['alt', 'class', 'href', 'name', 'rel', 'src', 'target'],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick'],
+  CUSTOM_ELEMENT_HANDLING: {
+    tagNameCheck: null,
+    attributeNameCheck: null,
+    allowCustomizedBuiltInElements: false,
   },
-  allowedSchemes: ['http', 'https', 'mailto'],
 };
 
 export function sanitize(mdHtml: string): string {
-  return sanitizeHtml(mdHtml, sanitizeOptions);
+  return DOMPurify.sanitize(mdHtml, sanitizeOptions);
 }
