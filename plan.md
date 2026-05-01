@@ -47,12 +47,12 @@ Notes: Swapped markdown sanitization to DOMPurify, updated sanitizer tests, and 
 
 ### 2. Add Supabase generated types
 
-- [ ] Run `npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts`
-- [ ] Import and apply the generated types to the Supabase client in `src/lib/supabase.ts`
-- [ ] Fix any TypeScript errors surfaced by the stricter types
-- [ ] Run `npm run build` — confirm no errors
+- [x] Run `npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/database.types.ts`
+- [x] Import and apply the generated types to the Supabase client in `src/lib/supabase.ts`
+- [x] Fix any TypeScript errors surfaced by the stricter types
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Generated live Supabase types with `npx supabase gen types typescript --project-id ecpmipfpknoxeohbafxs > src/lib/database.types.ts`, wired `createClient<Database>`, re-exported app aliases from the generated type file, and verified with `npm run lint` and `npm run build`.
 
 ---
 
