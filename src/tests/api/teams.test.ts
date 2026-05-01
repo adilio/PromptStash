@@ -15,6 +15,11 @@ vi.mock('@/lib/supabase', () => ({
 describe('Teams API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock supabase.auth.getUser to return a user
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: { id: 'user1' } },
+      error: null,
+    });
   });
 
   describe('listTeams', () => {

@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
-// Allow any object shape for test mocks since Supabase query building uses chaining
-export type MockSupabaseQuery = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MockSupabaseQuery = any;
 
 export type MockUser = {
   id: string;

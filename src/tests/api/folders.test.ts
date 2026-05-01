@@ -6,12 +6,20 @@ import type { MockSupabaseQuery } from '../mocks/supabase';
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
+    auth: {
+      getUser: vi.fn(),
+    },
   },
 }));
 
 describe('Folders API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock supabase.auth.getUser to return a user
+    vi.mocked(supabase.auth.getUser).mockResolvedValue({
+      data: { user: { id: 'user1' } },
+      error: null,
+    });
   });
 
   describe('listFolders', () => {
