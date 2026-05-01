@@ -167,7 +167,9 @@ For Netlify with external DNS:
    Site URL: https://promptstash.4dl.ca
    Redirect URLs:
    https://promptstash.4dl.ca/**
+   https://promptstash.4dl.ca/reset-password
    http://localhost:5173/**
+   http://localhost:5173/reset-password
    ```
 
 5. Make sure the Netlify production environment has:

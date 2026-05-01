@@ -68,6 +68,40 @@ export function SignIn() {
   const requestedRedirectPath = searchParams.get('redirect');
   const redirectPath = requestedRedirectPath?.startsWith('/') ? requestedRedirectPath : '/app';
 
+  const handlePasswordResetRequest = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    if (!email.trim()) {
+      toast({
+        title: 'Email required',
+        description: 'Enter your email address first, then request a reset link.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+
+      toast({
+        title: 'Check your email',
+        description: 'We sent you a password reset link.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not send reset link',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOAuth = async (provider: 'google' | 'github') => {
     setLoading(true);
     try {
@@ -324,12 +358,22 @@ export function SignIn() {
                 Password
               </label>
               {mode === 'signin' && (
-                <a
-                  href="#"
-                  style={{ fontSize: 12, color: 'var(--ps-accent)', textDecoration: 'none' }}
+                <button
+                  type="button"
+                  onClick={handlePasswordResetRequest}
+                  disabled={loading}
+                  style={{
+                    background: 'none',
+                    border: 0,
+                    color: 'var(--ps-accent)',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    padding: 0,
+                  }}
                 >
                   Forgot?
-                </a>
+                </button>
               )}
             </div>
             <input
