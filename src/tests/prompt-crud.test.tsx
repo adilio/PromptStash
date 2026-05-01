@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPrompt, updatePrompt, deletePrompt, listPrompts } from '../api/prompts';
 import { supabase } from '../lib/supabase';
+import type { MockSupabaseQuery, MockUser } from './mocks/supabase';
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -27,7 +28,7 @@ describe('Prompt CRUD Operations', () => {
     };
 
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
-      data: { user: { id: 'user-1' } as any },
+      data: { user: { id: 'user-1' } as MockUser },
       error: null,
     });
 
@@ -42,7 +43,7 @@ describe('Prompt CRUD Operations', () => {
 
     vi.mocked(supabase.from).mockReturnValue({
       insert: mockInsert,
-    } as any);
+    } as MockSupabaseQuery);
 
     const result = await createPrompt({
       team_id: 'team-1',
@@ -74,7 +75,7 @@ describe('Prompt CRUD Operations', () => {
 
     vi.mocked(supabase.from).mockReturnValue({
       update: mockUpdate,
-    } as any);
+    } as MockSupabaseQuery);
 
     const result = await updatePrompt('prompt-1', {
       title: 'Updated Prompt',
@@ -94,7 +95,7 @@ describe('Prompt CRUD Operations', () => {
 
     vi.mocked(supabase.from).mockReturnValue({
       delete: mockDelete,
-    } as any);
+    } as MockSupabaseQuery);
 
     await deletePrompt('prompt-1');
 
@@ -126,7 +127,7 @@ describe('Prompt CRUD Operations', () => {
 
     vi.mocked(supabase.from).mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as MockSupabaseQuery);
 
     const result = await listPrompts('team-1');
 

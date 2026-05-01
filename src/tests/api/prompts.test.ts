@@ -10,6 +10,7 @@ import {
   makePromptPrivate,
 } from '@/api/prompts';
 import { supabase } from '@/lib/supabase';
+import type { MockSupabaseQuery, MockUser } from '../mocks/supabase';
 
 // Mock supabase
 vi.mock('@/lib/supabase', () => ({
@@ -40,7 +41,7 @@ describe('Prompts API', () => {
       };
 
       const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
 
       const result = await listPrompts('team1');
 
@@ -60,7 +61,7 @@ describe('Prompts API', () => {
       };
 
       const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
 
       await listPrompts('team1', 'folder1');
 
@@ -78,7 +79,7 @@ describe('Prompts API', () => {
       };
 
       const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
 
       await listPrompts('team1', undefined, 'search');
 
@@ -94,7 +95,7 @@ describe('Prompts API', () => {
       };
 
       const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
 
       await expect(listPrompts('team1')).rejects.toThrow('Database error');
     });
@@ -125,8 +126,8 @@ describe('Prompts API', () => {
       };
 
       vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as any)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as any);
+        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
+        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
 
       const result = await getPrompt('1');
 
@@ -154,8 +155,8 @@ describe('Prompts API', () => {
       };
 
       vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as any)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as any);
+        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
+        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
 
       const result = await getPrompt('1');
 
@@ -183,8 +184,8 @@ describe('Prompts API', () => {
       };
 
       vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as any)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as any);
+        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
+        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
 
       const result = await getPromptBySlug('abc123');
 
@@ -204,7 +205,7 @@ describe('Prompts API', () => {
       };
 
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as any },
+        data: { user: mockUser as MockUser },
         error: null,
       });
 
@@ -214,7 +215,7 @@ describe('Prompts API', () => {
         single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await createPrompt({
         team_id: 'team1',
@@ -264,7 +265,7 @@ describe('Prompts API', () => {
         single: vi.fn().mockResolvedValue({ data: mockUpdated, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await updatePrompt('1', {
         title: 'Updated Title',
@@ -287,7 +288,7 @@ describe('Prompts API', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await deletePrompt('1');
 
@@ -311,7 +312,7 @@ describe('Prompts API', () => {
         single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await makePromptPublic('1');
 
@@ -339,7 +340,7 @@ describe('Prompts API', () => {
         single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await makePromptPrivate('1');
 

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { AppLayout } from '../routes/app/AppLayout';
 import { supabase } from '../lib/supabase';
+import type { MockUser } from './mocks/supabase';
 
 // Mock Supabase
 vi.mock('../lib/supabase', () => ({
@@ -49,9 +50,9 @@ describe('Authentication', () => {
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: {
         session: {
-          user: { id: 'user-1' },
+          user: { id: 'user-1' } as MockUser,
           access_token: 'token',
-        } as any,
+        },
       },
       error: null,
     });

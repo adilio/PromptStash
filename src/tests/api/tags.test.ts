@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { listTags, createTag, deleteTag, addTagToPrompt, removeTagFromPrompt } from '@/api/tags';
 import { supabase } from '@/lib/supabase';
+import type { MockSupabaseQuery } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -26,7 +27,7 @@ describe('Tags API', () => {
         order: vi.fn().mockResolvedValue({ data: mockTags, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await listTags('team1');
 
@@ -51,7 +52,7 @@ describe('Tags API', () => {
         single: vi.fn().mockResolvedValue({ data: mockTag, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await createTag({
         team_id: 'team1',
@@ -74,7 +75,7 @@ describe('Tags API', () => {
         single: vi.fn().mockResolvedValue({ data: null, error: mockError }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await expect(
         createTag({
@@ -92,7 +93,7 @@ describe('Tags API', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await deleteTag('1');
 
@@ -112,7 +113,7 @@ describe('Tags API', () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await addTagToPrompt('prompt1', 'tag1');
 
@@ -130,7 +131,7 @@ describe('Tags API', () => {
         insert: vi.fn().mockResolvedValue({ error: mockError }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await expect(addTagToPrompt('prompt1', 'tag1')).rejects.toThrow('duplicate key value');
     });
@@ -149,7 +150,7 @@ describe('Tags API', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await removeTagFromPrompt('prompt1', 'tag1');
 

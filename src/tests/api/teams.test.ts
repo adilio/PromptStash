@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { listTeams, getTeam, createTeam, updateTeam, deleteTeam } from '@/api/teams';
 import { supabase } from '@/lib/supabase';
+import type { MockSupabaseQuery, MockUser } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -25,7 +26,7 @@ describe('Teams API', () => {
       ];
 
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as any },
+        data: { user: mockUser as MockUser },
         error: null,
       });
 
@@ -34,7 +35,7 @@ describe('Teams API', () => {
         eq: vi.fn().mockResolvedValue({ data: mockTeams, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await listTeams();
 
@@ -68,7 +69,7 @@ describe('Teams API', () => {
         single: vi.fn().mockResolvedValue({ data: mockTeam, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await getTeam('team1');
 
@@ -87,7 +88,7 @@ describe('Teams API', () => {
       };
 
       vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as any },
+        data: { user: mockUser as MockUser },
         error: null,
       });
 
@@ -104,8 +105,8 @@ describe('Teams API', () => {
       };
 
       vi.mocked(supabase.from)
-        .mockReturnValueOnce(mockTeamQuery as any)
-        .mockReturnValueOnce(mockMembershipQuery as any);
+        .mockReturnValueOnce(mockTeamQuery as MockSupabaseQuery)
+        .mockReturnValueOnce(mockMembershipQuery as MockSupabaseQuery);
 
       const result = await createTeam({ name: 'New Team' });
 
@@ -142,7 +143,7 @@ describe('Teams API', () => {
         single: vi.fn().mockResolvedValue({ data: mockTeam, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await updateTeam('team1', { name: 'Updated Name' });
 
@@ -159,7 +160,7 @@ describe('Teams API', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await deleteTeam('team1');
 
