@@ -22,12 +22,13 @@ const mockPrompt = {
 
 // Mock router hooks
 const mockNavigate = vi.fn();
+let mockParams: { promptId?: string } = { promptId: 'new' };
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ promptId: 'new' }),
+    useParams: () => mockParams,
     useOutletContext: () => ({ currentTeamId: 'team1' }),
   };
 });
@@ -35,6 +36,7 @@ vi.mock('react-router-dom', async () => {
 describe('PromptEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockParams = { promptId: 'new' };
   });
 
   it('should render editor for new prompt', () => {
@@ -46,6 +48,19 @@ describe('PromptEditor', () => {
 
     expect(screen.getByText('New Prompt')).toBeInTheDocument();
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
+  });
+
+  it('should render editor for explicit new route without loading a prompt', () => {
+    mockParams = {};
+
+    render(
+      <MemoryRouter>
+        <PromptEditor />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('New Prompt')).toBeInTheDocument();
+    expect(promptsApi.getPrompt).not.toHaveBeenCalled();
   });
 
   it('should allow entering title and body', async () => {

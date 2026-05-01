@@ -35,7 +35,7 @@ export function PromptEditor() {
   const { toast } = useToast();
   const initialLoadRef = useRef(true);
 
-  const isNew = promptId === 'new';
+  const isNew = !promptId || promptId === 'new';
   const debouncedTitle = useDebounce(title, 2000);
   const debouncedBody = useDebounce(body, 2000);
 
