@@ -141,14 +141,14 @@ Notes: Added debounced editor stats using `Math.ceil(body.length / 4)` and white
 
 ### 10. Team invite UI
 
-- [ ] Create an `invites` table in Supabase: `id`, `team_id`, `email`, `role`, `token` (uuid), `expires_at`, `used_at`, `created_by`
-- [ ] Add RLS: only team owners can insert invites for their team
-- [ ] Build a basic invite form in team settings: email input + role selector (editor/viewer) + "Send invite" button
-- [ ] On submit, insert the invite row and display the invite link (`/invite/:token`) to the owner so they can share it manually (no email sending required for this step)
-- [ ] Build the `/invite/:token` route: validate token, check expiry, insert membership row, mark `used_at`, redirect to `/app`
-- [ ] Run `npm run build` — confirm no errors
+- [x] Create an `invites` table in Supabase: `id`, `team_id`, `email`, `role`, `token` (uuid), `expires_at`, `used_at`, `created_by`
+- [x] Add RLS: only team owners can insert invites for their team
+- [x] Build a basic invite form in team settings: email input + role selector (editor/viewer) + "Send invite" button
+- [x] On submit, insert the invite row and display the invite link (`/invite/:token`) to the owner so they can share it manually (no email sending required for this step)
+- [x] Build the `/invite/:token` route: validate token, check expiry, insert membership row, mark `used_at`, redirect to `/app`
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Added invite SQL to `supabase-schema.sql` and `supabase/migrations/20260430223000_add_invites.sql`, including owner-only invite RLS and `accept_invite(invite_token uuid)` for validated membership acceptance. Added invite API/types, settings invite form/link display, `/invite/:token` route, and sign-in redirect support. Live Supabase DB still needs this migration applied. Verified with `npm run lint` and `npm run build`.
 
 ---
 

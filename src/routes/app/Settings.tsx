@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { useToast } from '@/components/ui/use-toast';
 import type { Team } from '@/lib/types';
@@ -17,7 +26,11 @@ export function Settings() {
   const { currentTeamId, setCurrentTeamId } = useOutletContext<ContextType>();
   const [teams, setTeams] = useState<Team[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<InviteRole>('editor');
+  const [inviteLink, setInviteLink] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,6 +72,53 @@ export function Settings() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTeamId || !inviteEmail.trim()) return;
+
+    setInviteLoading(true);
+    try {
+      const invite = await createInvite({
+        teamId: currentTeamId,
+        email: inviteEmail,
+        role: inviteRole,
+      });
+      const link = `${window.location.origin}/invite/${invite.token}`;
+      setInviteLink(link);
+      setInviteEmail('');
+      toast({
+        title: 'Invite created',
+        description: 'Share the invite link with your teammate.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteLink) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: 'Copied',
+        description: 'Invite link copied to clipboard',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Unable to copy invite link',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -113,6 +173,59 @@ export function Settings() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Invites</CardTitle>
+            <CardDescription>Create manual invite links for the current team</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleCreateInvite} className="grid gap-3 md:grid-cols-[1fr_160px_auto]">
+              <div className="space-y-2">
+                <Label htmlFor="invite-email">Email</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="teammate@example.com"
+                  disabled={!currentTeamId}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invite-role">Role</Label>
+                <Select
+                  value={inviteRole}
+                  onValueChange={(value) => setInviteRole(value as InviteRole)}
+                  disabled={!currentTeamId}
+                >
+                  <SelectTrigger id="invite-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" disabled={!currentTeamId || inviteLoading}>
+                  Send invite
+                </Button>
+              </div>
+            </form>
+
+            {inviteLink && (
+              <div className="flex gap-2">
+                <Input value={inviteLink} readOnly />
+                <Button type="button" variant="outline" size="icon" onClick={handleCopyInviteLink}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

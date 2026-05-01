@@ -4,6 +4,7 @@ export type { Database } from './database.types';
 
 export type Team = Database['public']['Tables']['teams']['Row'];
 export type Membership = Database['public']['Tables']['memberships']['Row'];
+export type Invite = Database['public']['Tables']['invites']['Row'];
 export type Folder = Database['public']['Tables']['folders']['Row'];
 export type Prompt = Database['public']['Tables']['prompts']['Row'];
 export type PromptVersion = Database['public']['Tables']['prompt_versions']['Row'];
