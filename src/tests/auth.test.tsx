@@ -24,6 +24,10 @@ vi.mock('../components/Loading', () => ({
   Loading: () => <div>Loading...</div>,
 }));
 
+vi.mock('../components/CommandPalette', () => ({
+  CommandPalette: () => null,
+}));
+
 describe('Authentication', () => {
   beforeEach(() => {
     vi.clearAllMocks();

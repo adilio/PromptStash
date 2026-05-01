@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from '@/routes/app/Dashboard';
 import * as promptsApi from '@/api/prompts';
 
@@ -44,6 +45,23 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('Dashboard', () => {
+  const renderDashboard = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <Dashboard />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -51,11 +69,7 @@ describe('Dashboard', () => {
   it('should render dashboard heading', async () => {
     vi.mocked(promptsApi.listPrompts).mockResolvedValue(mockPrompts);
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
@@ -65,11 +79,7 @@ describe('Dashboard', () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    const { container } = render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    const { container } = renderDashboard();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
@@ -77,11 +87,7 @@ describe('Dashboard', () => {
   it('should load and display prompts', async () => {
     vi.mocked(promptsApi.listPrompts).mockResolvedValue(mockPrompts);
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     await waitFor(() => {
       expect(screen.getByText('First Prompt')).toBeInTheDocument();
@@ -92,11 +98,7 @@ describe('Dashboard', () => {
   it('should show empty state when no prompts', async () => {
     vi.mocked(promptsApi.listPrompts).mockResolvedValue([]);
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     await waitFor(() => {
       expect(screen.getByText('No prompts yet')).toBeInTheDocument();
@@ -108,17 +110,13 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     await waitFor(() => {
       expect(screen.getByText('First Prompt')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/search prompts/i);
+    const searchInput = screen.getByPlaceholderText(/search title and content/i);
     await user.type(searchInput, 'First');
 
     await waitFor(() => {
@@ -132,11 +130,7 @@ describe('Dashboard', () => {
 
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     await waitFor(() => {
       expect(screen.getByText('First Prompt')).toBeInTheDocument();
@@ -150,7 +144,7 @@ describe('Dashboard', () => {
     await user.click(confirmButton);
 
     await waitFor(() => {
-      expect(promptsApi.deletePrompt).toHaveBeenCalledWith('1');
+      expect(promptsApi.deletePrompt).toHaveBeenCalledWith('1', expect.anything());
     });
   });
 
@@ -159,11 +153,7 @@ describe('Dashboard', () => {
       new Error('Failed to load prompts')
     );
 
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
+    renderDashboard();
 
     // Should not crash, error should be handled
     await waitFor(() => {

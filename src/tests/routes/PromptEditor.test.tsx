@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PromptEditor } from '@/routes/app/PromptEditor';
 import * as promptsApi from '@/api/prompts';
+import * as tagsApi from '@/api/tags';
 
 vi.mock('@/api/prompts');
+vi.mock('@/api/tags');
 
 const mockPrompt = {
   id: '1',
@@ -34,17 +37,31 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('PromptEditor', () => {
+  const renderPromptEditor = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <PromptEditor />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockParams = { promptId: 'new' };
+    vi.mocked(tagsApi.listTags).mockResolvedValue([]);
   });
 
   it('should render editor for new prompt', () => {
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     expect(screen.getByText('New Prompt')).toBeInTheDocument();
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
@@ -53,11 +70,7 @@ describe('PromptEditor', () => {
   it('should render editor for explicit new route without loading a prompt', () => {
     mockParams = {};
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     expect(screen.getByText('New Prompt')).toBeInTheDocument();
     expect(promptsApi.getPrompt).not.toHaveBeenCalled();
@@ -66,11 +79,7 @@ describe('PromptEditor', () => {
   it('should allow entering title and body', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'My New Prompt');
@@ -84,11 +93,7 @@ describe('PromptEditor', () => {
 
     vi.mocked(promptsApi.createPrompt).mockResolvedValue(createdPrompt);
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'My New Prompt');
@@ -97,22 +102,22 @@ describe('PromptEditor', () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(promptsApi.createPrompt).toHaveBeenCalledWith({
-        team_id: 'team1',
-        title: 'My New Prompt',
-        body_md: '',
-      });
+      expect(promptsApi.createPrompt).toHaveBeenCalledWith(
+        {
+          team_id: 'team1',
+          folder_id: undefined,
+          title: 'My New Prompt',
+          body_md: '',
+        },
+        expect.anything()
+      );
     });
   });
 
   it('should show error if title is empty on save', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const saveButton = screen.getByRole('button', { name: /save/i });
     await user.click(saveButton);
@@ -124,11 +129,7 @@ describe('PromptEditor', () => {
   it('should enforce title max length', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i) as HTMLInputElement;
     const longTitle = 'a'.repeat(150);
@@ -142,11 +143,7 @@ describe('PromptEditor', () => {
   it('should switch between edit and preview tabs', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const previewTab = screen.getByRole('tab', { name: /preview/i });
     await user.click(previewTab);
@@ -162,11 +159,7 @@ describe('PromptEditor', () => {
       () => new Promise((resolve) => setTimeout(() => resolve(mockPrompt), 1000))
     );
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
@@ -184,11 +177,7 @@ describe('PromptEditor', () => {
       () => new Promise((resolve) => setTimeout(() => resolve(mockPrompt), 1000))
     );
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
@@ -206,11 +195,7 @@ describe('PromptEditor', () => {
       new Error('Failed to save')
     );
 
-    render(
-      <MemoryRouter>
-        <PromptEditor />
-      </MemoryRouter>
-    );
+    renderPromptEditor();
 
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
