@@ -146,7 +146,7 @@ export function Sidebar({
     if (currentTeamId) {
       loadFolders(currentTeamId);
     }
-  }, [currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTeamId]);
 
   const loadTeams = async () => {
     try {
