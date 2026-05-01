@@ -1,3 +1,5 @@
+<img src="icon.svg" width="48" height="48" alt="PromptStash icon" />
+
 # PromptStash
 
 A fast, clean SPA for saving, organizing, and sharing prompts. Built with React, TypeScript, Tailwind CSS, and Supabase.
