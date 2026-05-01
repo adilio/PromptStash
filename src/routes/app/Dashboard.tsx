@@ -111,10 +111,10 @@ export function Dashboard() {
     try {
       const data = await listPrompts(currentTeamId, undefined, debouncedSearchQuery);
       setPrompts(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
@@ -128,10 +128,10 @@ export function Dashboard() {
     try {
       const data = await listFolders(currentTeamId);
       setFolders(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }
@@ -143,10 +143,10 @@ export function Dashboard() {
     try {
       const data = await listTags(currentTeamId);
       setAvailableTags(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }
@@ -162,10 +162,10 @@ export function Dashboard() {
         title: 'Success',
         description: 'Prompt deleted',
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {
@@ -207,10 +207,10 @@ export function Dashboard() {
         title: 'Success',
         description: `${selectedPrompts.size} prompt(s) deleted`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }
@@ -265,10 +265,10 @@ export function Dashboard() {
         title: 'Success',
         description: `Moved to ${folderId ? folders.find(f => f.id === folderId)?.name : 'root'}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

@@ -45,10 +45,10 @@ export function ShareDialog({ prompt, open, onOpenChange, onUpdate }: ShareDialo
             ? 'Prompt is now public'
             : 'Prompt is now private',
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

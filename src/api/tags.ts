@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import type { Tag } from '@/lib/types';
 
+interface PromptTagJoin {
+  tag_id: string;
+  tags: Tag;
+}
+
 export async function listTags(teamId: string): Promise<Tag[]> {
   const { data, error } = await supabase
     .from('tags')
@@ -61,5 +66,5 @@ export async function getPromptTags(promptId: string): Promise<Tag[]> {
     .eq('prompt_id', promptId);
 
   if (error) throw error;
-  return data.map((pt: any) => pt.tags).filter(Boolean);
+  return data.map((pt: PromptTagJoin) => pt.tags).filter(Boolean);
 }

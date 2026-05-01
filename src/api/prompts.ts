@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { nanoid } from 'nanoid';
-import type { Prompt, PromptWithTags } from '@/lib/types';
+import type { Prompt, PromptWithTags, Tag } from '@/lib/types';
+
+interface PromptTagJoin {
+  tag_id: string;
+  tags: Tag;
+}
 
 export async function listPrompts(
   teamId: string,
@@ -46,7 +51,7 @@ export async function getPrompt(id: string): Promise<PromptWithTags> {
 
   return {
     ...prompt,
-    tags: promptTags.map((pt: any) => pt.tags).filter(Boolean),
+    tags: promptTags.map((pt: PromptTagJoin) => pt.tags).filter(Boolean),
   };
 }
 
@@ -70,7 +75,7 @@ export async function getPromptBySlug(slug: string): Promise<PromptWithTags> {
 
   return {
     ...prompt,
-    tags: promptTags.map((pt: any) => pt.tags).filter(Boolean),
+    tags: promptTags.map((pt: PromptTagJoin) => pt.tags).filter(Boolean),
   };
 }
 

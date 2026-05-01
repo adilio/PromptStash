@@ -53,10 +53,10 @@ export function ExportImportDialog({ teamId, onImportComplete }: ExportImportDia
         title: 'Success',
         description: `Exported ${prompts.length} prompts`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }
@@ -95,10 +95,10 @@ export function ExportImportDialog({ teamId, onImportComplete }: ExportImportDia
       });
 
       onImportComplete?.();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }

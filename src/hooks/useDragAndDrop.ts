@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 export interface DragItem {
   id: string;
   type: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export interface DropZone {
