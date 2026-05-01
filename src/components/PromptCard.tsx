@@ -105,7 +105,7 @@ export function PromptCard({
           {prompt.visibility === 'public' && (
             <Globe
               style={{ width: 14, height: 14, color: 'var(--ps-accent)', marginTop: 3 }}
-              aria-label="Public"
+              aria-label="Public prompt"
             />
           )}
           <button
@@ -186,7 +186,7 @@ export function PromptCard({
           overflow: 'hidden',
         }}
       >
-        {prompt.body_md}
+        {prompt.body_md.length > 300 ? prompt.body_md.slice(0, 300) + '…' : prompt.body_md}
       </div>
 
       {/* Card footer */}
@@ -223,7 +223,7 @@ export function PromptCard({
           </div>
         )}
         <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-          {new Date(prompt.updated_at).toLocaleDateString()}
+          Updated {new Date(prompt.updated_at).toLocaleDateString()}
         </span>
       </div>
     </div>

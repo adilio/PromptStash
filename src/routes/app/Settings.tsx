@@ -259,7 +259,7 @@ export function Settings() {
           overflow: 'auto',
         }}
       >
-        <div
+        <h2
           style={{
             fontSize: 11,
             fontWeight: 600,
@@ -270,7 +270,7 @@ export function Settings() {
           }}
         >
           Settings
-        </div>
+        </h2>
         {sections.map((s) => (
           <button
             key={s.id}

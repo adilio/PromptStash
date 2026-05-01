@@ -249,7 +249,7 @@ export function PromptEditor() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ps-fg-faint)' }}>
           <span>Workspace</span>
           <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 6 6 6-6 6" /></svg>
-          <span style={{ color: 'var(--ps-fg)', fontWeight: 500 }}>{title || 'Untitled'}</span>
+          <span style={{ color: 'var(--ps-fg)', fontWeight: 500 }}>{title || (isNew ? 'New Prompt' : 'Untitled')}</span>
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -319,7 +319,7 @@ export function PromptEditor() {
             }}
           >
             <Play style={{ width: 12, height: 12 }} />
-            {saving ? 'Saving…' : isNew ? 'Create' : 'Save'}
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
@@ -337,7 +337,14 @@ export function PromptEditor() {
         }}
       >
         {/* Title */}
+        <label
+          htmlFor="prompt-title"
+          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+        >
+          Title
+        </label>
         <input
+          id="prompt-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled prompt"
@@ -401,7 +408,9 @@ export function PromptEditor() {
             <button
               key={t}
               onClick={() => setTab(t)}
+              role="tab"
               aria-selected={tab === t}
+              data-state={tab === t ? 'active' : 'inactive'}
               style={{
                 appearance: 'none',
                 border: 0,

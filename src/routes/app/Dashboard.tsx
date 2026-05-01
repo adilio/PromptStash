@@ -299,7 +299,7 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) =>
           margin: '0 0 8px',
         }}
       >
-        An empty stash, ready when you are.
+        No prompts yet
       </h2>
       <p style={{ margin: '0 0 22px', fontSize: 14 }}>
         Save the prompts you find yourself rewriting. Variables, versions, folders — it's all here.
@@ -583,7 +583,7 @@ export function Dashboard() {
 
   const currentFolderName = selectedFolder
     ? folders.find((f) => f.id === selectedFolder)?.name ?? 'Folder'
-    : 'All prompts';
+    : 'Dashboard';
 
   const isEmpty = !loading && filteredPrompts.length === 0 && !searchQuery;
 
@@ -614,7 +614,7 @@ export function Dashboard() {
           >
             <span>Workspace</span>
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 6 6 6-6 6" /></svg>
-            <span>{currentFolderName}</span>
+            <span>{selectedFolder ? currentFolderName : 'All prompts'}</span>
           </div>
           <h1
             style={{
@@ -691,7 +691,7 @@ export function Dashboard() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search prompts, tags, content…"
+              placeholder="Search title and content…"
               style={{
                 appearance: 'none',
                 width: '100%',
