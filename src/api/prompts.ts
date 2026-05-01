@@ -19,6 +19,10 @@ function isTag(tag: Tag | null): tag is Tag {
   return tag !== null;
 }
 
+function normalizeFullTextSearchQuery(searchQuery: string): string {
+  return searchQuery.trim().replace(/[(),]/g, ' ').replace(/\s+/g, ' ');
+}
+
 export async function listPrompts(
   teamId: string,
   folderId?: string,
@@ -35,7 +39,13 @@ export async function listPrompts(
   }
 
   if (searchQuery) {
-    query = query.ilike('title', `%${searchQuery}%`);
+    const normalizedSearchQuery = normalizeFullTextSearchQuery(searchQuery);
+
+    if (normalizedSearchQuery) {
+      query = query.or(
+        `title.plfts.${normalizedSearchQuery},body_md.plfts.${normalizedSearchQuery}`
+      );
+    }
   }
 
   const { data, error } = await query;

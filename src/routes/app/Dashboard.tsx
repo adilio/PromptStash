@@ -341,7 +341,7 @@ export function Dashboard() {
           <div className="flex gap-2">
             <Input
               ref={searchInputRef}
-              placeholder="Search prompts... (Ctrl+K)"
+              placeholder="Search title and content"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1"

@@ -72,12 +72,12 @@ Notes: Added a shared QueryClient and prompt query keys, migrated Dashboard prom
 
 ### 4. Add full-text search on prompt body
 
-- [ ] In Supabase SQL Editor, add a `tsvector` index on the `prompts.body` column
-- [ ] Update the search query in `src/api/prompts.ts` (or wherever title search lives) to use `.textSearch()` on both `title` and `body`
-- [ ] Update the search UI if needed so the placeholder says "Search title and content"
-- [ ] Run `npm run build` — confirm no errors
+- [x] In Supabase SQL Editor, add a `tsvector` index on the `prompts.body` column
+- [x] Update the search query in `src/api/prompts.ts` (or wherever title search lives) to use `.textSearch()` on both `title` and `body`
+- [x] Update the search UI if needed so the placeholder says "Search title and content"
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: The live body column is `body_md`, so search now uses PostgREST full-text `plfts` filters across `title` and `body_md`; added matching GIN index SQL to `supabase-schema.sql`. Live database index still needs to be applied in Supabase SQL Editor or via a DB migration connection. Verified with `npm run lint`, `npm run build`, and `npm test -- src/tests/api/prompts.test.ts --run`.
 
 ---
 

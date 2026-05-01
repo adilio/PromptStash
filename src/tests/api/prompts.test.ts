@@ -27,6 +27,7 @@ function createQuery(result: { data?: unknown; error: Error | null }): MockSupab
     eq: vi.fn(() => query),
     order: vi.fn(() => query),
     ilike: vi.fn(() => query),
+    or: vi.fn(() => query),
     insert: vi.fn(() => query),
     update: vi.fn(() => query),
     delete: vi.fn(() => query),
@@ -82,7 +83,7 @@ describe('Prompts API', () => {
 
       await listPrompts('team1', undefined, 'search');
 
-      expect(query.ilike).toHaveBeenCalledWith('title', '%search%');
+      expect(query.or).toHaveBeenCalledWith('title.plfts.search,body_md.plfts.search');
     });
 
     it('should throw error on failure', async () => {

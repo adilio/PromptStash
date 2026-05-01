@@ -39,6 +39,12 @@ create table public.prompts (
   updated_at timestamptz not null default now()
 );
 
+create index prompts_title_fts_idx
+  on public.prompts using gin (to_tsvector('english', coalesce(title, '')));
+
+create index prompts_body_md_fts_idx
+  on public.prompts using gin (to_tsvector('english', coalesce(body_md, '')));
+
 create table public.prompt_versions (
   id uuid primary key default gen_random_uuid(),
   prompt_id uuid references public.prompts(id) on delete cascade,
