@@ -140,6 +140,43 @@ See `src/lib/markdown.ts` for configuration.
 
 ## Deployment
 
+### Production Domain
+
+Production should be served from:
+
+```text
+https://prompstash.4dl.ca
+```
+
+For Netlify with external DNS:
+
+1. In Netlify, open the PromptStash site and add `prompstash.4dl.ca` as a custom domain.
+2. In the DNS provider for `4dl.ca`, create a CNAME record:
+
+   ```text
+   Type:  CNAME
+   Name:  prompstash
+   Value: promptstash.netlify.app
+   TTL:   Auto
+   ```
+
+3. After DNS propagates, enable/verify the Netlify TLS certificate for `prompstash.4dl.ca`.
+4. In Supabase Auth URL Configuration, set:
+
+   ```text
+   Site URL: https://prompstash.4dl.ca
+   Redirect URLs:
+   https://prompstash.4dl.ca/**
+   http://localhost:5173/**
+   ```
+
+5. Make sure the Netlify production environment has:
+
+   ```bash
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
 ### Cloudflare Pages
 
 1. Connect your GitHub repository to Cloudflare Pages
