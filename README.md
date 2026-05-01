@@ -4,13 +4,13 @@ A fast, clean SPA for saving, organizing, and sharing prompts. Built with React,
 
 ## Overview
 
-PromptStash is a production-ready MVP that lets users:
+PromptStash is a production-ready app that lets users:
 - Sign in and create teams
 - Organize prompts into folders with hierarchical structure
-- Tag and search prompts
+- Tag and search prompts by title and full content
 - Share prompts publicly via read-only links
-- Collaborate with team members (owner, editor, viewer roles)
-- Write prompts in Markdown with live preview
+- Collaborate with team members (owner, editor, viewer roles) with a built-in invite flow
+- Write prompts in Markdown with live preview and token/word count
 - Store everything securely in Supabase with Row Level Security
 
 ## Tech Stack
@@ -18,10 +18,12 @@ PromptStash is a production-ready MVP that lets users:
 - **Frontend**: React 18, TypeScript, Vite
 - **Routing**: React Router v6
 - **UI**: Tailwind CSS, shadcn/ui, Radix UI primitives
-- **Data**: Supabase (Postgres + Auth)
-- **State**: React local state (no external state library for MVP)
+- **Fonts**: Inter (UI), JetBrains Mono (display/code)
+- **Data**: Supabase (Postgres + Auth + generated types)
+- **Server state**: TanStack React Query
 - **Forms**: react-hook-form + zod validation
-- **Markdown**: react-markdown + sanitize-html
+- **Markdown**: react-markdown + DOMPurify
+- **Search**: Command palette (Cmd+K) + full-text search across title and body
 - **Testing**: Vitest + React Testing Library
 - **CI/CD**: GitHub Actions
 
@@ -50,11 +52,12 @@ npm install
 
 ### 3. Run Database Migration
 
-Copy the contents of `supabase-schema.sql` and run it in your Supabase SQL Editor. This will:
-- Create all tables (teams, prompts, folders, tags, etc.)
+Copy the contents of `supabase/migrations/` and run them in your Supabase SQL Editor in order. This will:
+- Create all tables (teams, prompts, folders, tags, invites, etc.)
 - Enable Row Level Security
 - Set up RLS policies
-- Add triggers for updated_at timestamp
+- Add triggers for `updated_at` timestamps
+- Add GIN full-text search indexes on `title` and `body_md`
 
 ### 4. Configure Environment
 
@@ -93,14 +96,15 @@ The application uses the following tables:
 - **memberships**: User-team relationships with roles (owner, editor, viewer)
 - **folders**: Hierarchical folder structure
 - **prompts**: The main content, with title, body (Markdown), and visibility
-- **prompt_versions**: Version history for prompts (ready for future use)
+- **prompt_versions**: Version history for prompts
 - **tags**: Team-scoped tags
 - **prompt_tags**: Many-to-many relationship between prompts and tags
-- **shares**: Individual prompt sharing (ready for future use)
+- **shares**: Individual prompt sharing
+- **invites**: Email-based team invitations with expiry, tokens, and role assignment
 
 All tables have Row Level Security enabled. The RLS policies ensure:
 - Users can only see teams they're members of
-- Only owners can manage team memberships
+- Only owners can manage team memberships and send invitations
 - Only editors and owners can create/modify prompts
 - Viewers can read but not modify
 - Public prompts are visible to anyone via public slug
@@ -125,7 +129,7 @@ This ensures users can only access data from teams they belong to.
 
 ### Markdown Sanitization
 
-All Markdown content is sanitized using `sanitize-html` before rendering:
+All Markdown content is sanitized using DOMPurify before rendering:
 - Allows safe HTML tags (headings, lists, links, code blocks, tables)
 - Strips potentially dangerous content (scripts, iframes, etc.)
 - Only allows http/https/mailto URL schemes
@@ -171,11 +175,9 @@ See `src/lib/markdown.ts` for configuration.
 - Generous free tier
 - No custom backend needed
 
-### Why No State Management Library?
+### Why TanStack React Query?
 
-For the MVP scope, React's built-in state (useState, useEffect, Context if needed) is sufficient. As the app grows, consider:
-- TanStack Query for server state
-- Zustand or Jotai for client state
+Server state is managed with React Query for prompts (list, detail, create, update, delete). This gives automatic caching, background refetching, and optimistic mutation handling without a custom store. Local UI state stays in component-level `useState`.
 
 ### Why shadcn/ui?
 
@@ -200,20 +202,23 @@ For the MVP scope, React's built-in state (useState, useEffect, Context if neede
 2. Click "Share" button
 3. Enable public access
 4. Copy the public link (e.g., `/p/abc123xyz`)
-5. Share the link - anyone can view without auth
+5. Share the link — anyone can view without auth
 
-### Team Collaboration (Manual Setup for MVP)
+### Inviting Team Members
 
-To add a user to your team:
+1. Go to Settings > Workspace
+2. Enter the invitee's email and choose a role (editor or viewer)
+3. Click "Send invite" — an invite link (`/invite/:token`) is generated
+4. Share the link with your teammate
+5. When they visit the link they are added to the team automatically
 
-1. Get the user's UUID from Supabase Auth dashboard
-2. In Supabase SQL Editor, run:
-   ```sql
-   insert into public.memberships (team_id, user_id, role)
-   values ('your-team-id', 'their-user-id', 'editor');
-   ```
+### Keyboard Shortcuts
 
-Future versions will include a UI for this.
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+K` / `Ctrl+K` | Open command palette |
+| `Cmd+N` / `N` | New prompt |
+| `Cmd+S` | Save prompt |
 
 ## Testing
 
@@ -232,6 +237,31 @@ npm run test:ui       # Interactive mode
 
 ## Changelog
 
+### v0.2.0
+
+**Features:**
+- Full UI redesign — Inter UI font, JetBrains Mono display font, muted indigo-blue (oklch hue 258) theme, light and dark mode
+- Split sign-in layout with editorial left panel and clean auth form
+- Dashboard list/grid toggle for prompt browsing
+- Redesigned sidebar with workspace switcher, system folders, and folder drop-target highlighting
+- Title-first prompt editor with large monospace title input
+- Two-pane Settings with sidebar navigation
+- Command palette (`Cmd+K`) — fuzzy search prompts, New Prompt action, folder navigation
+- Full-text search on prompt title and body (PostgreSQL `tsvector` + GIN index)
+- Token and word count in editor, updated live with 300ms debounce (`~N tokens · N words`)
+- Team invite flow — invite by email, shareable `/invite/:token` link, auto membership on accept
+- `N` keyboard shortcut for new prompt (when not focused in an input)
+- Prompt card copy button (hover-to-reveal, copies body to clipboard)
+- Prompt cards show title, truncated body preview, and tag pills
+- Folder drag-and-drop to move prompts
+
+**Infrastructure:**
+- Migrated to DOMPurify for Markdown sanitization (replaced sanitize-html)
+- Added Supabase generated TypeScript types (`src/lib/database.types.ts`)
+- Added TanStack React Query for prompts server state
+- `invites` table with owner-only RLS and `accept_invite()` SQL function
+- GIN full-text indexes on `prompts.title` and `prompts.body_md`
+
 ### v0.1.0 (MVP)
 
 **Features:**
@@ -242,7 +272,7 @@ npm run test:ui       # Interactive mode
 - Live Markdown preview
 - Public sharing with unique slugs
 - Search prompts by title
-- Tag support (backend ready, UI minimal)
+- Tag support
 - Row Level Security
 - Markdown sanitization
 
@@ -253,31 +283,13 @@ npm run test:ui       # Interactive mode
 - GitHub Actions CI
 - Test coverage
 
-**Known Limitations:**
-- Team invitations require manual SQL (no UI yet)
-- No version history UI (tables ready)
-- No real-time updates
-- No folder drag-and-drop
-- Basic search (title only)
-
-## Future Enhancements
-
-- Team invitation UI with email invites
-- Prompt version history viewer
-- Advanced search (full-text, tags, folders)
-- Real-time collaboration
-- Folder drag-and-drop
-- Prompt templates
-- Export/import functionality
-- Keyboard shortcuts
-- Dark mode
-- Mobile app (React Native)
-
 ## Project Structure
 
 ```
 promptstash/
 ├── .github/workflows/     # CI configuration
+├── supabase/
+│   └── migrations/        # SQL migration files
 ├── src/
 │   ├── api/              # Supabase API calls
 │   ├── components/       # React components
@@ -288,9 +300,8 @@ promptstash/
 │   │   ├── app/         # App pages
 │   │   └── public/      # Public pages
 │   ├── tests/           # Test files
-│   ├── app.css          # Global styles
+│   ├── app.css          # Global styles and design tokens
 │   └── main.tsx         # App entry point
-├── supabase-schema.sql  # Database schema
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js
@@ -308,7 +319,7 @@ promptstash/
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License — see LICENSE file for details
 
 ## Support
 
@@ -316,4 +327,4 @@ For issues, questions, or contributions, please open an issue on GitHub.
 
 ---
 
-Built with ❤️ using React, TypeScript, and Supabase
+Built with React, TypeScript, and Supabase
