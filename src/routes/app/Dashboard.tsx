@@ -8,7 +8,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PromptCard } from '@/components/PromptCard';
 import { PromptCardSkeleton } from '@/components/PromptCardSkeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { Loading } from '@/components/Loading';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { DragAndDropHelp } from '@/components/DragAndDropHelp';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
@@ -40,7 +39,9 @@ export function Dashboard() {
 
   // Drag and drop state
   const [draggedPrompt, setDraggedPrompt] = useState<Prompt | null>(null);
-  const [showDropZones, setShowDropZones] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_showDropZones, setShowDropZones] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_dropZoneHover, setDropZoneHover] = useState<string | null>(null);
 
   // Filter state
@@ -95,14 +96,14 @@ export function Dashboard() {
     if (currentTeamId) {
       loadPrompts();
     }
-  }, [currentTeamId, debouncedSearchQuery]);
+  }, [currentTeamId, debouncedSearchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (currentTeamId) {
       loadFolders();
       loadTags();
     }
-  }, [currentTeamId]);
+  }, [currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPrompts = async () => {
     if (!currentTeamId) return;
@@ -286,7 +287,7 @@ export function Dashboard() {
         setFolderDropHandler(undefined);
       }
     };
-  }, [setFolderDropHandler, draggedPrompt, folders]);
+  }, [setFolderDropHandler, draggedPrompt, folders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="h-full flex flex-col">

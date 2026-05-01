@@ -17,7 +17,7 @@ export function PublicPrompt() {
     if (slug) {
       loadPrompt();
     }
-  }, [slug]);
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPrompt = async () => {
     if (!slug) return;

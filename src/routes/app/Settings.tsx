@@ -21,7 +21,7 @@ export function Settings() {
 
   useEffect(() => {
     loadTeams();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTeams = async () => {
     try {

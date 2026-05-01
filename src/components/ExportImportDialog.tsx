@@ -11,7 +11,6 @@ import {
 import { useToast } from './ui/use-toast';
 import { listPrompts } from '@/api/prompts';
 import { createPrompt } from '@/api/prompts';
-import type { Prompt } from '@/lib/types';
 
 interface ExportImportDialogProps {
   teamId: string;

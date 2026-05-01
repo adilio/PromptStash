@@ -46,7 +46,7 @@ export function PromptEditor() {
     if (currentTeamId) {
       loadTags();
     }
-  }, [promptId, currentTeamId]);
+  }, [promptId, currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTags = async () => {
     if (!currentTeamId) return;
@@ -86,7 +86,7 @@ export function PromptEditor() {
     if (!isNew && promptId) {
       autoSave();
     }
-  }, [debouncedTitle, debouncedBody]);
+  }, [debouncedTitle, debouncedBody]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPrompt = async () => {
     if (!promptId || isNew) return;

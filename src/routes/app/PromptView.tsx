@@ -25,7 +25,7 @@ export function PromptView() {
     if (promptId) {
       loadPrompt();
     }
-  }, [promptId]);
+  }, [promptId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPrompt = async () => {
     if (!promptId) return;

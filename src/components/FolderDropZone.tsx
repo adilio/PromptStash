@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Folder } from 'lucide-react';
 
 interface FolderDropZoneProps {

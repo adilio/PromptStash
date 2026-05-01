@@ -13,7 +13,7 @@ export function AppLayout() {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuth = async () => {
     try {

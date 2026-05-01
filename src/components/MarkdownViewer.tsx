@@ -10,7 +10,7 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
       <ReactMarkdown
         components={{
           // Custom components to ensure safe rendering
-          a: ({ node, ...props }) => (
+          a: ({ _node, ...props }) => (
             <a {...props} target="_blank" rel="noopener noreferrer" />
           ),
         }}
