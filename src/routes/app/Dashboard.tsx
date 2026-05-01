@@ -41,7 +41,7 @@ export function Dashboard() {
   // Drag and drop state
   const [draggedPrompt, setDraggedPrompt] = useState<Prompt | null>(null);
   const [showDropZones, setShowDropZones] = useState(false);
-  const [dropZoneHover, setDropZoneHover] = useState<string | null>(null);
+  const [_dropZoneHover, setDropZoneHover] = useState<string | null>(null);
 
   // Filter state
   const [folders, setFolders] = useState<Folder[]>([]);

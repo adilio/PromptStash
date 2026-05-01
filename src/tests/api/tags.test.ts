@@ -104,11 +104,6 @@ describe('Tags API', () => {
 
   describe('addTagToPrompt', () => {
     it('should add a tag to a prompt', async () => {
-      const mockPromptTag = {
-        prompt_id: 'prompt1',
-        tag_id: 'tag1',
-      };
-
       const mockQuery = {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
