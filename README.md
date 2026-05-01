@@ -156,7 +156,7 @@ For Netlify with external DNS:
    ```text
    Type:  CNAME
    Name:  promptstash
-   Value: promptstash.netlify.app
+   Value: promptstsh.netlify.app
    TTL:   Auto
    ```
 
