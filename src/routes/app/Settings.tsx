@@ -27,10 +27,10 @@ export function Settings() {
     try {
       const data = await listTeams();
       setTeams(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }
@@ -49,10 +49,10 @@ export function Settings() {
         title: 'Success',
         description: 'Team created',
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

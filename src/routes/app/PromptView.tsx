@@ -34,10 +34,10 @@ export function PromptView() {
     try {
       const data = await getPrompt(promptId);
       setPrompt(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
       navigate('/app');
@@ -56,10 +56,10 @@ export function PromptView() {
         description: 'Prompt deleted',
       });
       navigate('/app');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     }

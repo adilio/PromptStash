@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { listFolders, getFolder, createFolder, updateFolder, deleteFolder } from '@/api/folders';
 import { supabase } from '@/lib/supabase';
+import type { MockSupabaseQuery } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -26,7 +27,7 @@ describe('Folders API', () => {
         order: vi.fn().mockResolvedValue({ data: mockFolders, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await listFolders('team1');
 
@@ -45,7 +46,7 @@ describe('Folders API', () => {
         order: vi.fn().mockResolvedValue({ data: null, error: mockError }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await expect(listFolders('team1')).rejects.toThrow('Database error');
     });
@@ -65,7 +66,7 @@ describe('Folders API', () => {
         single: vi.fn().mockResolvedValue({ data: mockFolder, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await getFolder('1');
 
@@ -89,7 +90,7 @@ describe('Folders API', () => {
         single: vi.fn().mockResolvedValue({ data: mockFolder, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await createFolder({
         team_id: 'team1',
@@ -118,7 +119,7 @@ describe('Folders API', () => {
         single: vi.fn().mockResolvedValue({ data: mockFolder, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await createFolder({
         team_id: 'team1',
@@ -149,7 +150,7 @@ describe('Folders API', () => {
         single: vi.fn().mockResolvedValue({ data: mockFolder, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await updateFolder('1', { name: 'Updated Name' });
 
@@ -166,7 +167,7 @@ describe('Folders API', () => {
         eq: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await deleteFolder('1');
 
@@ -182,7 +183,7 @@ describe('Folders API', () => {
         eq: vi.fn().mockResolvedValue({ error: mockError }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       await expect(deleteFolder('1')).rejects.toThrow('Cannot delete folder with children');
     });

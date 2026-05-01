@@ -97,10 +97,10 @@ export function PromptEditor() {
       setTitle(data.title);
       setBody(data.body_md);
       setSelectedTags(data.tags || []);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
       navigate('/app');
@@ -194,10 +194,10 @@ export function PromptEditor() {
         });
         navigate(`/app/p/${promptId}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
     } finally {

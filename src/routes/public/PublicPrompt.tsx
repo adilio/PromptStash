@@ -27,8 +27,8 @@ export function PublicPrompt() {
     try {
       const data = await getPromptBySlug(slug);
       setPrompt(data);
-    } catch (error: any) {
-      setError(error.message || 'Prompt not found');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Prompt not found');
     } finally {
       setLoading(false);
     }
