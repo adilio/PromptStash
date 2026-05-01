@@ -1,60 +1,93 @@
-@import '@fontsource/dm-sans/latin-400.css';
-@import '@fontsource/dm-sans/latin-500.css';
-@import '@fontsource/dm-sans/latin-600.css';
-@import '@fontsource/dm-sans/latin-700.css';
-@import '@fontsource/lora/latin-400.css';
-@import '@fontsource/lora/latin-500.css';
-@import '@fontsource/lora/latin-600.css';
-@import '@fontsource/lora/latin-700.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* shadcn/ui tokens — muted indigo-blue (hue 258) */
+    --background: 258 12% 97%;
+    --foreground: 258 18% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 258 18% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 153 40% 30%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 153 40% 30%;
+    --popover-foreground: 258 18% 20%;
+    --primary: 258 34% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 10% 95%;
+    --secondary-foreground: 258 18% 20%;
+    --muted: 258 10% 95%;
+    --muted-foreground: 258 13% 47%;
+    --accent: 258 10% 95%;
+    --accent-foreground: 258 34% 42%;
+    --destructive: 4 72% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 258 6% 90%;
+    --input: 258 6% 90%;
+    --ring: 258 34% 42%;
     --radius: 0.5rem;
+
+    /* PromptStash design tokens — oklch hue 258 */
+    --ps-accent:        oklch(0.55 0.09 258);
+    --ps-accent-hover:  oklch(0.49 0.10 258);
+    --ps-accent-soft:   oklch(0.94 0.02 258);
+    --ps-accent-fg:     #ffffff;
+    --ps-accent-ring:   oklch(0.55 0.09 258 / 0.25);
+
+    --ps-bg:            oklch(0.985 0.003 258);
+    --ps-bg-elev:       #ffffff;
+    --ps-bg-sunken:     oklch(0.965 0.004 258);
+    --ps-hairline:      oklch(0.90 0.006 258);
+    --ps-hairline-soft: oklch(0.94 0.005 258);
+
+    --ps-fg:            oklch(0.22 0.02 258);
+    --ps-fg-muted:      oklch(0.48 0.015 258);
+    --ps-fg-faint:      oklch(0.62 0.012 258);
+    --ps-fg-dim:        oklch(0.74 0.008 258);
+
+    --ps-shadow-sm:     0 1px 0 oklch(0.90 0.006 258 / 0.6);
+    --ps-shadow-md:     0 1px 2px oklch(0.20 0.02 258 / 0.04), 0 8px 24px oklch(0.20 0.02 258 / 0.06);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 153 43% 54%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 153 43% 54%;
+    --background: 258 18% 13%;
+    --foreground: 258 10% 96%;
+    --card: 258 16% 17%;
+    --card-foreground: 258 10% 96%;
+    --popover: 258 16% 17%;
+    --popover-foreground: 258 10% 96%;
+    --primary: 258 38% 65%;
+    --primary-foreground: 258 18% 13%;
+    --secondary: 258 14% 20%;
+    --secondary-foreground: 258 10% 96%;
+    --muted: 258 14% 20%;
+    --muted-foreground: 258 10% 72%;
+    --accent: 258 14% 20%;
+    --accent-foreground: 258 38% 65%;
+    --destructive: 4 56% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 258 14% 30%;
+    --input: 258 14% 30%;
+    --ring: 258 38% 65%;
+
+    --ps-accent:        oklch(0.72 0.09 258);
+    --ps-accent-hover:  oklch(0.78 0.10 258);
+    --ps-accent-soft:   oklch(0.30 0.04 258);
+    --ps-accent-fg:     oklch(0.16 0.02 258);
+    --ps-accent-ring:   oklch(0.72 0.09 258 / 0.30);
+
+    --ps-bg:            oklch(0.18 0.012 258);
+    --ps-bg-elev:       oklch(0.22 0.014 258);
+    --ps-bg-sunken:     oklch(0.15 0.010 258);
+    --ps-hairline:      oklch(0.30 0.012 258);
+    --ps-hairline-soft: oklch(0.26 0.012 258);
+
+    --ps-fg:            oklch(0.96 0.005 258);
+    --ps-fg-muted:      oklch(0.74 0.012 258);
+    --ps-fg-faint:      oklch(0.62 0.010 258);
+    --ps-fg-dim:        oklch(0.48 0.008 258);
+
+    --ps-shadow-sm:     0 1px 0 oklch(0 0 0 / 0.3);
+    --ps-shadow-md:     0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.25);
   }
 }
 
@@ -63,6 +96,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background font-sans text-foreground;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
   }
 }
