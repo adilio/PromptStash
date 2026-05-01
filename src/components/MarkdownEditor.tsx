@@ -15,7 +15,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || 'Write your prompt in Markdown...'}
-        className="flex-1 font-mono text-sm resize-none"
+        className="flex-1 resize-none font-serif text-sm leading-7"
       />
     </div>
   );

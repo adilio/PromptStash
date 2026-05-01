@@ -106,14 +106,14 @@ Notes: Confirmed existing `src/components/ui/command.tsx`, added `CommandPalette
 
 ### 7. UI — typography and color
 
-- [ ] Add `DM Sans` (UI chrome) and `Lora` (prompt body/editor) via Google Fonts or `fontsource`
-- [ ] Apply `DM Sans` as the base font in `tailwind.config.js`
-- [ ] Apply `Lora` to the prompt editor textarea and rendered prompt body
-- [ ] Pick one brand accent color (suggest: `#2D6A4F` forest green or `#D48B2A` amber) and set it as the primary color in the shadcn theme in `src/app.css` or wherever CSS variables are defined
-- [ ] Apply the accent to: primary CTA button, active sidebar item, public prompt badge
-- [ ] Run `npm run build` — confirm no errors
+- [x] Add `DM Sans` (UI chrome) and `Lora` (prompt body/editor) via Google Fonts or `fontsource`
+- [x] Apply `DM Sans` as the base font in `tailwind.config.js`
+- [x] Apply `Lora` to the prompt editor textarea and rendered prompt body
+- [x] Pick one brand accent color (suggest: `#2D6A4F` forest green or `#D48B2A` amber) and set it as the primary color in the shadcn theme in `src/app.css` or wherever CSS variables are defined
+- [x] Apply the accent to: primary CTA button, active sidebar item, public prompt badge
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Added local fontsource DM Sans and Lora latin faces, wired Tailwind font families, applied Lora to editor/viewer prompt bodies, set forest green primary/ring tokens, made active folder items primary, and replaced the public icon with a primary badge. Verified with `npm run lint` and `npm run build`.
 
 ---
 

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { FileText, MoreVertical, Trash2, Edit, Globe, GripVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +46,10 @@ export function PromptCard({ prompt, onEdit, onDelete, draggable = false, onDrag
         </div>
         <div className="flex items-center gap-1">
           {prompt.visibility === 'public' && (
-            <Globe className="h-3 w-3 text-muted-foreground" aria-label="Public prompt" />
+            <Badge className="gap-1">
+              <Globe className="h-3 w-3" aria-hidden="true" />
+              Public
+            </Badge>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

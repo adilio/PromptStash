@@ -245,7 +245,7 @@ function FolderItem({
       }`}
     >
       <Button
-        variant={active ? 'secondary' : 'ghost'}
+        variant={active ? 'default' : 'ghost'}
         className="w-full justify-start"
         onClick={handleClick}
       >
