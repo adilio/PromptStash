@@ -10,10 +10,11 @@ import type { Team } from '@/lib/types';
 
 interface ContextType {
   currentTeamId?: string;
+  setCurrentTeamId?: (teamId: string) => void;
 }
 
 export function Settings() {
-  const { currentTeamId } = useOutletContext<ContextType>();
+  const { currentTeamId, setCurrentTeamId } = useOutletContext<ContextType>();
   const [teams, setTeams] = useState<Team[]>([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,8 +43,9 @@ export function Settings() {
 
     setLoading(true);
     try {
-      await createTeam(newTeamName);
+      const team = await createTeam(newTeamName);
       setNewTeamName('');
+      setCurrentTeamId?.(team.id);
       await loadTeams();
       toast({
         title: 'Success',

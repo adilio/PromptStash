@@ -45,7 +45,7 @@ export function AppLayout() {
         onFolderDrop={folderDropHandler}
       />
       <main className="flex-1 overflow-auto">
-        <Outlet context={{ currentTeamId, setFolderDropHandler }} />
+        <Outlet context={{ currentTeamId, setCurrentTeamId, setFolderDropHandler }} />
       </main>
     </Shell>
   );

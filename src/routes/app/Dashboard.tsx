@@ -95,6 +95,9 @@ export function Dashboard() {
   useEffect(() => {
     if (currentTeamId) {
       loadPrompts();
+    } else {
+      setLoading(false);
+      setPrompts([]);
     }
   }, [currentTeamId, debouncedSearchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -421,6 +424,16 @@ export function Dashboard() {
               <PromptCardSkeleton key={i} />
             ))}
           </div>
+        ) : !currentTeamId ? (
+          <EmptyState
+            icon={FileText}
+            title="Create your first team"
+            description="Teams keep your prompts, folders, and tags organized."
+            action={{
+              label: 'Go to Settings',
+              onClick: () => navigate('/app/settings'),
+            }}
+          />
         ) : filteredPrompts.length === 0 ? (
           <EmptyState
             icon={FileText}

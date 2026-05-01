@@ -43,9 +43,12 @@ export function Sidebar({ currentTeamId, onTeamChange, onFolderDrop }: SidebarPr
 
   useEffect(() => {
     if (currentTeamId) {
+      if (teams.length === 0) {
+        loadTeams();
+      }
       loadFolders(currentTeamId);
     }
-  }, [currentTeamId]);
+  }, [currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTeams = async () => {
     try {
