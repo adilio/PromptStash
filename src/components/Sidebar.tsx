@@ -380,7 +380,7 @@ export function Sidebar({
             color: 'rgba(255,255,255,0.7)',
           }}
         >
-          ⌘N
+          N
         </span>
       </button>
 
