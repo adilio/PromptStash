@@ -3,7 +3,19 @@ import type { Tag } from '@/lib/types';
 
 interface PromptTagJoin {
   tag_id: string;
-  tags: Tag;
+  tags: Tag | Tag[] | null;
+}
+
+function extractTag(join: PromptTagJoin): Tag | null {
+  if (Array.isArray(join.tags)) {
+    return join.tags[0] ?? null;
+  }
+
+  return join.tags;
+}
+
+function isTag(tag: Tag | null): tag is Tag {
+  return tag !== null;
 }
 
 export async function listTags(teamId: string): Promise<Tag[]> {
@@ -66,5 +78,5 @@ export async function getPromptTags(promptId: string): Promise<Tag[]> {
     .eq('prompt_id', promptId);
 
   if (error) throw error;
-  return data.map((pt: PromptTagJoin) => pt.tags).filter(Boolean);
+  return (data as PromptTagJoin[]).map(extractTag).filter(isTag);
 }

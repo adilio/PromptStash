@@ -17,15 +17,23 @@ import type { PromptVersion } from '@/lib/types';
 
 interface VersionHistoryDialogProps {
   promptId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onRestore?: () => void;
 }
 
-export function VersionHistoryDialog({ promptId, onRestore }: VersionHistoryDialogProps) {
-  const [open, setOpen] = useState(false);
+export function VersionHistoryDialog({
+  promptId,
+  open: controlledOpen,
+  onOpenChange,
+  onRestore,
+}: VersionHistoryDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [versions, setVersions] = useState<PromptVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<PromptVersion | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const open = controlledOpen ?? uncontrolledOpen;
 
   const loadVersions = async () => {
     setLoading(true);
@@ -50,7 +58,7 @@ export function VersionHistoryDialog({ promptId, onRestore }: VersionHistoryDial
         title: 'Success',
         description: 'Version restored',
       });
-      setOpen(false);
+      handleOpenChange(false);
       onRestore?.();
     } catch (error) {
       toast({
@@ -62,7 +70,8 @@ export function VersionHistoryDialog({ promptId, onRestore }: VersionHistoryDial
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
+    setUncontrolledOpen(newOpen);
+    onOpenChange?.(newOpen);
     if (newOpen) {
       loadVersions();
     }
@@ -103,15 +112,10 @@ export function VersionHistoryDialog({ promptId, onRestore }: VersionHistoryDial
                         : 'hover:bg-accent/50'
                     }`}
                   >
-                    <div className="font-medium text-sm truncate">{version.title}</div>
+                    <div className="font-medium text-sm truncate">Version {version.version}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {new Date(version.created_at).toLocaleString()}
+                      {new Date(version.edited_at).toLocaleString()}
                     </div>
-                    {version.change_note && (
-                      <div className="text-xs text-muted-foreground mt-1 italic">
-                        {version.change_note}
-                      </div>
-                    )}
                   </button>
                 ))}
               </div>
@@ -124,9 +128,9 @@ export function VersionHistoryDialog({ promptId, onRestore }: VersionHistoryDial
               <>
                 <div className="border-b p-4 flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium">{selectedVersion.title}</h3>
+                    <h3 className="font-medium">Version {selectedVersion.version}</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(selectedVersion.created_at).toLocaleString()}
+                      {new Date(selectedVersion.edited_at).toLocaleString()}
                     </p>
                   </div>
                   <Button

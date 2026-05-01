@@ -112,10 +112,7 @@ export function PromptEditor() {
   const handleCreateTag = async (name: string): Promise<Tag> => {
     if (!currentTeamId) throw new Error('No team selected');
 
-    const newTag = await createTag({
-      team_id: currentTeamId,
-      name,
-    });
+    const newTag = await createTag(currentTeamId, name);
 
     setAvailableTags([...availableTags, newTag]);
     return newTag;

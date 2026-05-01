@@ -18,7 +18,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useDragPreview } from '@/hooks/useDragPreview';
-import type { Prompt, Folder, Tag } from '@/lib/types';
+import type { PromptWithTags, Folder, Tag } from '@/lib/types';
 
 interface ContextType {
   currentTeamId?: string;
@@ -27,7 +27,7 @@ interface ContextType {
 
 export function Dashboard() {
   const { currentTeamId, setFolderDropHandler } = useOutletContext<ContextType>();
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [prompts, setPrompts] = useState<PromptWithTags[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -38,7 +38,7 @@ export function Dashboard() {
   const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(new Set());
 
   // Drag and drop state
-  const [draggedPrompt, setDraggedPrompt] = useState<Prompt | null>(null);
+  const [draggedPrompt, setDraggedPrompt] = useState<PromptWithTags | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_showDropZones, setShowDropZones] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -66,7 +66,7 @@ export function Dashboard() {
 
       // Tag filter (client-side)
       if (selectedTags.length > 0) {
-        const promptTagIds = prompt.tags?.map((t) => t.id) || [];
+        const promptTagIds = prompt.tags?.map((t: Tag) => t.id) || [];
         const hasAllSelectedTags = selectedTags.every((tagId) =>
           promptTagIds.includes(tagId)
         );
@@ -217,7 +217,7 @@ export function Dashboard() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, prompt: Prompt) => {
+  const handleDragStart = (e: React.DragEvent, prompt: PromptWithTags) => {
     setDraggedPrompt(prompt);
     setShowDropZones(true);
     e.dataTransfer.effectAllowed = 'move';

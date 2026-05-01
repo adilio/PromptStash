@@ -6,7 +6,7 @@ export async function listPromptVersions(promptId: string): Promise<PromptVersio
     .from('prompt_versions')
     .select('*')
     .eq('prompt_id', promptId)
-    .order('created_at', { ascending: false });
+    .order('edited_at', { ascending: false });
 
   if (error) throw error;
   return data;
@@ -32,14 +32,23 @@ export async function createPromptVersion(input: {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('Not authenticated');
 
+  const { data: latestVersion, error: latestError } = await supabase
+    .from('prompt_versions')
+    .select('version')
+    .eq('prompt_id', input.prompt_id)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestError) throw latestError;
+
   const { data, error } = await supabase
     .from('prompt_versions')
     .insert({
       prompt_id: input.prompt_id,
-      created_by: user.id,
-      title: input.title,
+      version: (latestVersion?.version ?? 0) + 1,
       body_md: input.body_md,
-      change_note: input.change_note || null,
+      edited_by: user.id,
     })
     .select('*')
     .single();
@@ -59,7 +68,6 @@ export async function restorePromptVersion(
   const { error } = await supabase
     .from('prompts')
     .update({
-      title: version.title,
       body_md: version.body_md,
     })
     .eq('id', promptId);
