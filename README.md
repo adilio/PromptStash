@@ -145,28 +145,28 @@ See `src/lib/markdown.ts` for configuration.
 Production should be served from:
 
 ```text
-https://prompstash.4dl.ca
+https://promptstash.4dl.ca
 ```
 
 For Netlify with external DNS:
 
-1. In Netlify, open the PromptStash site and add `prompstash.4dl.ca` as a custom domain.
+1. In Netlify, open the PromptStash site and add `promptstash.4dl.ca` as a custom domain.
 2. In the DNS provider for `4dl.ca`, create a CNAME record:
 
    ```text
    Type:  CNAME
-   Name:  prompstash
+   Name:  promptstash
    Value: promptstash.netlify.app
    TTL:   Auto
    ```
 
-3. After DNS propagates, enable/verify the Netlify TLS certificate for `prompstash.4dl.ca`.
+3. After DNS propagates, enable/verify the Netlify TLS certificate for `promptstash.4dl.ca`.
 4. In Supabase Auth URL Configuration, set:
 
    ```text
-   Site URL: https://prompstash.4dl.ca
+   Site URL: https://promptstash.4dl.ca
    Redirect URLs:
-   https://prompstash.4dl.ca/**
+   https://promptstash.4dl.ca/**
    http://localhost:5173/**
    ```
 
