@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileText, Filter, X, Trash2 } from 'lucide-react';
@@ -64,7 +64,6 @@ export function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const { showPreview, hidePreview, updatePreviewPosition } = useDragPreview();
   const promptsQuery = useQuery({
     queryKey: promptKeys.list(currentTeamId, debouncedSearchQuery),
@@ -135,12 +134,6 @@ export function Dashboard() {
     key: 'n',
     ctrlKey: true,
     callback: navigateToNewPrompt,
-  });
-
-  useKeyboardShortcut({
-    key: 'k',
-    ctrlKey: true,
-    callback: () => searchInputRef.current?.focus(),
   });
 
   useEffect(() => {
@@ -365,7 +358,6 @@ export function Dashboard() {
         <div className="mt-4 space-y-2">
           <div className="flex gap-2">
             <Input
-              ref={searchInputRef}
               placeholder="Search title and content"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

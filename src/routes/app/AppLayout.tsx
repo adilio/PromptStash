@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Shell } from '@/components/Shell';
 import { Sidebar } from '@/components/Sidebar';
 import { Loading } from '@/components/Loading';
+import { CommandPalette } from '@/components/CommandPalette';
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -22,6 +23,7 @@ export function AppLayout() {
   const [loading, setLoading] = useState(true);
   const [currentTeamId, setCurrentTeamId] = useState<string>();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [folderDropHandler, setFolderDropHandler] = useState<((folderId: string | null) => void) | undefined>();
   const navigate = useNavigate();
 
@@ -100,6 +102,14 @@ export function AppLayout() {
           }}
         />
       </main>
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        currentTeamId={currentTeamId}
+        currentFolderId={currentFolderId}
+        onFolderChange={setCurrentFolderId}
+        onNewPrompt={navigateToNewPrompt}
+      />
     </Shell>
   );
 }

@@ -94,13 +94,13 @@ Notes: Added persistent sidebar "New Prompt" action, `/app/prompts/new` route, a
 
 ### 6. Command palette with `cmdk`
 
-- [ ] shadcn/ui includes a `<Command>` component built on cmdk — confirm it is available or add it
-- [ ] Build a `<CommandPalette>` component that opens on `Cmd+K` / `Ctrl+K`
-- [ ] Palette should support: fuzzy search across prompt titles, "New Prompt" action, navigate to folder
-- [ ] Register the palette in the main app layout so it is available on all authenticated routes
-- [ ] Run `npm run build` — confirm no errors
+- [x] shadcn/ui includes a `<Command>` component built on cmdk — confirm it is available or add it
+- [x] Build a `<CommandPalette>` component that opens on `Cmd+K` / `Ctrl+K`
+- [x] Palette should support: fuzzy search across prompt titles, "New Prompt" action, navigate to folder
+- [x] Register the palette in the main app layout so it is available on all authenticated routes
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Confirmed existing `src/components/ui/command.tsx`, added `CommandPalette` with prompt title search, New Prompt action, and folder navigation, registered it in `AppLayout`, and removed the old Dashboard `Ctrl+K` search focus conflict. Verified with `npm run lint` and `npm run build`.
 
 ---
 
