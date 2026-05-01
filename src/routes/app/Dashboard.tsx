@@ -11,7 +11,6 @@ import { listFolders } from '@/api/folders';
 import { listTags } from '@/api/tags';
 import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useDragPreview } from '@/hooks/useDragPreview';
 import { promptKeys } from '@/lib/queryClient';
 import type { PromptWithTags, Folder, Tag as TagType } from '@/lib/types';
@@ -173,13 +172,93 @@ function PromptListRow({
   );
 }
 
-function EmptyDashboard({ onNewPrompt }: { onNewPrompt: () => void }) {
-  const recipes = [
-    { title: 'Code review companion', sub: 'Senior-engineer style review prompt' },
-    { title: 'Meeting recap', sub: 'Transcript → decisions + action items' },
-    { title: 'Cold outreach', sub: 'Conversational, low-pressure email' },
-    { title: 'Research synthesizer', sub: 'Themes + verbatim quotes + signals' },
-  ];
+interface Template {
+  title: string;
+  sub: string;
+  body: string;
+}
+
+const STARTER_TEMPLATES: Template[] = [
+  {
+    title: 'Code review companion',
+    sub: 'Senior-engineer style review prompt',
+    body: `You are a senior software engineer conducting a thorough code review. Analyze the following code with a focus on correctness, readability, maintainability, and performance.
+
+\`\`\`{{language}}
+{{code}}
+\`\`\`
+
+Review criteria:
+- **Correctness**: Are there any bugs, edge cases, or logical errors?
+- **Readability**: Is the code clear and self-documenting? Are names meaningful?
+- **Maintainability**: Is there duplication? Are abstractions appropriate?
+- **Performance**: Are there any obvious inefficiencies?
+- **Security**: Are there any potential vulnerabilities?
+
+Provide specific, actionable feedback. For each issue, explain *why* it matters and suggest a concrete fix. Note what's done well too.`,
+  },
+  {
+    title: 'Meeting recap',
+    sub: 'Transcript → decisions + action items',
+    body: `Convert the following meeting transcript into a clean recap.
+
+<transcript>
+{{transcript}}
+</transcript>
+
+Format your output as:
+
+## Summary
+One paragraph, 2–3 sentences maximum.
+
+## Decisions
+- Bulleted list of decisions made
+
+## Action items
+| Owner | Action | Due |
+|-------|--------|-----|
+
+## Open questions
+Items that need follow-up but weren't resolved.`,
+  },
+  {
+    title: 'Cold outreach',
+    sub: 'Conversational, low-pressure email',
+    body: `Write a short, conversational cold outreach email. Avoid sounding like a template.
+
+About me: {{sender_background}}
+About them: {{recipient_name}} at {{company}}, {{recipient_role}}
+My goal: {{goal}}
+One specific hook: {{personalization_detail}}
+
+Guidelines:
+- Under 100 words in the body
+- No buzzwords or hype
+- One clear ask in the final line
+- Subject line: specific and non-spammy`,
+  },
+  {
+    title: 'Research synthesizer',
+    sub: 'Themes + verbatim quotes + signals',
+    body: `Synthesize the following research material into a structured analysis.
+
+<material>
+{{research_material}}
+</material>
+
+## Key themes
+For each theme: a one-sentence label, 2–3 supporting points, and one verbatim quote from the material.
+
+## Signals worth watching
+Emerging patterns or tensions that don't fit neatly into the themes above.
+
+## Gaps
+What important questions does this material *not* answer?`,
+  },
+];
+
+function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) => void }) {
+  const recipes = STARTER_TEMPLATES;
   return (
     <div
       style={{
@@ -227,7 +306,7 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: () => void }) {
       </p>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
         <button
-          onClick={onNewPrompt}
+          onClick={() => onNewPrompt()}
           style={{
             height: 34,
             padding: '0 12px',
@@ -272,7 +351,7 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: () => void }) {
           {recipes.map((r, i) => (
             <button
               key={i}
-              onClick={onNewPrompt}
+              onClick={() => onNewPrompt(r)}
               style={{
                 border: '1px solid var(--ps-hairline)',
                 background: 'var(--ps-bg-elev)',
@@ -377,18 +456,16 @@ export function Dashboard() {
     return list;
   }, [prompts, selectedFolder, selectedTags]);
 
-  const navigateToNewPrompt = () => {
+  const navigateToNewPrompt = (template?: Template) => {
     const activeFolderId = selectedFolder ?? currentFolderId;
     const search = activeFolderId ? `?folder=${encodeURIComponent(activeFolderId)}` : '';
-    navigate(`/app/prompts/new${search}`);
+    navigate(`/app/prompts/new${search}`, template ? { state: { initialTitle: template.title, initialBody: template.body } } : undefined);
   };
 
   const handleFolderFilterChange = (nextFolderId: string | null) => {
     setSelectedFolder(nextFolderId);
     setCurrentFolderId?.(nextFolderId);
   };
-
-  useKeyboardShortcut({ key: 'n', ctrlKey: true, callback: navigateToNewPrompt });
 
   useEffect(() => {
     if (promptsQuery.error) {
@@ -560,7 +637,7 @@ export function Dashboard() {
             onImportComplete={() => void promptsQuery.refetch()}
           />
           <button
-            onClick={navigateToNewPrompt}
+            onClick={() => navigateToNewPrompt()}
             style={{
               height: 28,
               padding: '0 10px',

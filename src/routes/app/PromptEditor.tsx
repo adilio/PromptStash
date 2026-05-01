@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { useParams, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext, useSearchParams, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Share2, Copy, Play } from 'lucide-react';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
@@ -22,11 +22,13 @@ type UpdatePromptPatch = Parameters<typeof updatePrompt>[1];
 export function PromptEditor() {
   const { promptId } = useParams<{ promptId: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const locationState = location.state as { initialTitle?: string; initialBody?: string } | null;
   const { currentTeamId } = useOutletContext<ContextType>();
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
+  const [title, setTitle] = useState(locationState?.initialTitle ?? '');
+  const [body, setBody] = useState(locationState?.initialBody ?? '');
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);

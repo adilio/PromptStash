@@ -502,7 +502,7 @@ export function Settings() {
             </p>
             <SettingsCard>
               {[
-                ['New prompt', '⌘ N'],
+                ['New prompt', 'N'],
                 ['Save', '⌘ S'],
                 ['Search', '⌘ K'],
                 ['Toggle theme', '⌘ ⇧ L'],

@@ -68,6 +68,24 @@ export function SignIn() {
   const requestedRedirectPath = searchParams.get('redirect');
   const redirectPath = requestedRedirectPath?.startsWith('/') ? requestedRedirectPath : '/app';
 
+  const handleOAuth = async (provider: 'google' | 'github') => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}${redirectPath}` },
+      });
+      if (error) throw error;
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Authentication failed',
+        variant: 'destructive',
+      });
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -368,7 +386,7 @@ export function SignIn() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button type="button" style={oauthBtnStyle}>
+            <button type="button" style={oauthBtnStyle} onClick={() => handleOAuth('google')} disabled={loading}>
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <path
                   fill="#EA4335"
@@ -377,7 +395,7 @@ export function SignIn() {
               </svg>
               Google
             </button>
-            <button type="button" style={oauthBtnStyle}>
+            <button type="button" style={oauthBtnStyle} onClick={() => handleOAuth('github')} disabled={loading}>
               <svg
                 viewBox="0 0 24 24"
                 width="16"
