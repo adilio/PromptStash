@@ -58,15 +58,15 @@ Notes: Generated live Supabase types with `npx supabase gen types typescript --p
 
 ### 3. Add `@tanstack/react-query`
 
-- [ ] Install `@tanstack/react-query`
-- [ ] Add `QueryClientProvider` wrapping the app in `src/main.tsx`
-- [ ] Migrate the prompts list fetch to `useQuery` — find the relevant file in `src/api/` or `src/routes/app/` and update it
-- [ ] Migrate the single prompt fetch (used in the editor/detail view) to `useQuery`
-- [ ] Migrate prompt create/update/delete to `useMutation` with basic error handling
-- [ ] Do not migrate any other fetches yet
-- [ ] Run `npm run build` — confirm no errors
+- [x] Install `@tanstack/react-query`
+- [x] Add `QueryClientProvider` wrapping the app in `src/main.tsx`
+- [x] Migrate the prompts list fetch to `useQuery` — find the relevant file in `src/api/` or `src/routes/app/` and update it
+- [x] Migrate the single prompt fetch (used in the editor/detail view) to `useQuery`
+- [x] Migrate prompt create/update/delete to `useMutation` with basic error handling
+- [x] Do not migrate any other fetches yet
+- [x] Run `npm run build` — confirm no errors
 
-Notes: _
+Notes: Added a shared QueryClient and prompt query keys, migrated Dashboard prompt list/delete/move, PromptView detail/delete, and PromptEditor detail/create/update/autosave to React Query. Left folders/tags/shares/version fetches on existing code. Verified with `npm run lint` and `npm run build`.
 
 ---
 

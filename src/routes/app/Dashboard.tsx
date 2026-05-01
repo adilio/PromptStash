@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileText, Filter, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useDragPreview } from '@/hooks/useDragPreview';
+import { promptKeys } from '@/lib/queryClient';
 import type { PromptWithTags, Folder, Tag } from '@/lib/types';
 
 interface ContextType {
@@ -25,10 +27,10 @@ interface ContextType {
   setFolderDropHandler?: (handler: ((folderId: string | null) => void) | undefined) => void;
 }
 
+const EMPTY_PROMPTS: PromptWithTags[] = [];
+
 export function Dashboard() {
   const { currentTeamId, setFolderDropHandler } = useOutletContext<ContextType>();
-  const [prompts, setPrompts] = useState<PromptWithTags[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [deletePromptId, setDeletePromptId] = useState<string | null>(null);
@@ -52,9 +54,39 @@ export function Dashboard() {
   const [showFilters, setShowFilters] = useState(false);
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { showPreview, hidePreview, updatePreviewPosition } = useDragPreview();
+  const promptsQuery = useQuery({
+    queryKey: promptKeys.list(currentTeamId, debouncedSearchQuery),
+    queryFn: () => listPrompts(currentTeamId!, undefined, debouncedSearchQuery),
+    enabled: !!currentTeamId,
+  });
+  const prompts = promptsQuery.data ?? EMPTY_PROMPTS;
+  const loading = promptsQuery.isLoading;
+
+  const deletePromptMutation = useMutation({
+    mutationFn: deletePrompt,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: promptKeys.lists() });
+    },
+  });
+
+  const updatePromptMutation = useMutation({
+    mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
+      updatePrompt(id, { folder_id: folderId }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<PromptWithTags[]>(
+        promptKeys.list(currentTeamId, debouncedSearchQuery),
+        (previous) =>
+          previous?.map((prompt) =>
+            prompt.id === updated.id ? { ...prompt, folder_id: updated.folder_id } : prompt
+          )
+      );
+      queryClient.invalidateQueries({ queryKey: promptKeys.detail(updated.id) });
+    },
+  });
 
   // Filter prompts based on selected folder and tags
   const filteredPrompts = useMemo(() => {
@@ -93,13 +125,15 @@ export function Dashboard() {
   });
 
   useEffect(() => {
-    if (currentTeamId) {
-      loadPrompts();
-    } else {
-      setLoading(false);
-      setPrompts([]);
+    if (promptsQuery.error) {
+      toast({
+        title: 'Error',
+        description:
+          promptsQuery.error instanceof Error ? promptsQuery.error.message : 'Unknown error',
+        variant: 'destructive',
+      });
     }
-  }, [currentTeamId, debouncedSearchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [promptsQuery.error, toast]);
 
   useEffect(() => {
     if (currentTeamId) {
@@ -108,22 +142,8 @@ export function Dashboard() {
     }
   }, [currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadPrompts = async () => {
-    if (!currentTeamId) return;
-
-    setLoading(true);
-    try {
-      const data = await listPrompts(currentTeamId, undefined, debouncedSearchQuery);
-      setPrompts(data);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+  const refetchPrompts = () => {
+    void promptsQuery.refetch();
   };
 
   const loadFolders = async () => {
@@ -160,8 +180,7 @@ export function Dashboard() {
     if (!deletePromptId) return;
 
     try {
-      await deletePrompt(deletePromptId);
-      setPrompts((prev) => prev.filter((p) => p.id !== deletePromptId));
+      await deletePromptMutation.mutateAsync(deletePromptId);
       toast({
         title: 'Success',
         description: 'Prompt deleted',
@@ -202,9 +221,8 @@ export function Dashboard() {
 
     try {
       await Promise.all(
-        Array.from(selectedPrompts).map((id) => deletePrompt(id))
+        Array.from(selectedPrompts).map((id) => deletePromptMutation.mutateAsync(id))
       );
-      setPrompts((prev) => prev.filter((p) => !selectedPrompts.has(p.id)));
       setSelectedPrompts(new Set());
       setBulkMode(false);
       toast({
@@ -254,16 +272,7 @@ export function Dashboard() {
     if (!draggedPrompt) return;
 
     try {
-      await updatePrompt(draggedPrompt.id, {
-        folder_id: folderId,
-      });
-
-      // Update local state
-      setPrompts((prev) =>
-        prev.map((p) =>
-          p.id === draggedPrompt.id ? { ...p, folder_id: folderId } : p
-        )
-      );
+      await updatePromptMutation.mutateAsync({ id: draggedPrompt.id, folderId });
 
       toast({
         title: 'Success',
@@ -312,7 +321,7 @@ export function Dashboard() {
                 Delete {selectedPrompts.size}
               </Button>
             )}
-            <ExportImportDialog teamId={currentTeamId!} onImportComplete={loadPrompts} />
+            <ExportImportDialog teamId={currentTeamId!} onImportComplete={refetchPrompts} />
             <Button
               variant={bulkMode ? "secondary" : "outline"}
               onClick={() => {

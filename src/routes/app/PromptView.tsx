@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Edit, Share2, Trash2, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
@@ -9,48 +10,49 @@ import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
 import { Loading } from '@/components/Loading';
 import { getPrompt, deletePrompt } from '@/api/prompts';
 import { useToast } from '@/components/ui/use-toast';
+import { promptKeys } from '@/lib/queryClient';
 import type { PromptWithTags } from '@/lib/types';
 
 export function PromptView() {
   const { promptId } = useParams<{ promptId: string }>();
-  const [prompt, setPrompt] = useState<PromptWithTags | null>(null);
-  const [loading, setLoading] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const promptQuery = useQuery({
+    queryKey: promptKeys.detail(promptId),
+    queryFn: () => getPrompt(promptId!),
+    enabled: !!promptId,
+  });
+  const prompt = promptQuery.data;
+  const loading = promptQuery.isLoading;
+
+  const deletePromptMutation = useMutation({
+    mutationFn: deletePrompt,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: promptKeys.lists() });
+    },
+  });
 
   useEffect(() => {
-    if (promptId) {
-      loadPrompt();
-    }
-  }, [promptId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadPrompt = async () => {
-    if (!promptId) return;
-
-    setLoading(true);
-    try {
-      const data = await getPrompt(promptId);
-      setPrompt(data);
-    } catch (error) {
+    if (promptQuery.error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description:
+          promptQuery.error instanceof Error ? promptQuery.error.message : 'Unknown error',
         variant: 'destructive',
       });
       navigate('/app');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [navigate, promptQuery.error, toast]);
 
   const handleDelete = async () => {
     if (!promptId) return;
 
     try {
-      await deletePrompt(promptId);
+      await deletePromptMutation.mutateAsync(promptId);
       toast({
         title: 'Success',
         description: 'Prompt deleted',
@@ -63,6 +65,11 @@ export function PromptView() {
         variant: 'destructive',
       });
     }
+  };
+
+  const handlePromptUpdate = (updated: PromptWithTags) => {
+    queryClient.setQueryData(promptKeys.detail(promptId), updated);
+    queryClient.invalidateQueries({ queryKey: promptKeys.lists() });
   };
 
   if (loading) {
@@ -125,13 +132,13 @@ export function PromptView() {
             prompt={prompt}
             open={shareOpen}
             onOpenChange={setShareOpen}
-            onUpdate={setPrompt}
+            onUpdate={handlePromptUpdate}
           />
           <VersionHistoryDialog
             promptId={promptId!}
             open={versionHistoryOpen}
             onOpenChange={setVersionHistoryOpen}
-            onRestore={loadPrompt}
+            onRestore={() => void promptQuery.refetch()}
           />
         </>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,16 +15,18 @@ import { listTags, createTag, addTagToPrompt, removeTagFromPrompt } from '@/api/
 import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { promptKeys } from '@/lib/queryClient';
 import type { Tag } from '@/lib/types';
 
 interface ContextType {
   currentTeamId?: string;
 }
 
+type UpdatePromptPatch = Parameters<typeof updatePrompt>[1];
+
 export function PromptEditor() {
   const { promptId } = useParams<{ promptId: string }>();
   const { currentTeamId } = useOutletContext<ContextType>();
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [title, setTitle] = useState('');
@@ -32,21 +35,63 @@ export function PromptEditor() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const initialLoadRef = useRef(true);
 
   const isNew = !promptId || promptId === 'new';
   const debouncedTitle = useDebounce(title, 2000);
   const debouncedBody = useDebounce(body, 2000);
+  const promptQuery = useQuery({
+    queryKey: promptKeys.detail(promptId),
+    queryFn: () => getPrompt(promptId!),
+    enabled: !!promptId && !isNew,
+  });
+  const loading = promptQuery.isLoading;
+
+  const createPromptMutation = useMutation({
+    mutationFn: createPrompt,
+    onSuccess: (created) => {
+      queryClient.setQueryData(promptKeys.detail(created.id), created);
+      queryClient.invalidateQueries({ queryKey: promptKeys.lists() });
+    },
+  });
+
+  const updatePromptMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdatePromptPatch }) =>
+      updatePrompt(id, patch),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(promptKeys.detail(updated.id), updated);
+      queryClient.invalidateQueries({ queryKey: promptKeys.lists() });
+    },
+  });
 
   useEffect(() => {
-    if (promptId && !isNew) {
-      loadPrompt();
-    }
     if (currentTeamId) {
       loadTags();
     }
   }, [promptId, currentTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (promptQuery.data) {
+      setTitle(promptQuery.data.title);
+      setBody(promptQuery.data.body_md);
+      setSelectedTags(promptQuery.data.tags || []);
+      initialLoadRef.current = true;
+    }
+  }, [promptQuery.data]);
+
+  useEffect(() => {
+    if (promptQuery.error) {
+      toast({
+        title: 'Error',
+        description:
+          promptQuery.error instanceof Error ? promptQuery.error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+      navigate('/app');
+    }
+  }, [navigate, promptQuery.error, toast]);
 
   const loadTags = async () => {
     if (!currentTeamId) return;
@@ -70,9 +115,12 @@ export function PromptEditor() {
 
       setAutoSaving(true);
       try {
-        await updatePrompt(promptId!, {
-          title: debouncedTitle,
-          body_md: debouncedBody,
+        await updatePromptMutation.mutateAsync({
+          id: promptId!,
+          patch: {
+            title: debouncedTitle,
+            body_md: debouncedBody,
+          },
         });
         setLastSaved(new Date());
       } catch (error) {
@@ -87,27 +135,6 @@ export function PromptEditor() {
       autoSave();
     }
   }, [debouncedTitle, debouncedBody]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadPrompt = async () => {
-    if (!promptId || isNew) return;
-
-    setLoading(true);
-    try {
-      const data = await getPrompt(promptId);
-      setTitle(data.title);
-      setBody(data.body_md);
-      setSelectedTags(data.tags || []);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      });
-      navigate('/app');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateTag = async (name: string): Promise<Tag> => {
     if (!currentTeamId) throw new Error('No team selected');
@@ -170,7 +197,7 @@ export function PromptEditor() {
     setSaving(true);
     try {
       if (isNew) {
-        const created = await createPrompt({
+        const created = await createPromptMutation.mutateAsync({
           team_id: currentTeamId!,
           title,
           body_md: body,
@@ -181,9 +208,12 @@ export function PromptEditor() {
         });
         navigate(`/app/p/${created.id}`);
       } else {
-        await updatePrompt(promptId!, {
-          title,
-          body_md: body,
+        await updatePromptMutation.mutateAsync({
+          id: promptId!,
+          patch: {
+            title,
+            body_md: body,
+          },
         });
         toast({
           title: 'Success',
