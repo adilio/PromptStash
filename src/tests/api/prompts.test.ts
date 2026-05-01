@@ -10,9 +10,8 @@ import {
   makePromptPrivate,
 } from '@/api/prompts';
 import { supabase } from '@/lib/supabase';
-import type { MockSupabaseQuery, MockUser } from '../mocks/supabase';
+import type { MockSupabaseQuery } from '../mocks/supabase';
 
-// Mock supabase
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
@@ -22,10 +21,26 @@ vi.mock('@/lib/supabase', () => ({
   },
 }));
 
+function createQuery(result: { data?: unknown; error: Error | null }): MockSupabaseQuery {
+  const query: MockSupabaseQuery = {
+    select: vi.fn(() => query),
+    eq: vi.fn(() => query),
+    order: vi.fn(() => query),
+    ilike: vi.fn(() => query),
+    insert: vi.fn(() => query),
+    update: vi.fn(() => query),
+    delete: vi.fn(() => query),
+    single: vi.fn().mockResolvedValue(result),
+    then: (resolve: (value: typeof result) => void, reject: (reason: unknown) => void) =>
+      Promise.resolve(result).then(resolve, reject),
+  };
+
+  return query;
+}
+
 describe('Prompts API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock supabase.auth.getUser to return a user
     vi.mocked(supabase.auth.getUser).mockResolvedValue({
       data: { user: { id: 'user1' } },
       error: null,
@@ -38,69 +53,41 @@ describe('Prompts API', () => {
         { id: '1', title: 'Test Prompt', team_id: 'team1' },
         { id: '2', title: 'Another Prompt', team_id: 'team1' },
       ];
+      const query = createQuery({ data: mockPrompts, error: null });
 
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        ilike: vi.fn().mockResolvedValue({ data: mockPrompts, error: null }),
-      };
-
-      const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       const result = await listPrompts('team1');
 
       expect(supabase.from).toHaveBeenCalledWith('prompts');
-      expect(mockSelect).toHaveBeenCalledWith('*');
-      expect(mockQuery.eq).toHaveBeenCalledWith('team_id', 'team1');
-      expect(mockQuery.order).toHaveBeenCalledWith('updated_at', { ascending: false });
+      expect(query.select).toHaveBeenCalledWith('*');
+      expect(query.eq).toHaveBeenCalledWith('team_id', 'team1');
+      expect(query.order).toHaveBeenCalledWith('updated_at', { ascending: false });
       expect(result).toEqual(mockPrompts);
     });
 
     it('should filter by folder', async () => {
-      const mockPrompts = [{ id: '1', title: 'Test', folder_id: 'folder1' }];
-
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockPrompts, error: null }),
-      };
-
-      const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
+      const query = createQuery({ data: [], error: null });
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       await listPrompts('team1', 'folder1');
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('team_id', 'team1');
-      expect(mockQuery.eq).toHaveBeenCalledWith('folder_id', 'folder1');
+      expect(query.eq).toHaveBeenCalledWith('team_id', 'team1');
+      expect(query.eq).toHaveBeenCalledWith('folder_id', 'folder1');
     });
 
     it('should filter by search query', async () => {
-      const mockPrompts = [{ id: '1', title: 'Searchable Prompt' }];
-
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        ilike: vi.fn().mockResolvedValue({ data: mockPrompts, error: null }),
-      };
-
-      const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
+      const query = createQuery({ data: [], error: null });
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       await listPrompts('team1', undefined, 'search');
 
-      expect(mockQuery.ilike).toHaveBeenCalledWith('title', '%search%');
+      expect(query.ilike).toHaveBeenCalledWith('title', '%search%');
     });
 
     it('should throw error on failure', async () => {
-      const mockError = new Error('Database error');
-
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: null, error: mockError }),
-      };
-
-      const mockSelect = vi.fn().mockReturnValue(mockQuery);
-      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as MockSupabaseQuery);
+      const query = createQuery({ data: null, error: new Error('Database error') });
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       await expect(listPrompts('team1')).rejects.toThrow('Database error');
     });
@@ -113,29 +100,19 @@ describe('Prompts API', () => {
         title: 'Test Prompt',
         body_md: 'Content',
       };
-
       const mockTags = [
         { tag_id: 't1', tags: { id: 't1', name: 'tag1' } },
         { tag_id: 't2', tags: { id: 't2', name: 'tag2' } },
       ];
+      const promptQuery = createQuery({ data: mockPrompt, error: null });
+      const tagsQuery = createQuery({ data: mockTags, error: null });
 
-      const mockPromptQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      const mockTagsQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: mockTags, error: null }),
-      };
-
-      vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValueOnce(promptQuery).mockReturnValueOnce(tagsQuery);
 
       const result = await getPrompt('1');
 
+      expect(promptQuery.eq).toHaveBeenCalledWith('id', '1');
+      expect(tagsQuery.eq).toHaveBeenCalledWith('prompt_id', '1');
       expect(result).toEqual({
         ...mockPrompt,
         tags: [
@@ -146,22 +123,9 @@ describe('Prompts API', () => {
     });
 
     it('should handle prompts without tags', async () => {
-      const mockPrompt = { id: '1', title: 'Test' };
-
-      const mockPromptQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      const mockTagsQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-      };
-
       vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
+        .mockReturnValueOnce(createQuery({ data: { id: '1', title: 'Test' }, error: null }))
+        .mockReturnValueOnce(createQuery({ data: [], error: null }));
 
       const result = await getPrompt('1');
 
@@ -171,56 +135,33 @@ describe('Prompts API', () => {
 
   describe('getPromptBySlug', () => {
     it('should get a public prompt by slug', async () => {
-      const mockPrompt = {
-        id: '1',
-        public_slug: 'abc123',
-        visibility: 'public',
-      };
-
-      const mockPromptQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      const mockTagsQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-      };
+      const promptQuery = createQuery({
+        data: { id: '1', public_slug: 'abc123', visibility: 'public' },
+        error: null,
+      });
 
       vi.mocked(supabase.from)
-        .mockReturnValueOnce({ select: mockPromptQuery.select } as MockSupabaseQuery)
-        .mockReturnValueOnce({ select: mockTagsQuery.select } as MockSupabaseQuery);
+        .mockReturnValueOnce(promptQuery)
+        .mockReturnValueOnce(createQuery({ data: [], error: null }));
 
       const result = await getPromptBySlug('abc123');
 
-      expect(mockPromptQuery.eq).toHaveBeenCalledWith('public_slug', 'abc123');
-      expect(mockPromptQuery.eq).toHaveBeenCalledWith('visibility', 'public');
+      expect(promptQuery.eq).toHaveBeenCalledWith('public_slug', 'abc123');
+      expect(promptQuery.eq).toHaveBeenCalledWith('visibility', 'public');
       expect(result.id).toBe('1');
     });
   });
 
   describe('createPrompt', () => {
     it('should create a new prompt', async () => {
-      const mockUser = { id: 'user1' };
       const mockPrompt = {
         id: '1',
         title: 'New Prompt',
         body_md: 'Content',
       };
+      const query = createQuery({ data: mockPrompt, error: null });
 
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as MockUser },
-        error: null,
-      });
-
-      const mockQuery = {
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       const result = await createPrompt({
         team_id: 'team1',
@@ -228,7 +169,7 @@ describe('Prompts API', () => {
         body_md: 'Content',
       });
 
-      expect(mockQuery.insert).toHaveBeenCalledWith({
+      expect(query.insert).toHaveBeenCalledWith({
         team_id: 'team1',
         folder_id: null,
         owner_id: 'user1',
@@ -262,43 +203,33 @@ describe('Prompts API', () => {
         title: 'Updated Title',
         body_md: 'Updated content',
       };
+      const query = createQuery({ data: mockUpdated, error: null });
 
-      const mockQuery = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockUpdated, error: null }),
-      };
-
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       const result = await updatePrompt('1', {
         title: 'Updated Title',
         body_md: 'Updated content',
       });
 
-      expect(mockQuery.update).toHaveBeenCalledWith({
+      expect(query.update).toHaveBeenCalledWith({
         title: 'Updated Title',
         body_md: 'Updated content',
       });
-      expect(mockQuery.eq).toHaveBeenCalledWith('id', '1');
+      expect(query.eq).toHaveBeenCalledWith('id', '1');
       expect(result).toEqual(mockUpdated);
     });
   });
 
   describe('deletePrompt', () => {
     it('should delete a prompt', async () => {
-      const mockQuery = {
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      };
-
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      const query = createQuery({ error: null });
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       await deletePrompt('1');
 
-      expect(mockQuery.delete).toHaveBeenCalled();
-      expect(mockQuery.eq).toHaveBeenCalledWith('id', '1');
+      expect(query.delete).toHaveBeenCalled();
+      expect(query.eq).toHaveBeenCalledWith('id', '1');
     });
   });
 
@@ -307,21 +238,15 @@ describe('Prompts API', () => {
       const mockPrompt = {
         id: '1',
         visibility: 'public',
-        public_slug: expect.any(String),
+        public_slug: 'generated-slug',
       };
+      const query = createQuery({ data: mockPrompt, error: null });
 
-      const mockQuery = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       const result = await makePromptPublic('1');
 
-      expect(mockQuery.update).toHaveBeenCalledWith({
+      expect(query.update).toHaveBeenCalledWith({
         visibility: 'public',
         public_slug: expect.any(String),
       });
@@ -337,19 +262,13 @@ describe('Prompts API', () => {
         visibility: 'private',
         public_slug: null,
       };
+      const query = createQuery({ data: mockPrompt, error: null });
 
-      const mockQuery = {
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockPrompt, error: null }),
-      };
-
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      vi.mocked(supabase.from).mockReturnValue(query);
 
       const result = await makePromptPrivate('1');
 
-      expect(mockQuery.update).toHaveBeenCalledWith({
+      expect(query.update).toHaveBeenCalledWith({
         visibility: 'private',
         public_slug: null,
       });

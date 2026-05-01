@@ -65,13 +65,13 @@ describe('Dashboard', () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    render(
+    const { container } = render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('should load and display prompts', async () => {
@@ -142,9 +142,8 @@ describe('Dashboard', () => {
       expect(screen.getByText('First Prompt')).toBeInTheDocument();
     });
 
-    // Click delete button
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    await user.click(deleteButtons[0]);
+    await user.click(screen.getAllByRole('button', { name: /prompt actions/i })[0]);
+    await user.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     // Confirm deletion
     const confirmButton = await screen.findByRole('button', { name: /delete/i });

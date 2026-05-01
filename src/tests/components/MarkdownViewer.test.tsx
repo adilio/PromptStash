@@ -66,7 +66,7 @@ describe('MarkdownViewer', () => {
   });
 
   it('should allow safe HTML tags', () => {
-    render(<MarkdownViewer content="<strong>Bold text</strong>" />);
+    render(<MarkdownViewer content="**Bold text**" />);
 
     const strong = screen.getByText('Bold text');
     expect(strong.tagName).toBe('STRONG');

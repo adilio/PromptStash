@@ -100,15 +100,13 @@ describe('Folders API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      const result = await createFolder({
-        team_id: 'team1',
-        name: 'New Folder',
-      });
+      const result = await createFolder('team1', 'New Folder');
 
       expect(mockQuery.insert).toHaveBeenCalledWith({
         team_id: 'team1',
         name: 'New Folder',
         parent_id: null,
+        created_by: 'user1',
       });
       expect(result).toEqual(mockFolder);
     });
@@ -129,16 +127,13 @@ describe('Folders API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      const result = await createFolder({
-        team_id: 'team1',
-        name: 'Nested Folder',
-        parent_id: '1',
-      });
+      const result = await createFolder('team1', 'Nested Folder', '1');
 
       expect(mockQuery.insert).toHaveBeenCalledWith({
         team_id: 'team1',
         name: 'Nested Folder',
         parent_id: '1',
+        created_by: 'user1',
       });
       expect(result.parent_id).toBe('1');
     });
@@ -160,7 +155,7 @@ describe('Folders API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      const result = await updateFolder('1', { name: 'Updated Name' });
+      const result = await updateFolder('1', 'Updated Name');
 
       expect(mockQuery.update).toHaveBeenCalledWith({ name: 'Updated Name' });
       expect(mockQuery.eq).toHaveBeenCalledWith('id', '1');

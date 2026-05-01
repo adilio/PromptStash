@@ -44,7 +44,7 @@ describe('Settings', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/settings/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     });
   });
 
@@ -73,7 +73,7 @@ describe('Settings', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/settings/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     });
   });
 
@@ -89,7 +89,7 @@ describe('Settings', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/settings/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     });
   });
 });

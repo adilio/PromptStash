@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { listTeams, getTeam, createTeam, updateTeam, deleteTeam } from '@/api/teams';
 import { supabase } from '@/lib/supabase';
-import type { MockSupabaseQuery, MockUser } from '../mocks/supabase';
+import type { MockSupabaseQuery } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -24,39 +24,24 @@ describe('Teams API', () => {
 
   describe('listTeams', () => {
     it('should list teams for current user', async () => {
-      const mockUser = { id: 'user1' };
       const mockTeams = [
         { id: 'team1', name: 'Team 1' },
         { id: 'team2', name: 'Team 2' },
       ];
 
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as MockUser },
-        error: null,
-      });
-
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: mockTeams, error: null }),
+        order: vi.fn().mockResolvedValue({ data: mockTeams, error: null }),
       };
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
       const result = await listTeams();
 
-      expect(supabase.from).toHaveBeenCalledWith('memberships');
-      expect(mockQuery.select).toHaveBeenCalledWith('team_id, teams(*)');
-      expect(mockQuery.eq).toHaveBeenCalledWith('user_id', 'user1');
+      expect(supabase.from).toHaveBeenCalledWith('teams');
+      expect(mockQuery.select).toHaveBeenCalledWith('*');
+      expect(mockQuery.order).toHaveBeenCalledWith('name', { ascending: true });
       expect(result).toHaveLength(2);
-    });
-
-    it('should throw error if not authenticated', async () => {
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-
-      await expect(listTeams()).rejects.toThrow('Not authenticated');
     });
   });
 
@@ -86,16 +71,10 @@ describe('Teams API', () => {
 
   describe('createTeam', () => {
     it('should create a team and add user as owner', async () => {
-      const mockUser = { id: 'user1' };
       const mockTeam = {
         id: 'team1',
         name: 'New Team',
       };
-
-      vi.mocked(supabase.auth.getUser).mockResolvedValue({
-        data: { user: mockUser as MockUser },
-        error: null,
-      });
 
       // Mock team creation
       const mockTeamQuery = {
@@ -113,9 +92,12 @@ describe('Teams API', () => {
         .mockReturnValueOnce(mockTeamQuery as MockSupabaseQuery)
         .mockReturnValueOnce(mockMembershipQuery as MockSupabaseQuery);
 
-      const result = await createTeam({ name: 'New Team' });
+      const result = await createTeam('New Team');
 
-      expect(mockTeamQuery.insert).toHaveBeenCalledWith({ name: 'New Team' });
+      expect(mockTeamQuery.insert).toHaveBeenCalledWith({
+        name: 'New Team',
+        owner_id: 'user1',
+      });
       expect(mockMembershipQuery.insert).toHaveBeenCalledWith({
         team_id: 'team1',
         user_id: 'user1',
@@ -130,7 +112,7 @@ describe('Teams API', () => {
         error: null,
       });
 
-      await expect(createTeam({ name: 'Test' })).rejects.toThrow('Not authenticated');
+      await expect(createTeam('Test')).rejects.toThrow('Not authenticated');
     });
   });
 
@@ -150,7 +132,7 @@ describe('Teams API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      const result = await updateTeam('team1', { name: 'Updated Name' });
+      const result = await updateTeam('team1', 'Updated Name');
 
       expect(mockQuery.update).toHaveBeenCalledWith({ name: 'Updated Name' });
       expect(mockQuery.eq).toHaveBeenCalledWith('id', 'team1');

@@ -62,14 +62,12 @@ describe('Tags API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      const result = await createTag({
-        team_id: 'team1',
-        name: 'react',
-      });
+      const result = await createTag('team1', 'react');
 
       expect(mockQuery.insert).toHaveBeenCalledWith({
         team_id: 'team1',
         name: 'react',
+        created_by: 'user1',
       });
       expect(result).toEqual(mockTag);
     });
@@ -85,12 +83,7 @@ describe('Tags API', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
 
-      await expect(
-        createTag({
-          team_id: 'team1',
-          name: 'react',
-        })
-      ).rejects.toThrow('duplicate key value');
+      await expect(createTag('team1', 'react')).rejects.toThrow('duplicate key value');
     });
   });
 

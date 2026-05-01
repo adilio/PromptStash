@@ -45,11 +45,16 @@ export function PromptCard({ prompt, onEdit, onDelete, draggable = false, onDrag
         </div>
         <div className="flex items-center gap-1">
           {prompt.visibility === 'public' && (
-            <Globe className="h-3 w-3 text-muted-foreground" />
+            <Globe className="h-3 w-3 text-muted-foreground" aria-label="Public prompt" />
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Prompt actions"
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

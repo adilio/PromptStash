@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { PromptCard } from '@/components/PromptCard';
 import type { Prompt } from '@/lib/types';
 
@@ -18,18 +19,28 @@ const mockPrompt: Prompt = {
 };
 
 describe('PromptCard', () => {
-  it('should render prompt title', () => {
+  const renderPromptCard = (
+    props: Partial<React.ComponentProps<typeof PromptCard>> = {}
+  ) =>
     render(
-      <PromptCard prompt={mockPrompt} onEdit={vi.fn()} onDelete={vi.fn()} />
+      <MemoryRouter>
+        <PromptCard
+          prompt={mockPrompt}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          {...props}
+        />
+      </MemoryRouter>
     );
+
+  it('should render prompt title', () => {
+    renderPromptCard();
 
     expect(screen.getByText('Test Prompt')).toBeInTheDocument();
   });
 
   it('should render prompt content preview', () => {
-    render(
-      <PromptCard prompt={mockPrompt} onEdit={vi.fn()} onDelete={vi.fn()} />
-    );
+    renderPromptCard();
 
     expect(screen.getByText(/This is test content/)).toBeInTheDocument();
   });
@@ -38,11 +49,10 @@ describe('PromptCard', () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
 
-    render(
-      <PromptCard prompt={mockPrompt} onEdit={onEdit} onDelete={vi.fn()} />
-    );
+    renderPromptCard({ onEdit });
 
-    const editButton = screen.getByRole('button', { name: /edit/i });
+    await user.click(screen.getByRole('button', { name: /prompt actions/i }));
+    const editButton = screen.getByRole('menuitem', { name: /edit/i });
     await user.click(editButton);
 
     expect(onEdit).toHaveBeenCalledWith(mockPrompt);
@@ -52,11 +62,10 @@ describe('PromptCard', () => {
     const user = userEvent.setup();
     const onDelete = vi.fn();
 
-    render(
-      <PromptCard prompt={mockPrompt} onEdit={vi.fn()} onDelete={onDelete} />
-    );
+    renderPromptCard({ onDelete });
 
-    const deleteButton = screen.getByRole('button', { name: /delete/i });
+    await user.click(screen.getByRole('button', { name: /prompt actions/i }));
+    const deleteButton = screen.getByRole('menuitem', { name: /delete/i });
     await user.click(deleteButton);
 
     expect(onDelete).toHaveBeenCalledWith(mockPrompt);
@@ -69,11 +78,9 @@ describe('PromptCard', () => {
       public_slug: 'abc123',
     };
 
-    render(
-      <PromptCard prompt={publicPrompt} onEdit={vi.fn()} onDelete={vi.fn()} />
-    );
+    renderPromptCard({ prompt: publicPrompt });
 
-    expect(screen.getByText(/public/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/public prompt/i)).toBeInTheDocument();
   });
 
   it('should truncate long content', () => {
@@ -82,9 +89,7 @@ describe('PromptCard', () => {
       body_md: 'A'.repeat(500),
     };
 
-    render(
-      <PromptCard prompt={longPrompt} onEdit={vi.fn()} onDelete={vi.fn()} />
-    );
+    renderPromptCard({ prompt: longPrompt });
 
     const content = screen.getByText(/A+/);
     // Content should be truncated (not full 500 characters)
@@ -92,9 +97,7 @@ describe('PromptCard', () => {
   });
 
   it('should display updated date', () => {
-    render(
-      <PromptCard prompt={mockPrompt} onEdit={vi.fn()} onDelete={vi.fn()} />
-    );
+    renderPromptCard();
 
     // Should show some date information
     expect(screen.getByText(/updated/i)).toBeInTheDocument();
