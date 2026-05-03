@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Shell } from '@/components/Shell';
@@ -7,7 +7,9 @@ import { Sidebar } from '@/components/Sidebar';
 import { Loading } from '@/components/Loading';
 import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsHelp } from '@/components/ShortcutsHelp';
+import { TemplateGallery } from '@/components/TemplateGallery';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import type { Stage } from '@/lib/types';
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -51,7 +53,9 @@ export function AppLayout() {
   const [folderDropHandler, setFolderDropHandler] = useState<((folderId: string | null) => void) | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const handleResize = () => {
@@ -76,6 +80,22 @@ export function AppLayout() {
   const navigateToNewPrompt = () => {
     const search = currentFolderId ? `?folder=${encodeURIComponent(currentFolderId)}` : '';
     navigate(`/app/prompts/new${search}`);
+  };
+
+  const handleStageFilter = (stage: Stage) => {
+    const stages = searchParams.get('stages');
+    const currentStages = stages ? stages.split(',') as Stage[] : [];
+    const newStages = currentStages.includes(stage)
+      ? currentStages.filter(s => s !== stage)
+      : [...currentStages, stage];
+
+    if (newStages.length > 0) {
+      searchParams.set('stages', newStages.join(','));
+    } else {
+      searchParams.delete('stages');
+    }
+    setSearchParams(searchParams);
+    navigate('/app');
   };
 
   useEffect(() => {
@@ -194,6 +214,8 @@ export function AppLayout() {
             currentFolderId,
             setCurrentFolderId,
             setFolderDropHandler,
+            templateGalleryOpen,
+            setTemplateGalleryOpen,
           }}
         />
       </main>
@@ -204,8 +226,11 @@ export function AppLayout() {
         currentFolderId={currentFolderId}
         onFolderChange={setCurrentFolderId}
         onNewPrompt={navigateToNewPrompt}
+        onStageFilter={handleStageFilter}
+        onBrowseTemplates={() => setTemplateGalleryOpen(true)}
       />
       <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+      <TemplateGallery open={templateGalleryOpen} onClose={() => setTemplateGalleryOpen(false)} currentTeamId={currentTeamId} />
     </Shell>
   );
 }

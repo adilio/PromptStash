@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Folder, Plus, Filter, Package } from 'lucide-react';
+import { FileText, Folder, Plus, Filter, Package, BookOpen } from 'lucide-react';
 import { listFolders } from '@/api/folders';
 import { listPrompts } from '@/api/prompts';
 import { listBundles } from '@/api/bundles';
@@ -28,6 +28,7 @@ interface CommandPaletteProps {
   onFolderChange?: (folderId: string | null) => void;
   onNewPrompt: () => void;
   onStageFilter?: (stage: Stage) => void;
+  onBrowseTemplates?: () => void;
 }
 
 export function CommandPalette({
@@ -38,6 +39,7 @@ export function CommandPalette({
   onFolderChange,
   onNewPrompt,
   onStageFilter,
+  onBrowseTemplates,
 }: CommandPaletteProps) {
   const navigate = useNavigate();
   const promptsQuery = useQuery({
@@ -110,6 +112,12 @@ export function CommandPalette({
                 <span>New Prompt</span>
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)', fontFamily: '"JetBrains Mono", monospace' }}>N</span>
               </CommandItem>
+              {onBrowseTemplates && (
+                <CommandItem value="browse templates" onSelect={() => runCommand(onBrowseTemplates)}>
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  <span>Browse templates</span>
+                </CommandItem>
+              )}
             </CommandGroup>
             {showStageFilters && onStageFilter && (
               <CommandGroup heading="Filter by stage">

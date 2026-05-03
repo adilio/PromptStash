@@ -7,7 +7,6 @@ import { PromptCardSkeleton } from '@/components/PromptCardSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
 import { ConceptInfo } from '@/components/ConceptInfo';
-import { TemplateGallery } from '@/components/TemplateGallery';
 import { listPrompts, deletePrompt, updatePrompt } from '@/api/prompts';
 import { listFolders } from '@/api/folders';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -27,6 +26,7 @@ interface ContextType {
   currentFolderId?: string | null;
   setCurrentFolderId?: (folderId: string | null) => void;
   setFolderDropHandler?: (handler: ((folderId: string | null) => void) | undefined) => void;
+  setTemplateGalleryOpen?: (open: boolean) => void;
 }
 
 const EMPTY_PROMPTS: PromptWithTags[] = [];
@@ -410,6 +410,7 @@ export function Dashboard() {
     currentFolderId,
     setCurrentFolderId,
     setFolderDropHandler,
+    setTemplateGalleryOpen,
   } = useOutletContext<ContextType>();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -429,7 +430,6 @@ export function Dashboard() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [focusedPromptIndex, setFocusedPromptIndex] = useState(-1);
-  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const showAdvanced = useShowAdvanced();
 
@@ -742,7 +742,7 @@ export function Dashboard() {
             onImportComplete={() => void promptsQuery.refetch()}
           />
           <button
-            onClick={() => setTemplateGalleryOpen(true)}
+            onClick={() => setTemplateGalleryOpen?.(true)}
             style={{
               height: 28,
               padding: '0 10px',
@@ -1147,7 +1147,7 @@ export function Dashboard() {
         ) : !currentTeamId ? (
           <NoWorkspaceState />
         ) : isEmpty ? (
-          <EmptyDashboard onNewPrompt={navigateToNewPrompt} onBrowseTemplates={() => setTemplateGalleryOpen(true)} />
+          <EmptyDashboard onNewPrompt={navigateToNewPrompt} onBrowseTemplates={() => setTemplateGalleryOpen?.(true)} />
         ) : filteredPrompts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ps-fg-muted)' }}>
             <p>No prompts match your search.</p>
@@ -1253,8 +1253,6 @@ export function Dashboard() {
         onConfirm={handleDelete}
         confirmText="Delete"
       />
-
-      <TemplateGallery open={templateGalleryOpen} onClose={() => setTemplateGalleryOpen(false)} />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Loader2 } from 'lucide-react';
 import { useToast } from './ui/use-toast';
-import { useOutletContext } from 'react-router-dom';
 import { ConceptInfo } from './ConceptInfo';
 import { TEMPLATES, type TemplateWithDifficulty } from '@/lib/templates';
 import { createPrompt } from '@/api/prompts';
@@ -11,17 +10,13 @@ import { addBundleItem } from '@/api/bundles';
 import { promptKeys, bundleKeys } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 
-interface ContextType {
-  currentTeamId?: string;
-}
-
 interface TemplateGalleryProps {
   open: boolean;
   onClose: () => void;
+  currentTeamId?: string;
 }
 
-export function TemplateGallery({ open, onClose }: TemplateGalleryProps) {
-  const { currentTeamId } = useOutletContext<ContextType>();
+export function TemplateGallery({ open, onClose, currentTeamId }: TemplateGalleryProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [difficulty, setDifficulty] = useState<'starter' | 'intermediate' | 'advanced'>('starter');
