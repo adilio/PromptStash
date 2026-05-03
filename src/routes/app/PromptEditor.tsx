@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { promptKeys } from '@/lib/queryClient';
+import { slugify } from '@/lib/espanso';
 import type { Tag } from '@/lib/types';
 
 interface ContextType {
@@ -33,6 +34,8 @@ export function PromptEditor() {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [espansoTrigger, setEspansoTrigger] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -85,6 +88,7 @@ export function PromptEditor() {
       setTitle(promptQuery.data.title);
       setBody(promptQuery.data.body_md);
       setSelectedTags(promptQuery.data.tags || []);
+      setEspansoTrigger((promptQuery.data as any).espanso_trigger ?? '');
       initialLoadRef.current = true;
     }
   }, [promptQuery.data]);
@@ -110,7 +114,7 @@ export function PromptEditor() {
       try {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title: debouncedTitle, body_md: debouncedBody },
+          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined },
         });
         setLastSaved(new Date());
       } catch (error) {
@@ -177,11 +181,15 @@ export function PromptEditor() {
           folder_id: initialFolderId ?? undefined,
           title,
           body_md: body,
+          espanso_trigger: espansoTrigger || undefined,
         });
         toast({ title: 'Prompt created' });
         navigate(`/app/p/${created.id}`);
       } else {
-        await updatePromptMutation.mutateAsync({ id: promptId!, patch: { title, body_md: body } });
+        await updatePromptMutation.mutateAsync({
+          id: promptId!,
+          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined }
+        });
         toast({ title: 'Prompt saved' });
         navigate(`/app/p/${promptId}`);
       }
@@ -480,6 +488,65 @@ export function PromptEditor() {
             onCreateTag={handleCreateTag}
           />
         </div>
+
+        {/* Advanced options */}
+        <details style={{ marginBottom: 20 }}>
+          <summary
+            style={{
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--ps-fg-faint)',
+              marginBottom: showAdvanced ? 12 : 0,
+              listStyle: 'none',
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              setShowAdvanced(!showAdvanced);
+            }}
+          >
+            Advanced options
+          </summary>
+          {showAdvanced && (
+            <div>
+              <label
+                htmlFor="espanso-trigger"
+                style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6 }}
+              >
+                Espanso trigger
+              </label>
+              <input
+                id="espanso-trigger"
+                value={espansoTrigger}
+                onChange={(e) => setEspansoTrigger(e.target.value)}
+                onBlur={(e) => {
+                  if (!e.target.value.trim() && title) {
+                    e.target.value = `:${slugify(title)}`;
+                  }
+                }}
+                placeholder=":prompt-name"
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--ps-hairline)',
+                  background: 'var(--ps-bg-elev)',
+                  borderRadius: 8,
+                  padding: '0 12px',
+                  height: 32,
+                  color: 'var(--ps-fg)',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
+                Type this keyword anywhere on your system to expand the prompt using Espanso.
+              </p>
+            </div>
+          )}
+        </details>
 
         {/* Tabs */}
         <div

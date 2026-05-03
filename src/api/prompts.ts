@@ -32,26 +32,45 @@ export async function listPrompts(
     .from('prompts')
     .select('*')
     .eq('team_id', teamId)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false }) as any;
 
   if (folderId) {
     query = query.eq('folder_id', folderId);
   }
 
   if (searchQuery) {
-    const normalizedSearchQuery = normalizeFullTextSearchQuery(searchQuery);
+    const normalized = normalizeFullTextSearchQuery(searchQuery);
+    query = query.textSearch('fts', normalized);
+  }
 
-    if (normalizedSearchQuery) {
-      query = query.or(
-        `title.plfts.${normalizedSearchQuery},body_md.plfts.${normalizedSearchQuery}`
-      );
+  const { data: prompts, error } = await query;
+
+  if (error) throw error;
+
+  // Get tags for all prompts
+  const promptIds = prompts.map((p: Prompt) => p.id);
+  const { data: promptTags, error: tagsError } = await supabase
+    .from('prompt_tags')
+    .select('prompt_id, tags(*)')
+    .in('prompt_id', promptIds) as any;
+
+  if (tagsError) throw tagsError;
+
+  // Group tags by prompt_id
+  const tagsByPromptId = new Map<string, Tag[]>();
+  for (const row of promptTags || []) {
+    const tag = row.tags;
+    if (tag) {
+      const promptId = row.prompt_id;
+      const existing = tagsByPromptId.get(promptId) || [];
+      tagsByPromptId.set(promptId, [...existing, tag]);
     }
   }
 
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data;
+  return prompts.map((p: Prompt) => ({
+    ...p,
+    tags: tagsByPromptId.get(p.id) || [],
+  }));
 }
 
 export async function getPrompt(id: string): Promise<PromptWithTags> {
@@ -59,7 +78,7 @@ export async function getPrompt(id: string): Promise<PromptWithTags> {
     .from('prompts')
     .select('*')
     .eq('id', id)
-    .single();
+    .single() as any;
 
   if (promptError) throw promptError;
 
@@ -107,6 +126,7 @@ export async function createPrompt(input: {
   title: string;
   body_md: string;
   visibility?: 'private' | 'team' | 'public';
+  espanso_trigger?: string;
 }): Promise<Prompt> {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('Not authenticated');
@@ -120,9 +140,10 @@ export async function createPrompt(input: {
       title: input.title,
       body_md: input.body_md,
       visibility: input.visibility || 'private',
+      espanso_trigger: input.espanso_trigger || null,
     })
     .select('*')
-    .single();
+    .single() as any;
 
   if (error) throw error;
   return data;
@@ -136,6 +157,7 @@ export async function updatePrompt(
     folder_id: string | null;
     visibility: 'private' | 'team' | 'public';
     public_slug: string | null;
+    espanso_trigger: string;
   }>
 ): Promise<Prompt> {
   const { data, error } = await supabase
@@ -143,7 +165,7 @@ export async function updatePrompt(
     .update(patch)
     .eq('id', id)
     .select('*')
-    .single();
+    .single() as any;
 
   if (error) throw error;
   return data;
@@ -185,3 +207,4 @@ export async function makePromptPrivate(id: string): Promise<Prompt> {
   if (error) throw error;
   return data;
 }
+

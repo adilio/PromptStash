@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
+import { listPrompts } from '@/api/prompts';
+import { generateEspansoYaml } from '@/lib/espanso';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import type { Team } from '@/lib/types';
@@ -208,6 +210,7 @@ export function Settings() {
   const [newKeyName, setNewKeyName] = useState('');
   const [justCreatedKey, setJustCreatedKey] = useState<{ rawKey: string; name: string } | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [espansoLoading, setEspansoLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
@@ -404,6 +407,40 @@ export function Settings() {
         description: error instanceof Error ? error.message : 'Could not delete API key',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleDownloadEspanso = async () => {
+    if (!currentTeamId) {
+      toast({
+        title: 'No workspace',
+        description: 'Select a workspace first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setEspansoLoading(true);
+    try {
+      const prompts = await listPrompts(currentTeamId);
+      const yaml = generateEspansoYaml(prompts);
+
+      const blob = new Blob([yaml], { type: 'text/yaml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `promptstash-espanso-${new Date().toISOString().split('T')[0]}.yml`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Espanso package downloaded' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not download Espanso package',
+        variant: 'destructive',
+      });
+    } finally {
+      setEspansoLoading(false);
     }
   };
 
@@ -827,6 +864,48 @@ export function Settings() {
                   Delete…
                 </button>
               </SettingsRow>
+            </SettingsCard>
+
+            <SettingsCard>
+              <div style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>Espanso export</div>
+                <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
+                  Download your prompts as an Espanso match file. Drop the file into your Espanso config/match directory to expand prompts by keyword anywhere on your system.
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <button
+                    type="button"
+                    onClick={handleDownloadEspanso}
+                    disabled={espansoLoading || !currentTeamId}
+                    style={espansoLoading ? { ...btnPrimaryStyle, opacity: 0.7, cursor: 'not-allowed' } : btnPrimaryStyle}
+                  >
+                    {espansoLoading ? 'Downloading…' : 'Download Espanso package'}
+                  </button>
+                </div>
+
+                <details style={{ marginTop: 12 }}>
+                  <summary
+                    style={{
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--ps-fg)',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Install guide ▾
+                  </summary>
+                  <div style={{ marginTop: 12, fontSize: 13, color: 'var(--ps-fg-muted)', lineHeight: 1.6 }}>
+                    <p style={{ margin: '0 0 12px' }}>After downloading, place the .yml file in your Espanso match directory:</p>
+                    <ul style={{ margin: 0, paddingLeft: 20, marginBottom: 12 }}>
+                      <li><strong>macOS:</strong> <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>~/.config/espanso/match/</code></li>
+                      <li><strong>Linux:</strong> <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>~/.config/espanso/match/</code></li>
+                      <li><strong>Windows:</strong> <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>%APPDATA%\espanso\match\</code></li>
+                    </ul>
+                    <p style={{ margin: 0 }}>Then restart Espanso: <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>espanso restart</code></p>
+                  </div>
+                </details>
+              </div>
             </SettingsCard>
           </>
         )}
