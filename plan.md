@@ -727,7 +727,7 @@ The Learn page is the single standing invitation in the sidebar footer for users
 - [x] Issue #12 complete — committed and pushed
 - [x] Issue #13 complete — committed and pushed
 - [x] Issue #14 complete — committed and pushed
-- [ ] Issue #15 complete — committed and pushed
+- [x] Issue #15 complete — committed and pushed
 
 After all six issues land, perform the **end-to-end progressive disclosure audit**:
 

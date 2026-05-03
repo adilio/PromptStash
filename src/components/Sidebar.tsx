@@ -13,6 +13,7 @@ import {
   Sun,
   X,
   Layers,
+  BookOpen,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listTeams } from '@/api/teams';
@@ -632,6 +633,14 @@ export function Sidebar({
           paddingTop: 10,
         }}
       >
+        <NavItem
+          icon={<BookOpen style={{ width: 16, height: 16 }} />}
+          label="Learn"
+          onClick={() => {
+            navigate('/app/learn');
+            if (isMobile) onClose?.();
+          }}
+        />
         <NavItem
           icon={<Settings style={{ width: 16, height: 16 }} />}
           label="Settings"

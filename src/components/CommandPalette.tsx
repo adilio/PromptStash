@@ -5,6 +5,7 @@ import { FileText, Folder, Plus, Filter, Package, BookOpen } from 'lucide-react'
 import { listFolders } from '@/api/folders';
 import { listPrompts } from '@/api/prompts';
 import { listBundles } from '@/api/bundles';
+import { CONCEPTS } from '@/content/concepts';
 import {
   Command,
   CommandEmpty,
@@ -118,6 +119,22 @@ export function CommandPalette({
                   <span>Browse templates</span>
                 </CommandItem>
               )}
+              <CommandItem value="open learn" onSelect={() => runCommand(() => navigate('/app/learn'))}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                <span>Open Learn</span>
+              </CommandItem>
+            </CommandGroup>
+            <CommandGroup heading="Learn">
+              {Object.values(CONCEPTS).map((concept) => (
+                <CommandItem
+                  key={concept.id}
+                  value={`learn ${concept.title.toLowerCase()}`}
+                  onSelect={() => runCommand(() => navigate(`/app/learn/${concept.id}`))}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  <span>Learn: {concept.title}</span>
+                </CommandItem>
+              ))}
             </CommandGroup>
             {showStageFilters && onStageFilter && (
               <CommandGroup heading="Filter by stage">

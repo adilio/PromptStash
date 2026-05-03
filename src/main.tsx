@@ -12,6 +12,8 @@ import { PromptEditor } from './routes/app/PromptEditor';
 import { Settings } from './routes/app/Settings';
 import { BundleList } from './routes/app/BundleList';
 import { BundleEditor } from './routes/app/BundleEditor';
+import { Learn } from './routes/app/Learn';
+import { LearnConcept } from './routes/app/LearnConcept';
 import { PublicPrompt } from './routes/public/PublicPrompt';
 import { InviteAccept } from './routes/public/InviteAccept';
 import { Toaster } from './components/ui/toaster';
@@ -47,6 +49,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="bundles/new" element={<BundleEditor />} />
               <Route path="bundles/:bundleId" element={<BundleEditor />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="learn" element={<Learn />} />
+              <Route path="learn/:conceptId" element={<LearnConcept />} />
             </Route>
           </Routes>
           <Toaster />
