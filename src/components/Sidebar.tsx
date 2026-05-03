@@ -225,6 +225,7 @@ export function Sidebar({
     sidebarStyle.bottom = 0;
     sidebarStyle.left = 0;
     sidebarStyle.zIndex = 50;
+    sidebarStyle.width = 'min(85vw, 300px)';
     sidebarStyle.transform = open ? 'translateX(0)' : 'translateX(-100%)';
     sidebarStyle.transition = 'transform 200ms ease-out';
   }
@@ -442,19 +443,21 @@ export function Sidebar({
       >
         <Plus style={{ width: 14, height: 14 }} />
         New prompt
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 11,
-            padding: '1px 5px',
-            border: '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 4,
-            color: 'rgba(255,255,255,0.7)',
-          }}
-        >
-          N
-        </span>
+        {!isMobile && (
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: 11,
+              padding: '1px 5px',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: 4,
+              color: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            N
+          </span>
+        )}
       </button>
 
       {/* System folders */}
@@ -625,12 +628,15 @@ export function Sidebar({
             gap: 10,
             height: 30,
             padding: '0 8px',
+            marginTop: 6,
             borderRadius: 6,
             color: 'var(--ps-fg-muted)',
             fontSize: 13,
             cursor: 'pointer',
             background: 'transparent',
             border: 'none',
+            borderTop: '1px solid var(--ps-hairline-soft)',
+            paddingTop: 10,
             width: '100%',
             textAlign: 'left',
           }}
