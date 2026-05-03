@@ -1016,6 +1016,93 @@ export function Settings() {
                 )}
               </div>
             </SettingsCard>
+
+            <SettingsCard>
+              <div style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>API Usage</div>
+                <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
+                  Use your API key to access your prompts programmatically.
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>Base URL</div>
+                  <code style={{
+                    display: 'block',
+                    background: 'var(--ps-bg-sunken)',
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 12,
+                    color: 'var(--ps-fg)',
+                    overflow: 'auto',
+                  }}>
+                    {import.meta.env.VITE_SUPABASE_URL}/functions/v1/api
+                  </code>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>Authentication</div>
+                  <div style={{ fontSize: 13, color: 'var(--ps-fg)', lineHeight: 1.5 }}>
+                    Include your API key in the <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>Authorization</code> header:
+                  </div>
+                  <pre style={{
+                    background: 'var(--ps-bg-sunken)',
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 12,
+                    color: 'var(--ps-fg)',
+                    overflow: 'auto',
+                    marginTop: 8,
+                  }}><code>Authorization: Bearer ps_your_api_key_here</code></pre>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>List all prompts</div>
+                  <pre style={{
+                    background: 'var(--ps-bg-sunken)',
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 12,
+                    color: 'var(--ps-fg)',
+                    overflow: 'auto',
+                  }}><code>{`curl -H "Authorization: Bearer ps_your_key" \\
+  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts?workspace=TEAM_ID"`}</code></pre>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>Get a single prompt</div>
+                  <pre style={{
+                    background: 'var(--ps-bg-sunken)',
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 12,
+                    color: 'var(--ps-fg)',
+                    overflow: 'auto',
+                  }}><code>{`curl -H "Authorization: Bearer ps_your_key" \\
+  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts/PROMPT_ID"`}</code></pre>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>Create a prompt</div>
+                  <pre style={{
+                    background: 'var(--ps-bg-sunken)',
+                    padding: '10px 12px',
+                    borderRadius: 6,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: 12,
+                    color: 'var(--ps-fg)',
+                    overflow: 'auto',
+                  }}><code>{`curl -X POST \\
+  -H "Authorization: Bearer ps_your_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"team_id":"TEAM_ID","title":"My Prompt","body_md":"Prompt content"}' \\
+  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts"`}</code></pre>
+                </div>
+              </div>
+            </SettingsCard>
           </>
         )}
       </div>
