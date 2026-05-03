@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Copy, Plus, User, Sun, Key, Folder, Code, Bell, Database } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { useToast } from '@/components/ui/use-toast';
@@ -168,14 +169,74 @@ export function Settings() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<InviteRole>('editor');
   const [inviteLink, setInviteLink] = useState('');
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     loadTeams();
+    loadProfile();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getDisplayName = (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']>) => {
+    const metadata = user.user_metadata;
+    return (
+      metadata.display_name ||
+      metadata.full_name ||
+      metadata.name ||
+      user.email?.split('@')[0] ||
+      ''
+    );
+  };
+
+  const loadProfile = async () => {
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (error) throw error;
+      if (!user) return;
+
+      setProfileName(getDisplayName(user));
+      setProfileEmail(user.email ?? '');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not load your profile',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileLoading(true);
+    try {
+      const displayName = profileName.trim();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          display_name: displayName,
+          full_name: displayName,
+          name: displayName,
+        },
+      });
+      if (error) throw error;
+
+      toast({ title: 'Profile updated' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not update your profile',
+        variant: 'destructive',
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const loadTeams = async () => {
     try {
@@ -317,10 +378,25 @@ export function Settings() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>Profile</div>
                 <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>Your name and email address.</div>
                 <SettingsRow label="Display name" hint="Shown next to shared prompts.">
-                  <input className="" style={inputStyle} defaultValue="Your name" />
+                  <input
+                    style={inputStyle}
+                    value={profileName}
+                    onChange={(event) => setProfileName(event.target.value)}
+                    placeholder="Your name"
+                  />
                 </SettingsRow>
                 <SettingsRow label="Email" hint="Your primary login address.">
-                  <input style={inputStyle} type="email" defaultValue="" />
+                  <input style={inputStyle} type="email" value={profileEmail} readOnly />
+                </SettingsRow>
+                <SettingsRow label="Save changes" hint="Updates how your name appears in PromptStash.">
+                  <button
+                    type="button"
+                    style={profileLoading ? { ...btnPrimaryStyle, opacity: 0.7, cursor: 'not-allowed' } : btnPrimaryStyle}
+                    onClick={handleSaveProfile}
+                    disabled={profileLoading}
+                  >
+                    {profileLoading ? 'Saving...' : 'Save'}
+                  </button>
                 </SettingsRow>
               </div>
             </SettingsCard>
