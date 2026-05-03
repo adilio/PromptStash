@@ -198,6 +198,30 @@ export function PromptEditor() {
 
   useKeyboardShortcut({ key: 's', ctrlKey: true, callback: handleSave });
 
+  useKeyboardShortcut({
+    key: '1',
+    ctrlKey: true,
+    callback: () => setTab('write'),
+  });
+
+  useKeyboardShortcut({
+    key: '2',
+    ctrlKey: true,
+    callback: () => setTab('preview'),
+  });
+
+  useKeyboardShortcut({
+    key: 'c',
+    ctrlKey: true,
+    shiftKey: true,
+    callback: async () => {
+      if (body) {
+        await navigator.clipboard.writeText(body);
+        toast({ title: 'Copied to clipboard' });
+      }
+    },
+  });
+
   if (loading) return <Loading />;
 
   const saveStatusText = autoSaving

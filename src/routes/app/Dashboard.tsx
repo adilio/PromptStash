@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, LayoutGrid, List, Tag, Trash2, GripVertical, X, Filter } from 'lucide-react';
@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
 import { listPrompts, deletePrompt, updatePrompt } from '@/api/prompts';
 import { listFolders } from '@/api/folders';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { listTags } from '@/api/tags';
 import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -24,6 +25,18 @@ interface ContextType {
 
 const EMPTY_PROMPTS: PromptWithTags[] = [];
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
 function PromptListRow({
   prompt,
   onEdit: _onEdit,
@@ -32,6 +45,7 @@ function PromptListRow({
   onDragStart,
   onDragEnd,
   isDragging,
+  focused,
 }: {
   prompt: PromptWithTags;
   onEdit?: (p: PromptWithTags) => void;
@@ -40,6 +54,7 @@ function PromptListRow({
   onDragStart?: (e: React.DragEvent, p: PromptWithTags) => void;
   onDragEnd?: (e: React.DragEvent) => void;
   isDragging?: boolean;
+  focused?: boolean;
 }) {
   const navigate = useNavigate();
   const tags = prompt.tags ?? [];
@@ -61,10 +76,16 @@ function PromptListRow({
         borderBottom: '1px solid var(--ps-hairline-soft)',
         cursor: 'pointer',
         opacity: isDragging ? 0.5 : 1,
+        outline: focused ? '2px solid var(--ps-accent)' : 'none',
+        outlineOffset: -2,
       }}
       className="group list-row"
-      onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'var(--ps-bg-sunken)')}
-      onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
+      onMouseEnter={(e) => {
+        if (!focused) (e.currentTarget as HTMLDivElement).style.background = 'var(--ps-bg-sunken)';
+      }}
+      onMouseLeave={(e) => {
+        if (!focused) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+      }}
     >
       <span
         style={{
@@ -480,6 +501,8 @@ export function Dashboard() {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [focusedPromptIndex, setFocusedPromptIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -653,6 +676,41 @@ export function Dashboard() {
     };
   }, [setFolderDropHandler, draggedPrompt, folders]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useKeyboardShortcut({
+    key: '/',
+    callback: () => {
+      searchInputRef.current?.focus();
+    },
+  });
+
+  useEffect(() => {
+    setFocusedPromptIndex(-1);
+  }, [filteredPrompts.length, searchQuery, selectedFolder, selectedTags]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+      if (filteredPrompts.length === 0) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setFocusedPromptIndex((prev) => Math.min(prev + 1, filteredPrompts.length - 1));
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setFocusedPromptIndex((prev) => Math.max(prev - 1, 0));
+      } else if (event.key === 'Enter' && focusedPromptIndex >= 0) {
+        event.preventDefault();
+        const prompt = filteredPrompts[focusedPromptIndex];
+        if (prompt) {
+          navigate(`/app/p/${prompt.id}`);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredPrompts, focusedPromptIndex, navigate]);
+
   const currentFolderName = selectedFolder
     ? folders.find((f) => f.id === selectedFolder)?.name ?? 'Folder'
     : 'Dashboard';
@@ -763,6 +821,7 @@ export function Dashboard() {
               }}
             />
             <input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search title and content…"
@@ -1057,7 +1116,7 @@ export function Dashboard() {
               <span className="list-header-updated" style={{ textAlign: 'right' }}>Updated</span>
               <span />
             </div>
-            {filteredPrompts.map((prompt) => (
+            {filteredPrompts.map((prompt, index) => (
               <PromptListRow
                 key={prompt.id}
                 prompt={prompt}
@@ -1067,6 +1126,7 @@ export function Dashboard() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 isDragging={draggedPrompt?.id === prompt.id}
+                focused={focusedPromptIndex === index}
               />
             ))}
           </div>

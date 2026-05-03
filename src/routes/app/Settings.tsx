@@ -674,9 +674,17 @@ export function Settings() {
             <SettingsCard>
               {[
                 ['New prompt', 'N'],
-                ['Save', '⌘ S'],
-                ['Search', '⌘ K'],
-                ['Toggle theme', '⌘ ⇧ L'],
+                ['Open shortcuts help', '?'],
+                ['Focus search', '/'],
+                ['Command palette', '⌘ K'],
+                ['Toggle sidebar', '⌘ \\'],
+                ['Save prompt', '⌘ S'],
+                ['Write tab', '⌘ 1'],
+                ['Preview tab', '⌘ 2'],
+                ['Copy prompt body', '⌘ ⇧ C'],
+                ['Navigate prompt list', '↑ ↓'],
+                ['Open focused prompt', 'Enter'],
+                ['Close modal / palette', 'Esc'],
               ].map(([k, v], i) => (
                 <SettingsRow key={i} label={k}>
                   <code

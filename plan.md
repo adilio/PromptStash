@@ -113,12 +113,12 @@ The `useKeyboardShortcut` hook at `src/hooks/useKeyboardShortcut.ts` handles mod
 ### Tasks
 
 #### New global shortcuts
-- [ ] Register `Cmd/Ctrl+\` in `AppLayout.tsx` to toggle the sidebar (set `sidebarOpen = !sidebarOpen`). Use `useKeyboardShortcut` with `ctrlKey: true, key: '\\'`.
-- [ ] Register `?` (no modifiers, not in an editable target) in `AppLayout.tsx` to open a shortcuts help modal. Add state `shortcutsHelpOpen` and pass it to a new `ShortcutsHelp` component. Guard against firing when focus is in an input (reuse the existing `isEditableTarget` helper already in `AppLayout.tsx`).
+- [x] Register `Cmd/Ctrl+\` in `AppLayout.tsx` to toggle the sidebar (set `sidebarOpen = !sidebarOpen`). Use `useKeyboardShortcut` with `ctrlKey: true, key: '\\'`.
+- [x] Register `?` (no modifiers, not in an editable target) in `AppLayout.tsx` to open a shortcuts help modal. Add state `shortcutsHelpOpen` and pass it to a new `ShortcutsHelp` component. Guard against firing when focus is in an input (reuse the existing `isEditableTarget` helper already in `AppLayout.tsx`).
 
 #### Dashboard shortcuts
-- [ ] Register `/` (no modifiers, not in editable target) in `Dashboard.tsx` to focus the search input. Use a `useRef` on the search `<input>` and call `.focus()` on keydown.
-- [ ] Implement arrow-key navigation through the prompt list:
+- [x] Register `/` (no modifiers, not in editable target) in `Dashboard.tsx` to focus the search input. Use a `useRef` on the search `<input>` and call `.focus()` on keydown.
+- [x] Implement arrow-key navigation through the prompt list:
   - Track a `focusedPromptIndex` state in `Dashboard.tsx` (default `-1`).
   - On `ArrowDown`, increment index (capped at `filteredPrompts.length - 1`). On `ArrowUp`, decrement (floor 0). Don't fire when focus is in an editable element.
   - Render a visual focus ring on the focused card/row using a border or background change.
@@ -126,12 +126,12 @@ The `useKeyboardShortcut` hook at `src/hooks/useKeyboardShortcut.ts` handles mod
   - Reset `focusedPromptIndex` to `-1` when the prompt list changes.
 
 #### PromptEditor shortcuts
-- [ ] Register `Cmd/Ctrl+1` to switch to the Write tab: `setTab('write')`. Use `useKeyboardShortcut`.
-- [ ] Register `Cmd/Ctrl+2` to switch to the Preview tab: `setTab('preview')`.
-- [ ] Register `Cmd/Ctrl+Shift+C` to copy the prompt body to clipboard. Reuse the existing clipboard logic already in the Copy button handler.
+- [x] Register `Cmd/Ctrl+1` to switch to the Write tab: `setTab('write')`. Use `useKeyboardShortcut`.
+- [x] Register `Cmd/Ctrl+2` to switch to the Preview tab: `setTab('preview')`.
+- [x] Register `Cmd/Ctrl+Shift+C` to copy the prompt body to clipboard. Reuse the existing clipboard logic already in the Copy button handler.
 
 #### ShortcutsHelp modal
-- [ ] Create `src/components/ShortcutsHelp.tsx`. It renders a `Dialog` (use the existing `Dialog` component from `src/components/ui/dialog.tsx`).
+- [x] Create `src/components/ShortcutsHelp.tsx`. It renders a `Dialog` (use the existing `Dialog` component from `src/components/ui/dialog.tsx`).
   - Title: "Keyboard shortcuts"
   - Two-column grid of shortcut rows. Each row: left cell = key combo rendered in `<kbd>` style, right cell = description.
   - List every shortcut in the app (include the pre-existing ones).
@@ -150,17 +150,17 @@ The `useKeyboardShortcut` hook at `src/hooks/useKeyboardShortcut.ts` handles mod
     | `↑ ↓` | Navigate prompt list |
     | `Enter` | Open focused prompt |
     | `Esc` | Close modal / palette |
-- [ ] Wire `shortcutsHelpOpen` state from `AppLayout.tsx` into `ShortcutsHelp`.
-- [ ] Render `<ShortcutsHelp>` inside `AppLayout.tsx` alongside `CommandPalette`.
+- [x] Wire `shortcutsHelpOpen` state from `AppLayout.tsx` into `ShortcutsHelp`.
+- [x] Render `<ShortcutsHelp>` inside `AppLayout.tsx` alongside `CommandPalette`.
 
 #### CommandPalette shortcut hints
-- [ ] Add a `<span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)' }}>` after each action label in `CommandPalette.tsx` showing its shortcut (e.g. `N` next to "New Prompt").
+- [x] Add a `<span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)' }}>` after each action label in `CommandPalette.tsx` showing its shortcut (e.g. `N` next to "New Prompt").
 
 #### Settings — Shortcuts section
-- [ ] In `Settings.tsx`, find the existing `shortcuts` section (it already exists in the `sections` array but likely has a placeholder body). Replace the placeholder with the same shortcut table from `ShortcutsHelp`, rendered as a read-only reference.
+- [x] In `Settings.tsx`, find the existing `shortcuts` section (it already exists in the `sections` array but likely has a placeholder body). Replace the placeholder with the same shortcut table from `ShortcutsHelp`, rendered as a read-only reference.
 
 #### Focus management and accessibility
-- [ ] Ensure all `Dialog` modals in the app trap focus when open and return focus to the trigger element on close. The existing `Dialog` component from Radix UI (used via `src/components/ui/dialog.tsx`) handles this automatically — verify it is being used correctly in `ConfirmDialog`, `ExportImportDialog`, `ShareDialog`, and `VersionHistoryDialog`.
+- [x] Ensure all `Dialog` modals in the app trap focus when open and return focus to the trigger element on close. The existing `Dialog` component from Radix UI (used via `src/components/ui/dialog.tsx`) handles this automatically — verify it is being used correctly in `ConfirmDialog`, `ExportImportDialog`, `ShareDialog`, and `VersionHistoryDialog`.
 - [ ] Add `tabIndex={0}` and `onKeyDown` (Enter/Space to activate) to any interactive `<div>` elements that are missing keyboard activation. Audit: `PromptCard.tsx`, `PromptListRow` in `Dashboard.tsx`, `NavItem` in `Sidebar.tsx`.
 
 #### Testing
@@ -168,7 +168,7 @@ The `useKeyboardShortcut` hook at `src/hooks/useKeyboardShortcut.ts` handles mod
 - [ ] Verify shortcuts do NOT fire when typing in the title input, body textarea, or search input.
 - [ ] Verify `?` opens the help modal and `Esc` closes it.
 - [ ] Verify arrow keys navigate the dashboard prompt list.
-- [ ] Run `npx tsc --noEmit` — zero errors.
+- [x] Run `npx tsc --noEmit` — zero errors.
 
 **Commit message:** `Add comprehensive keyboard shortcuts and navigation with shortcuts help modal`
 
@@ -373,7 +373,7 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
 
 ## Completion checklist
 
-- [ ] Issue #3 complete — committed and pushed
+- [x] Issue #3 complete — committed and pushed
 - [ ] Issue #6 complete — committed and pushed
 - [ ] Issue #7 complete — committed and pushed
 - [ ] Issue #8 complete — committed and pushed

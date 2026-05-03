@@ -6,6 +6,8 @@ import { Shell } from '@/components/Shell';
 import { Sidebar } from '@/components/Sidebar';
 import { Loading } from '@/components/Loading';
 import { CommandPalette } from '@/components/CommandPalette';
+import { ShortcutsHelp } from '@/components/ShortcutsHelp';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -48,6 +50,7 @@ export function AppLayout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [folderDropHandler, setFolderDropHandler] = useState<((folderId: string | null) => void) | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,6 +61,17 @@ export function AppLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useKeyboardShortcut({
+    key: '\\',
+    ctrlKey: true,
+    callback: () => setSidebarOpen((v) => !v),
+  });
+
+  useKeyboardShortcut({
+    key: '?',
+    callback: () => setShortcutsHelpOpen(true),
+  });
 
   const navigateToNewPrompt = () => {
     const search = currentFolderId ? `?folder=${encodeURIComponent(currentFolderId)}` : '';
@@ -191,6 +205,7 @@ export function AppLayout() {
         onFolderChange={setCurrentFolderId}
         onNewPrompt={navigateToNewPrompt}
       />
+      <ShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
     </Shell>
   );
 }

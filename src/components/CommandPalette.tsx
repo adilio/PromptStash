@@ -78,6 +78,7 @@ export function CommandPalette({
               <CommandItem value="new prompt create" onSelect={() => runCommand(onNewPrompt)}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>New Prompt</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)', fontFamily: '"JetBrains Mono", monospace' }}>N</span>
               </CommandItem>
             </CommandGroup>
             <CommandGroup heading="Prompts">
