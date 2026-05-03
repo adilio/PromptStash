@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useParams, useNavigate, useOutletContext, useSearchParams, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, Share2, Copy, Play, AlertCircle } from 'lucide-react';
@@ -41,6 +42,8 @@ export function PromptEditor() {
   const { toast } = useToast();
   const initialLoadRef = useRef(true);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isNew = !promptId || promptId === 'new';
   const initialFolderId = searchParams.get('folder');
@@ -62,6 +65,18 @@ export function PromptEditor() {
     enabled: !!promptId && !isNew,
   });
   const loading = promptQuery.isLoading;
+
+  const focusNextOnTab = (
+    event: KeyboardEvent,
+    nextElement: HTMLElement | null
+  ) => {
+    if (event.key !== 'Tab' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    event.preventDefault();
+    nextElement?.focus();
+  };
 
   useEffect(() => {
     if (!isNew || loading) {
@@ -455,6 +470,7 @@ export function PromptEditor() {
           id="prompt-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => focusNextOnTab(e, tagInputRef.current)}
           placeholder="Untitled prompt"
           maxLength={140}
           style={{
@@ -500,6 +516,8 @@ export function PromptEditor() {
             selectedTags={selectedTags}
             onTagsChange={handleTagsChange}
             onCreateTag={handleCreateTag}
+            inputRef={tagInputRef}
+            onInputKeyDown={(e) => focusNextOnTab(e, bodyTextareaRef.current)}
           />
         </div>
 
@@ -603,6 +621,7 @@ export function PromptEditor() {
         {tab === 'write' ? (
           <>
             <textarea
+              ref={bodyTextareaRef}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               spellCheck={false}

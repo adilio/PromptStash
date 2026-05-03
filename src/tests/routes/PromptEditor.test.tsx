@@ -79,6 +79,22 @@ describe('PromptEditor', () => {
     });
   });
 
+  it('should tab from title to tags, then straight to prompt body', async () => {
+    const user = userEvent.setup();
+
+    renderPromptEditor();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/title/i)).toHaveFocus();
+    });
+
+    await user.keyboard('{Tab}');
+    expect(screen.getByPlaceholderText(/add tags/i)).toHaveFocus();
+
+    await user.keyboard('{Tab}');
+    expect(screen.getByPlaceholderText(/write your prompt here/i)).toHaveFocus();
+  });
+
   it('should render editor for explicit new route without loading a prompt', () => {
     mockParams = {};
 

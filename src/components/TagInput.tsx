@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { KeyboardEvent, Ref } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
@@ -10,6 +11,8 @@ interface TagInputProps {
   selectedTags: Tag[];
   onTagsChange: (tags: Tag[]) => void;
   onCreateTag?: (name: string) => Promise<Tag>;
+  inputRef?: Ref<HTMLInputElement>;
+  onInputKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export function TagInput({
@@ -17,6 +20,8 @@ export function TagInput({
   selectedTags,
   onTagsChange,
   onCreateTag,
+  inputRef,
+  onInputKeyDown,
 }: TagInputProps) {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<Tag[]>([]);
@@ -46,7 +51,7 @@ export function TagInput({
     onTagsChange(selectedTags.filter((t) => t.id !== tagId));
   };
 
-  const handleKeyDown = async (e: React.KeyboardEvent) => {
+  const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && input.trim()) {
       e.preventDefault();
 
@@ -66,6 +71,8 @@ export function TagInput({
       // Remove last tag if input is empty
       handleRemoveTag(selectedTags[selectedTags.length - 1].id);
     }
+
+    onInputKeyDown?.(e);
   };
 
   return (
@@ -85,6 +92,7 @@ export function TagInput({
           </Badge>
         ))}
         <Input
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
