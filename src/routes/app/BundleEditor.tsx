@@ -145,7 +145,7 @@ export function BundleEditor() {
       }
     };
     if (!isNew && bundleId) autoSave();
-  }, [debouncedName, debouncedDescription, debouncedTargetFormat]);
+  }, [bundleId, isNew, name, updateBundleMutation, debouncedName, debouncedDescription, debouncedTargetFormat]);
 
   const handleSave = async () => {
     if (!currentTeamId || !name.trim()) {

@@ -37,13 +37,13 @@ You can also export individual prompts to AGENTS.md format, and use the "Target 
   'claude-md': {
     id: 'claude-md',
     title: 'CLAUDE.md',
-    summary: 'Claude Code\'s custom instruction file format, similar to AGENTS.md but specific to Anthropic\'s Claude Code editor.',
-    body: `CLAUDE.md is Anthropic\'s custom instruction file format for Claude Code, their AI-powered code editor. It serves the same purpose as AGENTS.md but is specifically parsed and used by Claude Code to provide project-specific context.
+    summary: "Claude Code's custom instruction file format, similar to AGENTS.md but specific to Anthropic's Claude Code editor.",
+    body: `CLAUDE.md is Anthropic's custom instruction file format for Claude Code, their AI-powered code editor. It serves the same purpose as AGENTS.md but is specifically parsed and used by Claude Code to provide project-specific context.
 
-The format is nearly identical to AGENTS.md—both use markdown with section headers. Claude Code looks for CLAUDE.md at the root of your project and incorporates its contents into the context window when you\'re working in that directory.
+The format is nearly identical to AGENTS.md—both use markdown with section headers. Claude Code looks for CLAUDE.md at the root of your project and incorporates its contents into the context window when you're working in that directory.
 
 Key sections that Claude Code recognizes include project overview, architecture descriptions, preferred coding patterns, and any project-specific conventions. The editor uses this information to provide more relevant code suggestions and responses.`,
-    why: `Having a dedicated instruction file for Claude Code allows for customization specific to Anthropic\'s models. While AGENTS.md provides cross-tool compatibility, CLAUDE.md can include instructions that take advantage of Claude\'s specific capabilities and behaviors.
+    why: `Having a dedicated instruction file for Claude Code allows for customization specific to Anthropic's models. While AGENTS.md provides cross-tool compatibility, CLAUDE.md can include instructions that take advantage of Claude's specific capabilities and behaviors.
 
 For teams standardized on Claude Code, CLAUDE.md ensures that every developer gets consistent AI assistance that understands their codebase conventions and architectural decisions.`,
     howPromptStashUses: `PromptStash can export prompts and bundles to CLAUDE.md format. When creating a prompt, you can set "Target agent" to "Claude" to indicate it should be exported as CLAUDE.md. Bundles can also target CLAUDE.md format, composing multiple prompts into a single file.
@@ -87,8 +87,8 @@ When composing bundles, stages help ensure you have complete coverage of your wo
   bundles: {
     id: 'bundles',
     title: 'Bundles',
-    summary: 'Ordered collections of prompts that work together as complete instruction sets for AI agents.',
-    body: `Bundles are PromptStash\'s way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export.
+    summary: "Ordered collections of prompts that work together as complete instruction sets for AI agents.",
+    body: `Bundles are PromptStash's way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export.
 
 A bundle contains:
 - A name and description
@@ -98,13 +98,13 @@ A bundle contains:
 
 When you export a bundle, PromptStash generates a single file with all the included prompts rendered as sections. For markdown formats like AGENTS.md, each prompt becomes a second-level heading with its content below.
 
-Bundles also support the token budget gauge, which shows you the total token count and warns if you\'re approaching the "Dumb Zone" where model performance degrades.`,
+Bundles also support the token budget gauge, which shows you the total token count and warns if you're approaching the "Dumb Zone" where model performance degrades.`,
     why: `Bundles solve two problems: composability and token budgeting. By breaking instructions into modules, you can reuse the same prompt across multiple bundles. A "testing conventions" prompt can appear in both your frontend and backend bundles without duplication.
 
 The token budget gauge addresses a critical issue: AI models perform worse when their context window is too full. Bundles let you see exactly how many tokens your instructions consume and optimize by removing or condensing sections.`,
     howPromptStashUses: `Create bundles from the Bundles page (auto-disclosed in the sidebar once you have one). Add prompts to your bundle, reorder them, and toggle which ones are included. Use the preview pane to see the exported output in real-time.
 
-You can download bundles directly from the bundle editor, and soon you\'ll be able to sync them to GitHub repositories automatically. Bundles also integrate with the template gallery—instantiating the QRSPI template creates a bundle with eight staged prompts.`,
+You can download bundles directly from the bundle editor, and soon you'll be able to sync them to GitHub repositories automatically. Bundles also integrate with the template gallery—instantiating the QRSPI template creates a bundle with eight staged prompts.`,
     references: [
       { label: 'Dumb Zone', url: 'https://github.com/adilio/PromptStash/blob/main/FUTURE.md', note: 'See the Dumb Zone concept for more on token budgets' },
     ],
@@ -113,8 +113,8 @@ You can download bundles directly from the bundle editor, and soon you\'ll be ab
   'dumb-zone': {
     id: 'dumb-zone',
     title: 'Dumb Zone',
-    summary: 'The point where an AI model\'s context is too full (typically >40% of the window), leading to degraded performance.',
-    body: `The "Dumb Zone" is a term coined by the context engineering community to describe the point at which an AI model\'s performance degrades due to context window saturation. Research suggests this happens around 40% of the model\'s maximum context length.
+    summary: "The point where an AI model's context is too full (typically >40% of the window), leading to degraded performance.",
+    body: `The "Dumb Zone" is a term coined by the context engineering community to describe the point at which an AI model's performance degrades due to context window saturation. Research suggests this happens around 40% of the model's maximum context length.
 
 When an AI model operates in the Dumb Zone, you might see:
 - Reduced ability to follow complex instructions
@@ -122,15 +122,15 @@ When an AI model operates in the Dumb Zone, you might see:
 - Forgetting of earlier context
 - Inconsistent reasoning across the conversation
 
-The phenomenon occurs because language models process context through a fixed-size attention mechanism. As more tokens are added, each token gets less "attention weight," diluting the model\'s ability to reason about the full context.
+The phenomenon occurs because language models process context through a fixed-size attention mechanism. As more tokens are added, each token gets less "attention weight," diluting the model's ability to reason about the full context.
 
 Different models have different context windows (Claude Sonnet: 200k tokens, GPT-5: 400k tokens), but the 40% threshold is a useful rule of thumb across models.`,
-    why: `Understanding the Dumb Zone is critical for effective prompt engineering. If you\'re feeding an agent 150k tokens of instructions when the model\'s sweet spot is under 80k, you\'re actively hurting performance.
+    why: `Understanding the Dumb Zone is critical for effective prompt engineering. If you're feeding an agent 150k tokens of instructions when the model's sweet spot is under 80k, you're actively hurting performance.
 
-Smart practitioners keep their instructions lean and focused. Rather than dumping entire codebases into context, they use retrieval systems to find the most relevant snippets and keep the total token count in the model\'s optimal range.`,
-    howPromptStashUses: `PromptStash surfaces token estimates at multiple levels. Individual prompts show a token count in the editor, with color coding when you exceed recommended limits. Bundles have a full context budget gauge that shows your total tokens relative to the model\'s context window, with tick marks at 40% and 60%.
+Smart practitioners keep their instructions lean and focused. Rather than dumping entire codebases into context, they use retrieval systems to find the most relevant snippets and keep the total token count in the model's optimal range.`,
+    howPromptStashUses: `PromptStash surfaces token estimates at multiple levels. Individual prompts show a token count in the editor, with color coding when you exceed recommended limits. Bundles have a full context budget gauge that shows your total tokens relative to the model's context window, with tick marks at 40% and 60%.
 
-The gauge changes color based on which zone you\'re in: green for safe, amber for warning (>40%), and red for danger (>60%). This makes it easy to see at a glance whether your instructions are optimized for model performance.`,
+The gauge changes color based on which zone you're in: green for safe, amber for warning (>40%), and red for danger (>60%). This makes it easy to see at a glance whether your instructions are optimized for model performance.`,
     references: [
       { label: 'HumanLayer: Skill Issue', url: 'https://humanlayer.io/skill-issue', note: 'Blog post on harness engineering and the Dumb Zone' },
       { label: 'Dex Horthy on context saturation', url: 'https://www.linkedin.com/feed/update/urn:li:activity:7168220456152014848/', note: 'LinkedIn post on context window performance' },
@@ -143,8 +143,8 @@ The gauge changes color based on which zone you\'re in: green for safe, amber fo
     summary: 'A methodology for breaking down complex tasks into stages: Question, Research, Structure, Plan, and Implement.',
     body: `QRSPI (Question, Research, Structure, Plan, Implement) is a methodology for structured AI-human collaboration. It recognizes that the best outcomes come from breaking complex work into discrete stages, each with its own prompts and context.
 
-The eight stages in PromptStash\'s QRSPI implementation are:
-1. **Question**: Clarify what\'s being asked. Restate the problem, identify constraints, flag ambiguities.
+The eight stages in PromptStash's QRSPI implementation are:
+1. **Question**: Clarify what's being asked. Restate the problem, identify constraints, flag ambiguities.
 2. **Research**: Gather context. Search codebases, read documentation, find similar patterns.
 3. **Design**: Plan the solution. Define architecture, data structures, APIs, and error handling.
 4. **Structure**: Break down the work. List files to change, identify dependencies, estimate complexity.

@@ -11,7 +11,7 @@ import { generateEspansoYaml } from '@/lib/espanso';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import { useShowAdvanced } from '@/lib/preferences';
-import { AGENT_FORMATS, filenameFor, wrapPromptsForFormat, downloadFile } from '@/lib/agentExport';
+import { AGENT_FORMATS, filenameFor, wrapPromptsForFormat, downloadFile, type AgentFormat } from '@/lib/agentExport';
 import type { Team } from '@/lib/types';
 
 interface ContextType {
@@ -463,8 +463,8 @@ export function Settings() {
     setAgentExportLoading(true);
     try {
       const prompts = await listPrompts(currentTeamId);
-      const filename = filenameFor(agentExportFormat as any);
-      const content = wrapPromptsForFormat(prompts, agentExportFormat as any);
+      const filename = filenameFor(agentExportFormat as AgentFormat);
+      const content = wrapPromptsForFormat(prompts, agentExportFormat as AgentFormat);
       downloadFile(filename, content);
       toast({ title: 'Agent file downloaded' });
     } catch (error) {
