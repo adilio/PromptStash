@@ -4,6 +4,7 @@ import { Copy, Plus, User, Sun, Key, Folder, Code, Bell, Database } from 'lucide
 import { supabase } from '@/lib/supabase';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
+import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import type { Team } from '@/lib/types';
@@ -13,7 +14,7 @@ interface ContextType {
   setCurrentTeamId?: (teamId: string) => void;
 }
 
-type Section = 'account' | 'appearance' | 'models' | 'workspace' | 'shortcuts' | 'notifications' | 'data';
+type Section = 'account' | 'appearance' | 'models' | 'workspace' | 'shortcuts' | 'notifications' | 'data' | 'api';
 
 const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: 'account', label: 'Account', icon: <User style={{ width: 14, height: 14 }} /> },
@@ -23,6 +24,7 @@ const sections: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: 'shortcuts', label: 'Shortcuts', icon: <Code style={{ width: 14, height: 14 }} /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell style={{ width: 14, height: 14 }} /> },
   { id: 'data', label: 'Data & export', icon: <Database style={{ width: 14, height: 14 }} /> },
+  { id: 'api', label: 'API access', icon: <Code style={{ width: 14, height: 14 }} /> },
 ];
 
 function SettingsCard({ children }: { children: React.ReactNode }) {
@@ -202,13 +204,27 @@ export function Settings() {
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; key_prefix: string; created_at: string; last_used_at: string | null }>>([]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [justCreatedKey, setJustCreatedKey] = useState<{ rawKey: string; name: string } | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     loadTeams();
     loadProfile();
+    loadApiKeys();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadApiKeys = async () => {
+    try {
+      const keys = await listApiKeys();
+      setApiKeys(keys);
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+    }
+  };
 
   const getDisplayName = (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']>) => {
     const metadata = user.user_metadata;
@@ -353,6 +369,41 @@ export function Settings() {
       toast({ title: 'Copied', description: 'Invite link copied to clipboard' });
     } catch {
       toast({ title: 'Error', description: 'Unable to copy invite link', variant: 'destructive' });
+    }
+  };
+
+  const handleCreateApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+    setApiKeyLoading(true);
+    try {
+      const result = await createApiKey(newKeyName.trim());
+      setJustCreatedKey({ rawKey: result.rawKey, name: result.name });
+      setNewKeyName('');
+      await loadApiKeys();
+      toast({ title: 'API key created', description: 'Copy it now — it won\'t be shown again.' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not create API key',
+        variant: 'destructive',
+      });
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleDeleteApiKey = async (id: string) => {
+    try {
+      await deleteApiKey(id);
+      await loadApiKeys();
+      toast({ title: 'API key revoked' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not delete API key',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -776,6 +827,115 @@ export function Settings() {
                   Delete…
                 </button>
               </SettingsRow>
+            </SettingsCard>
+          </>
+        )}
+
+        {section === 'api' && (
+          <>
+            <h2 style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500, fontSize: 24, letterSpacing: '-0.02em', margin: '0 0 6px', color: 'var(--ps-fg)' }}>API access</h2>
+            <p style={{ color: 'var(--ps-fg-muted)', margin: '0 0 32px', maxWidth: '56ch', fontSize: 14 }}>
+              Use API keys to access your prompts programmatically. Keys are shown only once.
+            </p>
+            <SettingsCard>
+              <div style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>API Keys</div>
+                <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>Generate keys to access your prompts via API.</div>
+                <form onSubmit={handleCreateApiKey} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <input
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    placeholder="Key name (e.g., Production app)"
+                    maxLength={60}
+                    style={{ ...inputStyle, flex: 1, width: 'auto' }}
+                  />
+                  <button type="submit" disabled={apiKeyLoading || !newKeyName.trim()} style={btnPrimaryStyle}>
+                    <Plus style={{ width: 14, height: 14 }} />
+                    Generate key
+                  </button>
+                </form>
+
+                {justCreatedKey && (
+                  <div style={{
+                    marginTop: 16,
+                    padding: '16px',
+                    background: 'oklch(0.97 0.02 60)',
+                    border: '1px solid oklch(0.88 0.05 60)',
+                    borderRadius: 8,
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'oklch(0.45 0.08 60)', marginBottom: 8 }}>
+                      Your new API key
+                    </div>
+                    <div style={{ fontSize: 12, color: 'oklch(0.45 0.06 60)', marginBottom: 12 }}>
+                      Copy this key now — it won't be shown again.
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        value={justCreatedKey.rawKey}
+                        readOnly
+                        style={{ ...inputStyle, flex: 1, fontFamily: '"JetBrains Mono", monospace', fontSize: 12, background: 'var(--ps-bg)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(justCreatedKey.rawKey);
+                          toast({ title: 'Copied to clipboard' });
+                        }}
+                        style={btnSecondaryStyle}
+                      >
+                        <Copy style={{ width: 14, height: 14 }} />
+                        Copy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setJustCreatedKey(null)}
+                        style={btnSecondaryStyle}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {apiKeys.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--ps-hairline)', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }}>Name</th>
+                          <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }}>Prefix</th>
+                          <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }}>Created</th>
+                          <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }}>Last used</th>
+                          <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {apiKeys.map((key) => (
+                          <tr key={key.id} style={{ borderBottom: '1px solid var(--ps-hairline-soft)' }}>
+                            <td style={{ padding: '10px 0', color: 'var(--ps-fg)' }}>{key.name}</td>
+                            <td style={{ padding: '10px 0', fontFamily: '"JetBrains Mono", monospace', fontSize: 12, color: 'var(--ps-fg-muted)' }}>{key.key_prefix}…</td>
+                            <td style={{ padding: '10px 0', fontSize: 12, color: 'var(--ps-fg-faint)' }}>{new Date(key.created_at).toLocaleDateString()}</td>
+                            <td style={{ padding: '10px 0', fontSize: 12, color: 'var(--ps-fg-faint)' }}>{key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}</td>
+                            <td style={{ padding: '10px 0', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteApiKey(key.id)}
+                                style={{
+                                  ...btnSecondaryStyle,
+                                  color: 'hsl(var(--destructive))',
+                                  borderColor: 'hsl(var(--destructive) / 0.3)',
+                                }}
+                              >
+                                Revoke
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </SettingsCard>
           </>
         )}

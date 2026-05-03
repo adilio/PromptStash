@@ -191,7 +191,7 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
 ### Tasks
 
 #### Database migration
-- [ ] Create `supabase/migrations/<timestamp>_api_keys.sql`:
+- [x] Create `supabase/migrations/<timestamp>_api_keys.sql`:
   ```sql
   create table if not exists public.api_keys (
     id uuid primary key default gen_random_uuid(),
@@ -211,10 +211,10 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
     using (user_id = auth.uid())
     with check (user_id = auth.uid());
   ```
-- [ ] Generate the migration timestamp using the current UTC timestamp in the format `YYYYMMDDHHMMSS`.
+- [x] Generate the migration timestamp using the current UTC timestamp in the format `YYYYMMDDHHMMSS`.
 
 #### Client-side API key management (`src/api/apikeys.ts`)
-- [ ] Create `src/api/apikeys.ts` with the following functions:
+- [x] Create `src/api/apikeys.ts` with the following functions:
   - `generateApiKey(): string` — generates a random 32-byte hex string using `crypto.getRandomValues`. Format: `ps_` prefix + 64 hex chars (e.g. `ps_a1b2c3...`).
   - `hashApiKey(rawKey: string): Promise<string>` — SHA-256 hash using `crypto.subtle.digest`. Returns hex string.
   - `createApiKey(name: string): Promise<{ id: string; name: string; rawKey: string; key_prefix: string; created_at: string }>` — generates raw key, hashes it, inserts into `api_keys` table via Supabase, returns the raw key (only time it's available). The raw key is NOT stored.
@@ -222,8 +222,8 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
   - `deleteApiKey(id: string): Promise<void>` — deletes a key by ID.
 
 #### Settings UI — API Keys section
-- [ ] In `Settings.tsx`, add `'api'` to the `Section` type and add `{ id: 'api', label: 'API access', icon: <Code .../> }` to the `sections` array. (The `Code` icon is already imported.)
-- [ ] Add an API access section body:
+- [x] In `Settings.tsx`, add `'api'` to the `Section` type and add `{ id: 'api', label: 'API access', icon: <Code .../> }` to the `sections` array. (The `Code` icon is already imported.)
+- [x] Add an API access section body:
   - Header: "API Keys" with a description: "Use API keys to access your prompts programmatically. Keys are shown only once."
   - A form: text input for key name + "Generate key" button.
   - On submit: call `createApiKey(name)`, show the raw key in a read-only `<input>` with a copy button, display a warning: "Copy this key now — it won't be shown again."
@@ -374,6 +374,6 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
 ## Completion checklist
 
 - [x] Issue #3 complete — committed and pushed
-- [ ] Issue #6 complete — committed and pushed
+- [x] Issue #6 complete — committed and pushed
 - [ ] Issue #7 complete — committed and pushed
 - [ ] Issue #8 complete — committed and pushed
