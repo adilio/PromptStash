@@ -10,6 +10,8 @@ import { getApiBaseUrl } from '@/lib/api';
 import { generateEspansoYaml } from '@/lib/espanso';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
+import { useShowAdvanced } from '@/lib/preferences';
+import { AGENT_FORMATS, filenameFor, wrapPromptsForFormat, downloadFile } from '@/lib/agentExport';
 import type { Team } from '@/lib/types';
 
 interface ContextType {
@@ -212,8 +214,11 @@ export function Settings() {
   const [justCreatedKey, setJustCreatedKey] = useState<{ rawKey: string; name: string } | null>(null);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [espansoLoading, setEspansoLoading] = useState(false);
+  const [agentExportFormat, setAgentExportFormat] = useState('agents');
+  const [agentExportLoading, setAgentExportLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [showAdvanced, setShowAdvanced] = useShowAdvanced();
   const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
@@ -446,6 +451,33 @@ export function Settings() {
     }
   };
 
+  const handleDownloadAgentFormat = async () => {
+    if (!currentTeamId) {
+      toast({
+        title: 'No workspace',
+        description: 'Select a workspace first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setAgentExportLoading(true);
+    try {
+      const prompts = await listPrompts(currentTeamId);
+      const filename = filenameFor(agentExportFormat as any);
+      const content = wrapPromptsForFormat(prompts, agentExportFormat as any);
+      downloadFile(filename, content);
+      toast({ title: 'Agent file downloaded' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not download agent file',
+        variant: 'destructive',
+      });
+    } finally {
+      setAgentExportLoading(false);
+    }
+  };
+
   return (
     <div
       id="settings-container"
@@ -604,6 +636,37 @@ export function Settings() {
                   value={theme}
                   onChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}
                 />
+              </SettingsRow>
+              <SettingsRow
+                label="Show all advanced features"
+                hint="Forces every advanced surface (stages, bundles, token gauges) visible regardless of whether you've used them yet."
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 20,
+                    borderRadius: 999,
+                    background: showAdvanced ? 'var(--ps-accent)' : 'var(--ps-hairline)',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background 120ms',
+                  }}
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: showAdvanced ? 18 : 2,
+                      top: 2,
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                      transition: 'left 120ms',
+                    }}
+                  />
+                </div>
               </SettingsRow>
             </SettingsCard>
           </>
@@ -907,6 +970,37 @@ export function Settings() {
                     <p style={{ margin: 0 }}>Then restart Espanso: <code style={{ background: 'var(--ps-bg-sunken)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>espanso restart</code></p>
                   </div>
                 </details>
+              </div>
+            </SettingsCard>
+
+            <SettingsCard>
+              <div style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>Agent file export</div>
+                <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
+                  Download all prompts in this workspace as a single agent file.
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+                  <select
+                    value={agentExportFormat}
+                    onChange={(e) => setAgentExportFormat(e.target.value)}
+                    disabled={!currentTeamId}
+                    style={{ ...inputStyle, width: 'auto', minWidth: 200 }}
+                  >
+                    {AGENT_FORMATS.map((format) => (
+                      <option key={format.id} value={format.id}>
+                        {format.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleDownloadAgentFormat}
+                    disabled={agentExportLoading || !currentTeamId}
+                    style={agentExportLoading ? { ...btnPrimaryStyle, opacity: 0.7, cursor: 'not-allowed' } : btnPrimaryStyle}
+                  >
+                    {agentExportLoading ? 'Downloading…' : 'Download'}
+                  </button>
+                </div>
               </div>
             </SettingsCard>
           </>

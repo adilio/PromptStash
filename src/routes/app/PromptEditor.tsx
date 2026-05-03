@@ -6,6 +6,7 @@ import { ChevronLeft, Share2, Copy, Play, AlertCircle } from 'lucide-react';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { Loading } from '@/components/Loading';
 import { TagInput } from '@/components/TagInput';
+import { ConceptInfo } from '@/components/ConceptInfo';
 import { getPrompt, createPrompt, updatePrompt } from '@/api/prompts';
 import { listTags, createTag, addTagToPrompt, removeTagFromPrompt } from '@/api/tags';
 import { useToast } from '@/components/ui/use-toast';
@@ -13,7 +14,9 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { promptKeys } from '@/lib/queryClient';
 import { slugify } from '@/lib/espanso';
+import { AGENT_FORMATS } from '@/lib/agentExport';
 import type { Tag } from '@/lib/types';
+import type { AgentFormat } from '@/lib/agentExport';
 
 interface ContextType {
   currentTeamId?: string;
@@ -36,6 +39,7 @@ export function PromptEditor() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [espansoTrigger, setEspansoTrigger] = useState('');
+  const [agentFormat, setAgentFormat] = useState<AgentFormat | ''>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -117,6 +121,8 @@ export function PromptEditor() {
       setBody(promptQuery.data.body_md);
       setSelectedTags(promptQuery.data.tags || []);
       setEspansoTrigger(promptQuery.data.espanso_trigger ?? '');
+      const agentFormat = (promptQuery.data as { agent_format?: string | null }).agent_format;
+      setAgentFormat((agentFormat || '') as AgentFormat | '');
       initialLoadRef.current = true;
     }
   }, [promptQuery.data]);
@@ -142,7 +148,7 @@ export function PromptEditor() {
       try {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined },
+          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null },
         });
         setLastSaved(new Date());
       } catch (error) {
@@ -152,7 +158,7 @@ export function PromptEditor() {
       }
     };
     if (!isNew && promptId) autoSave();
-  }, [debouncedTitle, debouncedBody]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedTitle, debouncedBody, agentFormat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTags = async () => {
     if (!currentTeamId) return;
@@ -210,13 +216,14 @@ export function PromptEditor() {
           title,
           body_md: body,
           espanso_trigger: espansoTrigger || undefined,
+          agent_format: agentFormat || null,
         });
         toast({ title: 'Prompt created' });
         navigate(`/app/p/${created.id}`);
       } else {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined }
+          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null }
         });
         toast({ title: 'Prompt saved' });
         navigate(`/app/p/${promptId}`);
@@ -571,10 +578,49 @@ export function PromptEditor() {
                   fontSize: 13,
                   outline: 'none',
                   boxSizing: 'border-box',
+                  marginBottom: 14,
                 }}
               />
-              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
+              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 0, marginBottom: 14 }}>
                 Type this keyword anywhere on your system to expand the prompt using Espanso.
+              </p>
+
+              <label
+                htmlFor="agent-format"
+                style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6 }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  Target agent
+                  <ConceptInfo conceptId="agents-md" />
+                </span>
+              </label>
+              <select
+                id="agent-format"
+                value={agentFormat}
+                onChange={(e) => setAgentFormat(e.target.value as AgentFormat | '')}
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--ps-hairline)',
+                  background: 'var(--ps-bg-elev)',
+                  borderRadius: 8,
+                  padding: '0 12px',
+                  height: 32,
+                  color: 'var(--ps-fg)',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">Unspecified</option>
+                {AGENT_FORMATS.map((format) => (
+                  <option key={format.id} value={format.id}>
+                    {format.label}
+                  </option>
+                ))}
+              </select>
+              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
+                Pick the agent file this prompt should be exported as.
               </p>
             </div>
           )}

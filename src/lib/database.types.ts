@@ -226,6 +226,7 @@ export type Database = {
       }
       prompts: {
         Row: {
+          agent_format: string | null
           body_md: string
           created_at: string
           espanso_trigger: string | null
@@ -239,6 +240,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          agent_format?: string | null
           body_md: string
           created_at?: string
           espanso_trigger?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          agent_format?: string | null
           body_md?: string
           created_at?: string
           espanso_trigger?: string | null

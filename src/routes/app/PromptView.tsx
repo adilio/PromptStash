@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit, Share2, Trash2, History } from 'lucide-react';
+import { ArrowLeft, Edit, Share2, Trash2, History, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { ShareDialog } from '@/components/ShareDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -11,6 +12,7 @@ import { Loading } from '@/components/Loading';
 import { getPrompt, deletePrompt } from '@/api/prompts';
 import { useToast } from '@/components/ui/use-toast';
 import { promptKeys } from '@/lib/queryClient';
+import { AGENT_FORMATS, filenameFor, wrapPromptForFormat, downloadFile } from '@/lib/agentExport';
 import type { PromptWithTags } from '@/lib/types';
 
 export function PromptView() {
@@ -89,7 +91,23 @@ export function PromptView() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{prompt.title}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">{prompt.title}</h1>
+                {(prompt as { agent_format?: string | null }).agent_format && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      background: 'var(--ps-accent-soft)',
+                      color: 'var(--ps-accent)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Target: {AGENT_FORMATS.find(f => f.id === (prompt as { agent_format?: string | null }).agent_format)?.label || 'Agent file'}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">
                 Updated {new Date(prompt.updated_at).toLocaleDateString()}
               </p>
@@ -100,6 +118,32 @@ export function PromptView() {
               <History className="mr-2 h-4 w-4" />
               History
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download as…
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {AGENT_FORMATS.map((format) => (
+                  <DropdownMenuItem
+                    key={format.id}
+                    onClick={() => {
+                      const filename = filenameFor(format.id);
+                      const content = wrapPromptForFormat(prompt, format.id);
+                      downloadFile(filename, content);
+                      toast({ title: `Downloaded ${format.label}` });
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{format.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ps-fg-faint)' }}>{format.filename}</div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
               <Share2 className="mr-2 h-4 w-4" />
               Share

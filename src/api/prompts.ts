@@ -141,6 +141,7 @@ export async function createPrompt(input: {
   body_md: string;
   visibility?: 'private' | 'team' | 'public';
   espanso_trigger?: string;
+  agent_format?: string | null;
 }): Promise<Prompt> {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('Not authenticated');
@@ -155,6 +156,10 @@ export async function createPrompt(input: {
 
   if (input.espanso_trigger) {
     insertData.espanso_trigger = input.espanso_trigger;
+  }
+
+  if (input.agent_format) {
+    insertData.agent_format = input.agent_format;
   }
 
   const { data, error } = await supabase
@@ -177,6 +182,7 @@ export async function updatePrompt(
     visibility: 'private' | 'team' | 'public';
     public_slug: string | null;
     espanso_trigger: string;
+    agent_format: string | null;
   }>
 ): Promise<Prompt> {
   const { data, error } = await supabase
