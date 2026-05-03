@@ -7,6 +7,7 @@ import { PromptCardSkeleton } from '@/components/PromptCardSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
 import { ConceptInfo } from '@/components/ConceptInfo';
+import { TemplateGallery } from '@/components/TemplateGallery';
 import { listPrompts, deletePrompt, updatePrompt } from '@/api/prompts';
 import { listFolders } from '@/api/folders';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -240,91 +241,6 @@ function PromptListRow({
   );
 }
 
-interface Template {
-  title: string;
-  sub: string;
-  body: string;
-}
-
-const STARTER_TEMPLATES: Template[] = [
-  {
-    title: 'Code review companion',
-    sub: 'Senior-engineer style review prompt',
-    body: `You are a senior software engineer conducting a thorough code review. Analyze the following code with a focus on correctness, readability, maintainability, and performance.
-
-\`\`\`{{language}}
-{{code}}
-\`\`\`
-
-Review criteria:
-- **Correctness**: Are there any bugs, edge cases, or logical errors?
-- **Readability**: Is the code clear and self-documenting? Are names meaningful?
-- **Maintainability**: Is there duplication? Are abstractions appropriate?
-- **Performance**: Are there any obvious inefficiencies?
-- **Security**: Are there any potential vulnerabilities?
-
-Provide specific, actionable feedback. For each issue, explain *why* it matters and suggest a concrete fix. Note what's done well too.`,
-  },
-  {
-    title: 'Meeting recap',
-    sub: 'Transcript → decisions + action items',
-    body: `Convert the following meeting transcript into a clean recap.
-
-<transcript>
-{{transcript}}
-</transcript>
-
-Format your output as:
-
-## Summary
-One paragraph, 2–3 sentences maximum.
-
-## Decisions
-- Bulleted list of decisions made
-
-## Action items
-| Owner | Action | Due |
-|-------|--------|-----|
-
-## Open questions
-Items that need follow-up but weren't resolved.`,
-  },
-  {
-    title: 'Cold outreach',
-    sub: 'Conversational, low-pressure email',
-    body: `Write a short, conversational cold outreach email. Avoid sounding like a template.
-
-About me: {{sender_background}}
-About them: {{recipient_name}} at {{company}}, {{recipient_role}}
-My goal: {{goal}}
-One specific hook: {{personalization_detail}}
-
-Guidelines:
-- Under 100 words in the body
-- No buzzwords or hype
-- One clear ask in the final line
-- Subject line: specific and non-spammy`,
-  },
-  {
-    title: 'Research synthesizer',
-    sub: 'Themes + verbatim quotes + signals',
-    body: `Synthesize the following research material into a structured analysis.
-
-<material>
-{{research_material}}
-</material>
-
-## Key themes
-For each theme: a one-sentence label, 2–3 supporting points, and one verbatim quote from the material.
-
-## Signals worth watching
-Emerging patterns or tensions that don't fit neatly into the themes above.
-
-## Gaps
-What important questions does this material *not* answer?`,
-  },
-];
-
 function NoWorkspaceState() {
   const navigate = useNavigate();
   return (
@@ -396,8 +312,7 @@ function NoWorkspaceState() {
   );
 }
 
-function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) => void }) {
-  const recipes = STARTER_TEMPLATES;
+function EmptyDashboard({ onNewPrompt, onBrowseTemplates }: { onNewPrompt: () => void; onBrowseTemplates: () => void }) {
   return (
     <div
       style={{
@@ -443,9 +358,9 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) =>
       <p style={{ margin: '0 0 22px', fontSize: 14 }}>
         Save the prompts you find yourself rewriting. Variables, versions, folders — it's all here.
       </p>
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
         <button
-          onClick={() => onNewPrompt()}
+          onClick={onNewPrompt}
           style={{
             height: 34,
             padding: '0 12px',
@@ -465,65 +380,23 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) =>
           <Plus style={{ width: 14, height: 14 }} />
           New prompt
         </button>
-      </div>
-      <div
-        style={{
-          marginTop: 36,
-          textAlign: 'left',
-          borderTop: '1px solid var(--ps-hairline-soft)',
-          paddingTop: 24,
-        }}
-      >
-        <div
+        <button
+          onClick={onBrowseTemplates}
           style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--ps-fg-faint)',
-            marginBottom: 10,
+            height: 34,
+            padding: '0 12px',
+            borderRadius: 8,
+            background: 'var(--ps-bg-elev)',
+            color: 'var(--ps-fg)',
+            border: '1px solid var(--ps-hairline)',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: 'pointer',
           }}
         >
-          Or start from a template
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {recipes.map((r, i) => (
-            <button
-              key={i}
-              onClick={() => onNewPrompt(r)}
-              style={{
-                border: '1px solid var(--ps-hairline)',
-                background: 'var(--ps-bg-elev)',
-                borderRadius: 8,
-                padding: '12px 14px',
-                cursor: 'pointer',
-                display: 'flex',
-                gap: 10,
-                alignItems: 'flex-start',
-                textAlign: 'left',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--ps-accent)';
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--ps-accent-soft)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--ps-hairline)';
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--ps-bg-elev)';
-              }}
-            >
-              <span style={{ color: 'var(--ps-accent)', marginTop: 1, flexShrink: 0 }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.5 6.5 9 9M15 15l2.5 2.5M6.5 17.5 9 15M15 9l2.5-2.5" />
-                </svg>
-              </span>
-              <span>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ps-fg)' }}>{r.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 2 }}>{r.sub}</div>
-              </span>
-            </button>
-          ))}
-        </div>
+          Browse templates →
+        </button>
       </div>
     </div>
   );
@@ -556,6 +429,7 @@ export function Dashboard() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [focusedPromptIndex, setFocusedPromptIndex] = useState(-1);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const showAdvanced = useShowAdvanced();
 
@@ -628,10 +502,10 @@ export function Dashboard() {
     return list;
   }, [prompts, selectedFolder, selectedTags, selectedStages]);
 
-  const navigateToNewPrompt = (template?: Template) => {
+  const navigateToNewPrompt = () => {
     const activeFolderId = selectedFolder ?? currentFolderId;
     const search = activeFolderId ? `?folder=${encodeURIComponent(activeFolderId)}` : '';
-    navigate(`/app/prompts/new${search}`, template ? { state: { initialTitle: template.title, initialBody: template.body } } : undefined);
+    navigate(`/app/prompts/new${search}`);
   };
 
   const handleFolderFilterChange = (nextFolderId: string | null) => {
@@ -867,6 +741,26 @@ export function Dashboard() {
             teamId={currentTeamId!}
             onImportComplete={() => void promptsQuery.refetch()}
           />
+          <button
+            onClick={() => setTemplateGalleryOpen(true)}
+            style={{
+              height: 28,
+              padding: '0 10px',
+              borderRadius: 7,
+              background: 'var(--ps-bg-elev)',
+              color: 'var(--ps-fg)',
+              border: '1px solid var(--ps-hairline)',
+              fontFamily: 'inherit',
+              fontSize: 12.5,
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            From template
+          </button>
           <button
             onClick={() => navigateToNewPrompt()}
             style={{
@@ -1253,7 +1147,7 @@ export function Dashboard() {
         ) : !currentTeamId ? (
           <NoWorkspaceState />
         ) : isEmpty ? (
-          <EmptyDashboard onNewPrompt={navigateToNewPrompt} />
+          <EmptyDashboard onNewPrompt={navigateToNewPrompt} onBrowseTemplates={() => setTemplateGalleryOpen(true)} />
         ) : filteredPrompts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ps-fg-muted)' }}>
             <p>No prompts match your search.</p>
@@ -1359,6 +1253,8 @@ export function Dashboard() {
         onConfirm={handleDelete}
         confirmText="Delete"
       />
+
+      <TemplateGallery open={templateGalleryOpen} onClose={() => setTemplateGalleryOpen(false)} />
     </div>
   );
 }
