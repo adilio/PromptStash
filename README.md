@@ -73,7 +73,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 For production OAuth, configure Supabase Auth with your deployed origin:
 
 - Site URL: `https://promptstash.4dl.ca`
-- Redirect URLs: `https://promptstash.4dl.ca/**`
+- Redirect URLs: `https://promptstash.4dl.ca/**` and `https://promptstash.4dl.ca/auth/callback`
 - Google authorized redirect URI: `https://your-project.supabase.co/auth/v1/callback`
 - GitHub authorization callback URL: `https://your-project.supabase.co/auth/v1/callback`
 

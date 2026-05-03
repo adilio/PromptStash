@@ -107,7 +107,9 @@ export function SignIn() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}${redirectPath}` },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+        },
       });
       if (error) throw error;
     } catch (error) {
@@ -128,7 +130,9 @@ export function SignIn() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/app` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
+          },
         });
         if (error) throw error;
         toast({ title: 'Check your email to confirm your account' });
