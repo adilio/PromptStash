@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { AppLayout } from '../routes/app/AppLayout';
 import { supabase } from '../lib/supabase';
@@ -28,6 +29,23 @@ vi.mock('../components/CommandPalette', () => ({
   CommandPalette: () => null,
 }));
 
+function renderAppLayout() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+
 describe('Authentication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,11 +57,7 @@ describe('Authentication', () => {
       error: null,
     });
 
-    const { container } = render(
-      <BrowserRouter>
-        <AppLayout />
-      </BrowserRouter>
-    );
+    const { container } = renderAppLayout();
 
     await waitFor(() => {
       expect(container.innerHTML).toBeTruthy();
@@ -61,11 +75,7 @@ describe('Authentication', () => {
       error: null,
     });
 
-    render(
-      <BrowserRouter>
-        <AppLayout />
-      </BrowserRouter>
-    );
+    renderAppLayout();
 
     await waitFor(() => {
       expect(screen.getByText('Sidebar')).toBeInTheDocument();

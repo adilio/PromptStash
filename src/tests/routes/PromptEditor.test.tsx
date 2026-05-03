@@ -136,6 +136,9 @@ describe('PromptEditor', () => {
           folder_id: undefined,
           title: 'My New Prompt',
           body_md: '',
+          espanso_trigger: undefined,
+          agent_format: null,
+          stage: null,
         },
         expect.anything()
       );
