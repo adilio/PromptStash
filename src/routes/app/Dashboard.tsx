@@ -719,8 +719,15 @@ export function Dashboard() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        @media (max-width: 767px) {
+          #dashboard-header-actions { display: none !important; }
+          #dashboard-header { padding: 16px 16px 12px !important; }
+        }
+      `}</style>
       {/* Main header */}
       <header
+        id="dashboard-header"
         style={{
           padding: '22px 32px 16px',
           borderBottom: '1px solid var(--ps-hairline-soft)',
@@ -762,7 +769,7 @@ export function Dashboard() {
             {!currentTeamId ? 'Set up a workspace to get started.' : isEmpty ? 'Save your first prompt to get started.' : `${filteredPrompts.length} prompt${filteredPrompts.length !== 1 ? 's' : ''}`}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        <div id="dashboard-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           <ExportImportDialog
             teamId={currentTeamId!}
             onImportComplete={() => void promptsQuery.refetch()}
