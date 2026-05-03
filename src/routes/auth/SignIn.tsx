@@ -196,6 +196,32 @@ export function SignIn() {
           #mobile-brand {
             display: flex !important;
           }
+          #signin-form input {
+            height: 50px !important;
+            font-size: 16px !important;
+            padding: 0 16px !important;
+            border-radius: 10px !important;
+          }
+          #signin-form button[type="submit"] {
+            height: 52px !important;
+            font-size: 16px !important;
+            border-radius: 10px !important;
+          }
+          #signin-form label {
+            font-size: 14px !important;
+          }
+          #oauth-row button {
+            height: 50px !important;
+            font-size: 15px !important;
+            border-radius: 10px !important;
+          }
+          #oauth-row button svg {
+            width: 18px !important;
+            height: 18px !important;
+          }
+          #signin-form h1 {
+            font-size: 30px !important;
+          }
         }
         @media (min-width: 480px) and (max-width: 767px) {
           #signin-form-container {
@@ -504,7 +530,7 @@ export function SignIn() {
             <div style={{ flex: 1, height: 1, background: 'var(--ps-hairline)' }} />
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <div id="oauth-row" style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button type="button" style={oauthBtnStyle} onClick={() => handleOAuth('google')} disabled={loading}>
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <path
