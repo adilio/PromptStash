@@ -8,8 +8,10 @@ import { listPrompts } from '@/api/prompts';
 import { bundleKeys, promptKeys } from '@/lib/queryClient';
 import { useToast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ConceptInfo } from '@/components/ConceptInfo';
 import { AGENT_FORMATS, bundleToFile, downloadFile } from '@/lib/agentExport';
 import { STAGE_OPTIONS } from '@/lib/types';
+import { estimateTokens, getZone, zoneColor, MODEL_CONTEXTS, type ModelKey } from '@/lib/tokens';
 import { supabase } from '@/lib/supabase';
 import type { Stage, AgentFormat } from '@/lib/types';
 
@@ -35,6 +37,7 @@ export function BundleEditor() {
   const [addPromptOpen, setAddPromptOpen] = useState(false);
   const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [selectedModel, setSelectedModel] = useState<ModelKey>('claude-sonnet');
 
   const debouncedName = useDebounce(name, 2000);
   const debouncedDescription = useDebounce(description, 2000);
@@ -297,6 +300,12 @@ export function BundleEditor() {
     : availablePrompts.filter(p => p.stage === stageFilter);
 
   const { filename, content } = bundle ? bundleToFile(bundle, bundle.items) : { filename: '', content: '' };
+
+  const includedItems = bundle?.items.filter(item => item.included) ?? [];
+  const totalTokens = includedItems.reduce((sum, item) => sum + estimateTokens(item.prompt.body_md), 0);
+  const contextSize = MODEL_CONTEXTS[selectedModel];
+  const zone = getZone(totalTokens, contextSize);
+  const ratio = totalTokens / contextSize;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -638,6 +647,121 @@ export function BundleEditor() {
             <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--ps-fg)' }}>
               Preview: {filename}
             </h3>
+
+            <div style={{
+              marginBottom: 16,
+              padding: 12,
+              borderRadius: 8,
+              background: 'var(--ps-bg-elev)',
+              border: '1px solid var(--ps-hairline)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ps-fg)' }}>
+                  Context budget
+                </span>
+                <ConceptInfo conceptId="dumb-zone" />
+              </div>
+
+              <div style={{ marginBottom: 10 }}>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value as ModelKey)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--ps-hairline)',
+                    background: 'var(--ps-bg)',
+                    color: 'var(--ps-fg)',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                  }}
+                >
+                  <option value="claude-sonnet">Claude Sonnet (200k)</option>
+                  <option value="claude-opus">Claude Opus (200k)</option>
+                  <option value="gpt-5">GPT-5 (400k)</option>
+                </select>
+              </div>
+
+              <div style={{
+                position: 'relative',
+                height: 8,
+                borderRadius: 4,
+                background: 'var(--ps-bg-sunken)',
+                marginBottom: 8,
+                overflow: 'hidden',
+              }}>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    height: '100%',
+                    width: `${Math.min(ratio * 100, 100)}%`,
+                    background: zoneColor(zone),
+                    transition: 'width 120ms, background 120ms',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '40%',
+                    top: 0,
+                    width: 1,
+                    height: '100%',
+                    background: 'var(--ps-fg-dim)',
+                    opacity: 0.5,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '60%',
+                    top: 0,
+                    width: 1,
+                    height: '100%',
+                    background: 'var(--ps-fg-dim)',
+                    opacity: 0.5,
+                  }}
+                />
+              </div>
+
+              <div style={{
+                fontSize: 11,
+                color: 'var(--ps-fg-faint)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <span>0%</span>
+                <span>40%</span>
+                <span>60%</span>
+                <span>100%</span>
+              </div>
+
+              <div style={{
+                fontSize: 11.5,
+                color: 'var(--ps-fg-muted)',
+                textAlign: 'center',
+                fontFamily: '"JetBrains Mono", monospace',
+              }}>
+                ≈ {totalTokens.toLocaleString()} tokens • {Math.round(ratio * 100)}% of {selectedModel} • Zone: <span style={{ color: zoneColor(zone), fontWeight: 500 }}>{zone.charAt(0).toUpperCase() + zone.slice(1)}</span>
+              </div>
+
+              {(zone === 'warning' || zone === 'danger') && (
+                <div style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: '1px solid var(--ps-hairline-soft)',
+                  fontSize: 11,
+                  color: 'var(--ps-fg-muted)',
+                  lineHeight: 1.4,
+                }}>
+                  This bundle is approaching the Dumb Zone — consider splitting modules or moving detail into sub-agent instructions.
+                </div>
+              )}
+            </div>
+
             <pre
               style={{
                 fontSize: 12,

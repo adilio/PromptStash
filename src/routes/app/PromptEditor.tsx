@@ -15,6 +15,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { promptKeys } from '@/lib/queryClient';
 import { slugify } from '@/lib/espanso';
 import { AGENT_FORMATS } from '@/lib/agentExport';
+import { estimateTokens, zoneColor } from '@/lib/tokens';
 import type { Tag, Stage } from '@/lib/types';
 import { STAGE_OPTIONS } from '@/lib/types';
 import type { AgentFormat } from '@/lib/agentExport';
@@ -59,9 +60,11 @@ export function PromptEditor() {
 
   const bodyStats = useMemo(() => {
     const trimmed = debouncedStatsBody.trim();
+    const tokenCount = estimateTokens(debouncedStatsBody);
     return {
-      tokenCount: Math.ceil(debouncedStatsBody.length / 4),
+      tokenCount,
       wordCount: trimmed ? trimmed.split(/\s+/).length : 0,
+      tokenColor: tokenCount > 16000 ? zoneColor('danger') : tokenCount > 8000 ? zoneColor('warning') : undefined,
     };
   }, [debouncedStatsBody]);
 
@@ -517,7 +520,20 @@ export function PromptEditor() {
           )}
           <span style={{ color: 'var(--ps-fg-dim)' }}>·</span>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12 }}>
-            ~{bodyStats.tokenCount} tokens · {bodyStats.wordCount} words
+            {bodyStats.wordCount} words
+          </span>
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 11.5,
+              fontFamily: '"JetBrains Mono", monospace',
+              background: bodyStats.tokenColor ? 'transparent' : 'transparent',
+              color: bodyStats.tokenColor ?? 'var(--ps-fg-faint)',
+              border: bodyStats.tokenColor ? undefined : '1px solid var(--ps-hairline)',
+            }}
+          >
+            ≈ {bodyStats.tokenCount} tokens
           </span>
         </div>
 

@@ -17,6 +17,7 @@ import { useDragPreview } from '@/hooks/useDragPreview';
 import { useShowAdvanced } from '@/lib/preferences';
 import { promptKeys } from '@/lib/queryClient';
 import { STAGE_OPTIONS } from '@/lib/types';
+import { estimateTokens } from '@/lib/tokens';
 import type { PromptWithTags, Folder, Tag as TagType, Stage } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
@@ -65,6 +66,7 @@ function PromptListRow({
   const preview = prompt.body_md.slice(0, 90).replace(/\n/g, ' ');
   const stage = (prompt as { stage?: string | null }).stage;
   const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
+  const tokenCount = prompt.body_md.length > 1000 ? estimateTokens(prompt.body_md) : null;
 
   return (
     <div
@@ -74,7 +76,7 @@ function PromptListRow({
       onClick={() => navigate(`/app/p/${prompt.id}`)}
       style={{
         display: 'grid',
-        gridTemplateColumns: '22px 1fr 160px 130px 32px',
+        gridTemplateColumns: '22px 1fr 160px 90px 130px 32px',
         alignItems: 'center',
         gap: 14,
         padding: '0 14px',
@@ -85,7 +87,7 @@ function PromptListRow({
         outline: focused ? '2px solid var(--ps-accent)' : 'none',
         outlineOffset: -2,
       }}
-      className="group list-row"
+      className="group list-row desktop-list-row"
       onMouseEnter={(e) => {
         if (!focused) (e.currentTarget as HTMLDivElement).style.background = 'var(--ps-bg-sunken)';
       }}
@@ -93,6 +95,18 @@ function PromptListRow({
         if (!focused) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
       }}
     >
+      <style>{`
+        @media (max-width: 767px) {
+          .desktop-list-row {
+            grid-template-columns: 22px 1fr 32px !important;
+          }
+          .desktop-list-row .list-row-tags,
+          .desktop-list-row .list-row-tokens,
+          .desktop-list-row .list-row-updated {
+            display: none !important;
+          }
+        }
+      `}</style>
       <span
         style={{
           color: 'var(--ps-fg-dim)',
@@ -169,6 +183,17 @@ function PromptListRow({
           </span>
         ))}
       </div>
+
+      <span
+        className="list-row-tokens"
+        style={{
+          fontSize: 11,
+          color: 'var(--ps-fg-faint)',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {tokenCount !== null ? `≈ ${tokenCount} tok` : ''}
+      </span>
 
       <span
         className="list-row-updated"

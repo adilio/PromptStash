@@ -8,6 +8,7 @@ import {
 } from './ui/dropdown-menu';
 import { useToast } from './ui/use-toast';
 import { STAGE_OPTIONS } from '@/lib/types';
+import { estimateTokens } from '@/lib/tokens';
 import type { PromptWithTags } from '@/lib/types';
 
 interface PromptCardProps {
@@ -49,6 +50,7 @@ export function PromptCard({
   const tags = prompt.tags ?? [];
   const stage = (prompt as { stage?: string | null }).stage;
   const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
+  const tokenCount = prompt.body_md.length > 1000 ? estimateTokens(prompt.body_md) : null;
 
   return (
     <div
@@ -240,6 +242,20 @@ export function PromptCard({
                 </span>
               ))}
             </>
+          )}
+          {tokenCount !== null && (
+            <span
+              style={{
+                fontSize: 10.5,
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: 'transparent',
+                color: 'var(--ps-fg-faint)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ≈ {tokenCount} tok
+            </span>
           )}
         </div>
         <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
