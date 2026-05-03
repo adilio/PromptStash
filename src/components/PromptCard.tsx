@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { useToast } from './ui/use-toast';
+import { STAGE_OPTIONS } from '@/lib/types';
 import type { PromptWithTags } from '@/lib/types';
 
 interface PromptCardProps {
@@ -46,6 +47,8 @@ export function PromptCard({
   };
 
   const tags = prompt.tags ?? [];
+  const stage = (prompt as { stage?: string | null }).stage;
+  const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
 
   return (
     <div
@@ -202,26 +205,43 @@ export function PromptCard({
           color: 'var(--ps-fg-faint)',
         }}
       >
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'nowrap', overflow: 'hidden' }}>
-            {tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id}
-                style={{
-                  fontSize: 11,
-                  padding: '2px 7px',
-                  borderRadius: 4,
-                  background: 'var(--ps-bg-sunken)',
-                  color: 'var(--ps-fg-muted)',
-                  border: '1px solid var(--ps-hairline-soft)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {tag.name}
-              </span>
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'nowrap', overflow: 'hidden', alignItems: 'center' }}>
+          {stageOption && (
+            <span
+              style={{
+                fontSize: 10,
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: stageOption.color,
+                color: '#fff',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {stageOption.label}
+            </span>
+          )}
+          {tags.length > 0 && (
+            <>
+              {tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag.id}
+                  style={{
+                    fontSize: 11,
+                    padding: '2px 7px',
+                    borderRadius: 4,
+                    background: 'var(--ps-bg-sunken)',
+                    color: 'var(--ps-fg-muted)',
+                    border: '1px solid var(--ps-hairline-soft)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </>
+          )}
+        </div>
         <span style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
           Updated {new Date(prompt.updated_at).toLocaleDateString()}
         </span>

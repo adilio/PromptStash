@@ -15,7 +15,8 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { promptKeys } from '@/lib/queryClient';
 import { slugify } from '@/lib/espanso';
 import { AGENT_FORMATS } from '@/lib/agentExport';
-import type { Tag } from '@/lib/types';
+import type { Tag, Stage } from '@/lib/types';
+import { STAGE_OPTIONS } from '@/lib/types';
 import type { AgentFormat } from '@/lib/agentExport';
 
 interface ContextType {
@@ -40,6 +41,7 @@ export function PromptEditor() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [espansoTrigger, setEspansoTrigger] = useState('');
   const [agentFormat, setAgentFormat] = useState<AgentFormat | ''>('');
+  const [stage, setStage] = useState<Stage | ''>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -123,6 +125,8 @@ export function PromptEditor() {
       setEspansoTrigger(promptQuery.data.espanso_trigger ?? '');
       const agentFormat = (promptQuery.data as { agent_format?: string | null }).agent_format;
       setAgentFormat((agentFormat || '') as AgentFormat | '');
+      const stage = (promptQuery.data as { stage?: string | null }).stage;
+      setStage((stage || '') as Stage | '');
       initialLoadRef.current = true;
     }
   }, [promptQuery.data]);
@@ -148,7 +152,7 @@ export function PromptEditor() {
       try {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null },
+          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, stage: stage || null },
         });
         setLastSaved(new Date());
       } catch (error) {
@@ -158,7 +162,7 @@ export function PromptEditor() {
       }
     };
     if (!isNew && promptId) autoSave();
-  }, [debouncedTitle, debouncedBody, agentFormat]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedTitle, debouncedBody, agentFormat, stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTags = async () => {
     if (!currentTeamId) return;
@@ -217,13 +221,14 @@ export function PromptEditor() {
           body_md: body,
           espanso_trigger: espansoTrigger || undefined,
           agent_format: agentFormat || null,
+          stage: stage || null,
         });
         toast({ title: 'Prompt created' });
         navigate(`/app/p/${created.id}`);
       } else {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null }
+          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, stage: stage || null }
         });
         toast({ title: 'Prompt saved' });
         navigate(`/app/p/${promptId}`);
@@ -621,6 +626,44 @@ export function PromptEditor() {
               </select>
               <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
                 Pick the agent file this prompt should be exported as.
+              </p>
+
+              <label
+                htmlFor="stage"
+                style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6, marginTop: 14 }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  Stage
+                  <ConceptInfo conceptId="stages" />
+                </span>
+              </label>
+              <select
+                id="stage"
+                value={stage}
+                onChange={(e) => setStage(e.target.value as Stage | '')}
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--ps-hairline)',
+                  background: 'var(--ps-bg-elev)',
+                  borderRadius: 8,
+                  padding: '0 12px',
+                  height: 32,
+                  color: 'var(--ps-fg)',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <option value="">No stage</option>
+                {STAGE_OPTIONS.map((stageOption) => (
+                  <option key={stageOption.id} value={stageOption.id}>
+                    {stageOption.label}
+                  </option>
+                ))}
+              </select>
+              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
+                Tag this prompt as part of a Research → Plan → Implement workflow.
               </p>
             </div>
           )}

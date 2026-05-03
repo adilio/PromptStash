@@ -234,6 +234,7 @@ export type Database = {
           id: string
           owner_id: string
           public_slug: string | null
+          stage: string | null
           team_id: string | null
           title: string
           updated_at: string
@@ -248,6 +249,7 @@ export type Database = {
           id?: string
           owner_id: string
           public_slug?: string | null
+          stage?: string | null
           team_id?: string | null
           title: string
           updated_at?: string
@@ -262,6 +264,7 @@ export type Database = {
           id?: string
           owner_id?: string
           public_slug?: string | null
+          stage?: string | null
           team_id?: string | null
           title?: string
           updated_at?: string

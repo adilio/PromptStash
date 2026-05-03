@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Folder, Plus } from 'lucide-react';
+import { FileText, Folder, Plus, Filter } from 'lucide-react';
 import { listFolders } from '@/api/folders';
 import { listPrompts } from '@/api/prompts';
 import {
@@ -14,6 +14,10 @@ import {
 } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { promptKeys } from '@/lib/queryClient';
+import { useShowAdvanced } from '@/lib/preferences';
+import { STAGE_OPTIONS } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
+import type { Stage } from '@/lib/types';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -22,6 +26,7 @@ interface CommandPaletteProps {
   currentFolderId?: string | null;
   onFolderChange?: (folderId: string | null) => void;
   onNewPrompt: () => void;
+  onStageFilter?: (stage: Stage) => void;
 }
 
 export function CommandPalette({
@@ -31,6 +36,7 @@ export function CommandPalette({
   currentFolderId,
   onFolderChange,
   onNewPrompt,
+  onStageFilter,
 }: CommandPaletteProps) {
   const navigate = useNavigate();
   const promptsQuery = useQuery({
@@ -43,8 +49,24 @@ export function CommandPalette({
     queryFn: () => listFolders(currentTeamId!),
     enabled: !!currentTeamId && open,
   });
+  const hasAnyStagedPromptQuery = useQuery({
+    queryKey: ['prompts', 'hasStaged', currentTeamId] as const,
+    queryFn: async () => {
+      if (!currentTeamId) return false;
+      const { count } = await supabase
+        .from('prompts')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', currentTeamId)
+        .not('stage', 'is', null);
+      return (count ?? 0) > 0;
+    },
+    enabled: !!currentTeamId && open,
+  });
   const prompts = promptsQuery.data ?? [];
   const folders = foldersQuery.data ?? [];
+  const hasAnyStagedPrompt = hasAnyStagedPromptQuery.data ?? false;
+  const showAdvanced = useShowAdvanced();
+  const showStageFilters = hasAnyStagedPrompt || showAdvanced;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,6 +103,20 @@ export function CommandPalette({
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)', fontFamily: '"JetBrains Mono", monospace' }}>N</span>
               </CommandItem>
             </CommandGroup>
+            {showStageFilters && onStageFilter && (
+              <CommandGroup heading="Filter by stage">
+                {STAGE_OPTIONS.map((stageOption) => (
+                  <CommandItem
+                    key={stageOption.id}
+                    value={`filter by stage ${stageOption.label}`}
+                    onSelect={() => runCommand(() => onStageFilter(stageOption.id))}
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    <span>Filter by stage: {stageOption.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
             <CommandGroup heading="Prompts">
               {prompts.map((prompt) => (
                 <CommandItem

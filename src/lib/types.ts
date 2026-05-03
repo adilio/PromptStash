@@ -15,3 +15,18 @@ export type Share = Database['public']['Tables']['shares']['Row'];
 export type PromptWithTags = Prompt & {
   tags?: Tag[];
 };
+
+export type Stage =
+  | 'question' | 'research' | 'design' | 'structure'
+  | 'plan' | 'work' | 'implement' | 'review';
+
+export const STAGE_OPTIONS: { id: Stage; label: string; short: string; color: string }[] = [
+  { id: 'question',  label: 'Question',  short: 'Q',  color: 'oklch(0.65 0.18 250)' },
+  { id: 'research',  label: 'Research',  short: 'R',  color: 'oklch(0.55 0.20 280)' },
+  { id: 'design',    label: 'Design',    short: 'D',  color: 'oklch(0.70 0.15 320)' },
+  { id: 'structure', label: 'Structure', short: 'S',  color: 'oklch(0.68 0.12 200)' },
+  { id: 'plan',      label: 'Plan',      short: 'P',  color: 'oklch(0.75 0.10 150)' },
+  { id: 'work',      label: 'Work',      short: 'W',  color: 'oklch(0.70 0.14 80)' },
+  { id: 'implement', label: 'Implement', short: 'I',  color: 'oklch(0.72 0.16 60)' },
+  { id: 'review',    label: 'Review/PR', short: 'PR', color: 'oklch(0.65 0.18 30)' },
+];

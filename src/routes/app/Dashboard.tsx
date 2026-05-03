@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, LayoutGrid, List, Tag, Trash2, GripVertical, X, Filter } from 'lucide-react';
 import { PromptCard } from '@/components/PromptCard';
 import { PromptCardSkeleton } from '@/components/PromptCardSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
+import { ConceptInfo } from '@/components/ConceptInfo';
 import { listPrompts, deletePrompt, updatePrompt } from '@/api/prompts';
 import { listFolders } from '@/api/folders';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -13,8 +14,11 @@ import { listTags } from '@/api/tags';
 import { useToast } from '@/components/ui/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useDragPreview } from '@/hooks/useDragPreview';
+import { useShowAdvanced } from '@/lib/preferences';
 import { promptKeys } from '@/lib/queryClient';
-import type { PromptWithTags, Folder, Tag as TagType } from '@/lib/types';
+import { STAGE_OPTIONS } from '@/lib/types';
+import type { PromptWithTags, Folder, Tag as TagType, Stage } from '@/lib/types';
+import { supabase } from '@/lib/supabase';
 
 interface ContextType {
   currentTeamId?: string;
@@ -59,6 +63,8 @@ function PromptListRow({
   const navigate = useNavigate();
   const tags = prompt.tags ?? [];
   const preview = prompt.body_md.slice(0, 90).replace(/\n/g, ' ');
+  const stage = (prompt as { stage?: string | null }).stage;
+  const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
 
   return (
     <div
@@ -101,6 +107,21 @@ function PromptListRow({
       </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        {stageOption && (
+          <span
+            style={{
+              fontSize: 10,
+              padding: '1px 5px',
+              borderRadius: 4,
+              background: stageOption.color,
+              color: '#fff',
+              fontWeight: 500,
+              flexShrink: 0,
+            }}
+          >
+            {stageOption.short}
+          </span>
+        )}
         <span
           style={{
             fontSize: 13.5,
@@ -485,6 +506,7 @@ function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) =>
 
 export function Dashboard() {
   const { folderId } = useParams<{ folderId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     currentTeamId,
     currentFolderId,
@@ -500,9 +522,17 @@ export function Dashboard() {
   const [availableTags, setAvailableTags] = useState<TagType[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedStages, setSelectedStages] = useState<Stage[]>(() => {
+    const stagesParam = searchParams.get('stages');
+    if (stagesParam) {
+      return stagesParam.split(',') as Stage[];
+    }
+    return [];
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [focusedPromptIndex, setFocusedPromptIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const showAdvanced = useShowAdvanced();
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -516,6 +546,22 @@ export function Dashboard() {
   });
   const prompts = promptsQuery.data ?? EMPTY_PROMPTS;
   const loading = promptsQuery.isLoading;
+
+  const hasAnyStagedPromptQuery = useQuery({
+    queryKey: ['prompts', 'hasStaged', currentTeamId] as const,
+    queryFn: async () => {
+      if (!currentTeamId) return false;
+      const { count } = await supabase
+        .from('prompts')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', currentTeamId)
+        .not('stage', 'is', null);
+      return (count ?? 0) > 0;
+    },
+    enabled: !!currentTeamId,
+  });
+  const hasAnyStagedPrompt = hasAnyStagedPromptQuery.data ?? false;
+  const showStageFilters = hasAnyStagedPrompt || showAdvanced;
 
   const deletePromptMutation = useMutation({
     mutationFn: deletePrompt,
@@ -548,8 +594,14 @@ export function Dashboard() {
         return selectedTags.every((id) => promptTagIds.includes(id));
       });
     }
+    if (selectedStages.length > 0) {
+      list = list.filter((p) => {
+        const promptStage = (p as { stage?: string | null }).stage;
+        return promptStage && selectedStages.includes(promptStage as Stage);
+      });
+    }
     return list;
-  }, [prompts, selectedFolder, selectedTags]);
+  }, [prompts, selectedFolder, selectedTags, selectedStages]);
 
   const navigateToNewPrompt = (template?: Template) => {
     const activeFolderId = selectedFolder ?? currentFolderId;
@@ -560,6 +612,22 @@ export function Dashboard() {
   const handleFolderFilterChange = (nextFolderId: string | null) => {
     setSelectedFolder(nextFolderId);
     setCurrentFolderId?.(nextFolderId);
+  };
+
+  const handleStageToggle = (stage: Stage) => {
+    let newStages: Stage[];
+    if (selectedStages.includes(stage)) {
+      newStages = selectedStages.filter(s => s !== stage);
+    } else {
+      newStages = [...selectedStages, stage];
+    }
+    setSelectedStages(newStages);
+    if (newStages.length > 0) {
+      searchParams.set('stages', newStages.join(','));
+    } else {
+      searchParams.delete('stages');
+    }
+    setSearchParams(searchParams);
   };
 
   useEffect(() => {
@@ -1048,6 +1116,103 @@ export function Dashboard() {
                 })}
               </div>
             </div>
+          )}
+          {showStageFilters && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ps-fg-faint)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                Stage
+                <ConceptInfo conceptId="stages" />
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {STAGE_OPTIONS.map((stageOption) => {
+                  const active = selectedStages.includes(stageOption.id);
+                  return (
+                    <button
+                      key={stageOption.id}
+                      onClick={() => handleStageToggle(stageOption.id)}
+                      style={{
+                        fontSize: 12.5, padding: '3px 10px', borderRadius: 999, cursor: 'pointer',
+                        border: '1px solid var(--ps-hairline)',
+                        background: active ? stageOption.color : 'var(--ps-bg-elev)',
+                        color: active ? '#fff' : 'var(--ps-fg-muted)',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {stageOption.short}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Stage filter chips */}
+      {showStageFilters && !isEmpty && (
+        <div
+          style={{
+            padding: '10px 32px',
+            borderBottom: '1px solid var(--ps-hairline-soft)',
+            background: 'var(--ps-bg)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            overflow: 'auto',
+          }}
+        >
+          <ConceptInfo conceptId="stages" />
+          {STAGE_OPTIONS.map((stageOption) => {
+            const active = selectedStages.includes(stageOption.id);
+            return (
+              <button
+                key={stageOption.id}
+                onClick={() => handleStageToggle(stageOption.id)}
+                style={{
+                  appearance: 'none',
+                  border: '1px solid var(--ps-hairline)',
+                  background: active ? stageOption.color : 'var(--ps-bg-elev)',
+                  color: active ? '#fff' : 'var(--ps-fg-muted)',
+                  padding: '4px 10px',
+                  borderRadius: 999,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {stageOption.label}
+              </button>
+            );
+          })}
+          {selectedStages.length > 0 && (
+            <button
+              onClick={() => {
+                setSelectedStages([]);
+                searchParams.delete('stages');
+                setSearchParams(searchParams);
+              }}
+              style={{
+                appearance: 'none',
+                border: '1px solid var(--ps-hairline)',
+                background: 'var(--ps-bg-elev)',
+                color: 'var(--ps-fg-muted)',
+                padding: '4px 8px',
+                borderRadius: 999,
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                fontFamily: 'inherit',
+              }}
+            >
+              <X style={{ width: 11, height: 11 }} />
+              Clear
+            </button>
           )}
         </div>
       )}
