@@ -20,10 +20,10 @@ export const CONCEPTS: Record<string, Concept> = {
 
 The file typically contains project context, build/test commands, code style guidelines, and specific instructions for how the AI should approach tasks in that codebase. By standardizing on AGENTS.md, teams can maintain a single source of truth for agent instructions that works across multiple tools.
 
-AGENTS.md files are typically plain markdown with section headers like "Project overview", "Build and test commands", "Code style", and "PR conventions". The format is intentionally flexible—tools parse the markdown and extract relevant sections.`,
+AGENTS.md files are typically plain markdown with section headers like "Project overview", "Build and test commands", "Code style", and "PR conventions". The format is intentionally flexible, so tools parse the markdown and extract relevant sections.`,
     why: `As AI coding agents become central to development workflows, having a standard format for instructions helps teams maintain consistency. Developers can switch between tools without rewriting their prompts, and teams can share agent configurations across repositories.
 
-The community-driven nature of AGENTS.md means it evolves with best practices. Tool authors are adopting it because it reduces onboarding friction—users can drop an existing AGENTS.md file into a new project and have their AI agent already understand the codebase context.`,
+The community-driven nature of AGENTS.md means it evolves with best practices. Tool authors are adopting it because it reduces onboarding friction: users can drop an existing AGENTS.md file into a new project and have their AI agent already understand the codebase context.`,
     howPromptStashUses: `PromptStash treats AGENTS.md as the default export format for bundles. You can compose prompts into a bundle, export it as AGENTS.md, and place it in your repository root. Each prompt in your bundle becomes a section in the file.
 
 You can also export individual prompts to AGENTS.md format, and use the "Target agent" selector to specify that a prompt should be exported as AGENTS.md. This makes PromptStash a convenient editor for maintaining your AGENTS.md file over time.`,
@@ -40,7 +40,7 @@ You can also export individual prompts to AGENTS.md format, and use the "Target 
     summary: "Claude Code's custom instruction file format, similar to AGENTS.md but specific to Anthropic's Claude Code editor.",
     body: `CLAUDE.md is Anthropic's custom instruction file format for Claude Code, their AI-powered code editor. It serves the same purpose as AGENTS.md but is specifically parsed and used by Claude Code to provide project-specific context.
 
-The format is nearly identical to AGENTS.md—both use markdown with section headers. Claude Code looks for CLAUDE.md at the root of your project and incorporates its contents into the context window when you're working in that directory.
+The format is nearly identical to AGENTS.md; both use markdown with section headers. Claude Code looks for CLAUDE.md at the root of your project and incorporates its contents into the context window when you're working in that directory.
 
 Key sections that Claude Code recognizes include project overview, architecture descriptions, preferred coding patterns, and any project-specific conventions. The editor uses this information to provide more relevant code suggestions and responses.`,
     why: `Having a dedicated instruction file for Claude Code allows for customization specific to Anthropic's models. While AGENTS.md provides cross-tool compatibility, CLAUDE.md can include instructions that take advantage of Claude's specific capabilities and behaviors.
@@ -48,7 +48,7 @@ Key sections that Claude Code recognizes include project overview, architecture 
 For teams standardized on Claude Code, CLAUDE.md ensures that every developer gets consistent AI assistance that understands their codebase conventions and architectural decisions.`,
     howPromptStashUses: `PromptStash can export prompts and bundles to CLAUDE.md format. When creating a prompt, you can set "Target agent" to "Claude" to indicate it should be exported as CLAUDE.md. Bundles can also target CLAUDE.md format, composing multiple prompts into a single file.
 
-This makes PromptStash a convenient way to maintain your CLAUDE.md file over time—you can edit sections as individual prompts, compose them into a bundle, and export the complete file whenever you make changes.`,
+This makes PromptStash a convenient way to maintain your CLAUDE.md file over time. You can edit sections as individual prompts, compose them into a bundle, and export the complete file whenever you make changes.`,
     references: [
       { label: 'Claude Code documentation', url: 'https://docs.anthropic.com/en/docs/claude-code', note: 'Official Claude Code documentation' },
       { label: 'Customizing Claude Code', url: 'https://docs.anthropic.com/en/docs/claude-code/overview', note: 'How to configure Claude Code for your project' },
@@ -61,7 +61,7 @@ This makes PromptStash a convenient way to maintain your CLAUDE.md file over tim
     summary: 'Tag prompts as part of a structured workflow (Research, Plan, Implement, etc.) to organize and compose them into bundles.',
     body: `Stage typing is a way to categorize prompts by their role in a larger workflow. Rather than treating all prompts as equivalent, stages recognize that different prompts serve different purposes in the process of getting work done with an AI agent.
 
-PromptStash supports eight stages inspired by QRSPI and other structured methodologies:
+PromptStash supports eight stages inspired by Dex Horthy's QRSPI methodology (BetterQuestions.ai) and the broader context-engineering work coming out of HumanLayer, including their "Advanced Context Engineering for Coding Agents" guide:
 - **Question**: Clarifying what needs to be done
 - **Research**: Gathering context and information
 - **Design**: Planning the solution approach
@@ -72,7 +72,7 @@ PromptStash supports eight stages inspired by QRSPI and other structured methodo
 - **Review/PR**: Pull request and code review
 
 By tagging prompts with stages, you create a structured library of instructions that can be composed into complete workflows. This is especially powerful when combined with bundles.`,
-    why: `Stage typing turns a collection of disconnected prompts into a coherent system. When you know which stage a prompt belongs to, you can see gaps in your workflow—do you have research prompts but no design prompts? Are you missing review stage instructions?
+    why: `Stage typing turns a collection of disconnected prompts into a coherent system. When you know which stage a prompt belongs to, you can see gaps in your workflow. Do you have research prompts but no design prompts? Are you missing review stage instructions?
 
 For teams, stages provide a shared language for discussing AI-assisted workflows. Everyone understands what "implement stage" means, making it easier to share and reuse prompts across projects.`,
     howPromptStashUses: `In PromptStash, you assign a stage to any prompt from the Advanced section of the editor. The stage then appears as a colored badge on the prompt card, and you can filter your dashboard by stage using the stage filter chips.
@@ -88,7 +88,7 @@ When composing bundles, stages help ensure you have complete coverage of your wo
     id: 'bundles',
     title: 'Bundles',
     summary: "Ordered collections of prompts that work together as complete instruction sets for AI agents.",
-    body: `Bundles are PromptStash's way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export.
+    body: `Bundles are PromptStash's way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export. The approach echoes the modular-harness philosophy Dex Horthy and the HumanLayer team describe in their "Skill Issue" write-up and their context-engineering talks: keep each piece small and composable so the harness, not a single mega-prompt, carries the workflow.
 
 A bundle contains:
 - A name and description
@@ -104,7 +104,7 @@ Bundles also support the token budget gauge, which shows you the total token cou
 The token budget gauge addresses a critical issue: AI models perform worse when their context window is too full. Bundles let you see exactly how many tokens your instructions consume and optimize by removing or condensing sections.`,
     howPromptStashUses: `Create bundles from the Bundles page (auto-disclosed in the sidebar once you have one). Add prompts to your bundle, reorder them, and toggle which ones are included. Use the preview pane to see the exported output in real-time.
 
-You can download bundles directly from the bundle editor, and soon you'll be able to sync them to GitHub repositories automatically. Bundles also integrate with the template gallery—instantiating the QRSPI template creates a bundle with eight staged prompts.`,
+You can download bundles directly from the bundle editor, and soon you'll be able to sync them to GitHub repositories automatically. Bundles also integrate with the template gallery: instantiating the QRSPI template creates a bundle with eight staged prompts.`,
     references: [
       { label: 'Dumb Zone', url: 'https://github.com/adilio/PromptStash/blob/main/FUTURE.md', note: 'See the Dumb Zone concept for more on token budgets' },
     ],
@@ -114,7 +114,7 @@ You can download bundles directly from the bundle editor, and soon you'll be abl
     id: 'dumb-zone',
     title: 'Dumb Zone',
     summary: "The point where an AI model's context is too full (typically >40% of the window), leading to degraded performance.",
-    body: `The "Dumb Zone" is a term coined by the context engineering community to describe the point at which an AI model's performance degrades due to context window saturation. Research suggests this happens around 40% of the model's maximum context length.
+    body: `The "Dumb Zone" is a term popularized by Dex Horthy and the HumanLayer team, most notably in their "Skill Issue" post and Dex's "Advanced Context Engineering for Coding Agents" talk, to describe the point at which an AI model's performance degrades due to context window saturation. Their rule of thumb, drawn from running coding agents in production, is that things start falling apart somewhere around 40% of the model's maximum context length.
 
 When an AI model operates in the Dumb Zone, you might see:
 - Reduced ability to follow complex instructions
@@ -141,7 +141,7 @@ The gauge changes color based on which zone you're in: green for safe, amber for
     id: 'qrspi',
     title: 'QRSPI',
     summary: 'A methodology for breaking down complex tasks into stages: Question, Research, Structure, Plan, and Implement.',
-    body: `QRSPI (Question, Research, Structure, Plan, Implement) is a methodology for structured AI-human collaboration. It recognizes that the best outcomes come from breaking complex work into discrete stages, each with its own prompts and context.
+    body: `QRSPI (Question, Research, Structure, Plan, Implement) is a methodology developed by Dex Horthy of HumanLayer for structured AI-human collaboration. He's written about it on BetterQuestions.ai and shipped a reference implementation as the qrspi-agent npm package; the same ideas underpin his "Advanced Context Engineering for Coding Agents" talk. QRSPI recognizes that the best outcomes come from breaking complex work into discrete stages, each with its own prompts and context.
 
 The eight stages in PromptStash's QRSPI implementation are:
 1. **Question**: Clarify what's being asked. Restate the problem, identify constraints, flag ambiguities.
@@ -171,7 +171,7 @@ You can customize each stage prompt to match your workflow, then compose them in
     id: 'context-engineering',
     title: 'Context Engineering',
     summary: 'The practice of designing and optimizing prompts for AI agents to improve performance and outcomes.',
-    body: `Context engineering is the discipline of designing inputs to AI systems to produce optimal outputs. It encompasses prompt writing, but also includes structuring information, managing token budgets, and designing workflows that play to AI strengths while avoiding weaknesses.
+    body: `Context engineering is the discipline of designing inputs to AI systems to produce optimal outputs. The term has been pushed into wider use by practitioners like Dex Horthy and the HumanLayer team (see their open-source "context-engineering" guide and Dex's "Advanced Context Engineering for Coding Agents" talk) and by AI engineering communities such as the one around the Boundary ML podcast. It encompasses prompt writing, but also includes structuring information, managing token budgets, and designing workflows that play to AI strengths while avoiding weaknesses.
 
 Key principles of context engineering include:
 - **Modularity**: Break instructions into focused modules rather than monolithic prompts

@@ -8,7 +8,7 @@ Well-engineered context leads to better agent performance. As agents become more
 
 ## How PromptStash uses it
 
-PromptStash is designed as a context engineering tool — it helps you write, organize, and compose agent instructions effectively.
+PromptStash is designed as a context engineering tool. It helps you write, organize, and compose agent instructions effectively.
 
 ## References
 
