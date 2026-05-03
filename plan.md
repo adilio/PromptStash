@@ -232,8 +232,8 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
   - State: `apiKeys`, `newKeyName`, `justCreatedKey` (stores raw key temporarily until dismissed).
 
 #### Edge Functions
-- [ ] Create directory `supabase/functions/api/`. All API routes will be one function with path-based dispatch.
-- [ ] Create `supabase/functions/api/index.ts`:
+- [x] Create directory `supabase/functions/api/`. All API routes will be one function with path-based dispatch.
+- [x] Create `supabase/functions/api/index.ts`:
   - Parse `Authorization: Bearer <key>` header. If missing or malformed, return `401`.
   - Hash the raw key and look up `api_keys` table by `key_hash`. If not found, return `401`.
   - Fetch `user_id` from the matched row. Update `last_used_at = now()`.
@@ -265,20 +265,20 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
   - All responses include `Content-Type: application/json`.
   - Rate limiting: implement a simple in-memory counter per `key_hash` (reset every 60s). Return 429 with `{ error: 'Rate limit exceeded' }` if > 60 requests/min. Note: Supabase Edge Functions are stateless per invocation, so use Supabase KV or a `rate_limits` table for persistence if needed; a simple approach is to count requests in a `rate_limits` table with a 60-second TTL row.
 
-- [ ] Create `supabase/functions/api/cors.ts` that exports a `corsHeaders` object and a `handleCors(req)` function for preflight requests.
+- [x] Create `supabase/functions/api/cors.ts` that exports a `corsHeaders` object and a `handleCors(req)` function for preflight requests.
 
 #### In-app docs
-- [ ] In the Settings API section, below the key management UI, add a "Usage" subsection showing:
+- [x] In the Settings API section, below the key management UI, add a "Usage" subsection showing:
   - Base URL: display the Supabase Edge Function URL (read from `import.meta.env.VITE_SUPABASE_URL` + `/functions/v1/api`).
   - Example curl snippets for: list prompts, get one prompt, create a prompt.
   - Render snippets in a `<pre>` block styled with the existing monospace font.
 
 #### Testing
-- [ ] Generate an API key in the Settings UI, copy it, and use curl to hit `GET /api/v1/workspaces` — verify it returns teams.
-- [ ] Verify `GET /api/v1/prompts?workspace=<id>` returns prompts for that workspace.
-- [ ] Verify that an invalid key returns 401.
-- [ ] Verify the key is NOT retrievable after dismissing the "copy this key" dialog.
-- [ ] Run `npx tsc --noEmit` — zero errors.
+- [x] Generate an API key in the Settings UI, copy it, and use curl to hit `GET /api/v1/workspaces` — verify it returns teams.
+- [x] Verify `GET /api/v1/prompts?workspace=<id>` returns prompts for that workspace.
+- [x] Verify that an invalid key returns 401.
+- [x] Verify the key is NOT retrievable after dismissing the "copy this key" dialog.
+- [x] Run `npx tsc --noEmit` — zero errors.
 
 **Commit message:** `Add programmatic API access with API key management and Edge Function endpoints`
 
@@ -301,27 +301,27 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
 ### Tasks
 
 #### Database — add trigger field
-- [ ] Create `supabase/migrations/<timestamp>_espanso_trigger.sql`:
+- [x] Create `supabase/migrations/<timestamp>_espanso_trigger.sql`:
   ```sql
   alter table public.prompts
     add column if not exists espanso_trigger text;
   ```
-- [ ] Add `espanso_trigger?: string | null` to the `Prompt` interface in `src/lib/types.ts`.
-- [ ] In `src/api/prompts.ts`, include `espanso_trigger` in the select query and in the `createPrompt` / `updatePrompt` parameter types.
+- [x] Add `espanso_trigger?: string | null` to the `Prompt` interface in `src/lib/types.ts`.
+- [x] In `src/api/prompts.ts`, include `espanso_trigger` in the select query and in the `createPrompt` / `updatePrompt` parameter types.
 
 #### Prompt editor — trigger field
-- [ ] In `PromptEditor.tsx`, add `espansoTrigger` state (string, default `''`).
-- [ ] When loading an existing prompt (`promptQuery.data`), set `espansoTrigger` from `promptQuery.data.espanso_trigger ?? ''`.
-- [ ] In the editor body, below the Tags section, add an optional "Espanso trigger" field:
+- [x] In `PromptEditor.tsx`, add `espansoTrigger` state (string, default `''`).
+- [x] When loading an existing prompt (`promptQuery.data`), set `espansoTrigger` from `promptQuery.data.espanso_trigger ?? ''`.
+- [x] In the editor body, below the Tags section, add an optional "Espanso trigger" field:
   - A text input, placeholder `:prompt-name` (e.g. `:codereview`).
   - Label: "Espanso trigger" with a hint: "Type this keyword anywhere on your system to expand the prompt."
   - Only shown when the user expands an "Advanced" disclosure (a `<details>` / `<summary>` toggle) to keep the UI clean for users who don't use Espanso.
   - Auto-populate the trigger on `onBlur` if empty and a title exists: slugify the title with a `:` prefix (e.g. "Code review" → `:code-review`).
-- [ ] Include `espanso_trigger` in the `handleSave` payload for both create and update paths.
-- [ ] Include it in the auto-save `updatePromptMutation` payload.
+- [x] Include `espanso_trigger` in the `handleSave` payload for both create and update paths.
+- [x] Include it in the auto-save `updatePromptMutation` payload.
 
 #### Export function
-- [ ] Create `src/lib/espanso.ts` that exports:
+- [x] Create `src/lib/espanso.ts` that exports:
   ```ts
   function slugify(text: string): string
   // Lowercases, replaces spaces/special chars with hyphens, strips leading/trailing hyphens.
@@ -336,7 +336,7 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
   // For prompts with espanso_trigger set, use that. Otherwise, fall back to `:` + slugify(title).
   // Escape any `\` in the prompt body.
   ```
-- [ ] The YAML output should include a header comment explaining the file and how to install it.
+- [x] The YAML output should include a header comment explaining the file and how to install it.
   ```yaml
   # PromptStash — Espanso export
   # Generated: <ISO date>
@@ -345,7 +345,7 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
   ```
 
 #### Settings — Export section
-- [ ] In `Settings.tsx`, find the `data` section body. Add an "Espanso" subsection:
+- [x] In `Settings.tsx`, find the `data` section body. Add an "Espanso" subsection:
   - Header: "Espanso export"
   - Description: "Download your prompts as an Espanso match file. Drop the file into your Espanso config/match directory to expand prompts by keyword anywhere on your system."
   - Button: "Download Espanso package".
@@ -354,18 +354,18 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
     2. Call `generateEspansoYaml(prompts)`.
     3. Trigger a browser file download: create a `Blob` with `type: 'text/yaml'`, create an object URL, click a hidden `<a>` link, revoke the URL. Filename: `promptstash-espanso-<YYYY-MM-DD>.yml`.
   - Show a loading state on the button while fetching prompts.
-- [ ] Below the button, add an "Install guide" collapsible:
+- [x] Below the button, add an "Install guide" collapsible:
   - macOS: `~/.config/espanso/match/promptstash.yml`
   - Windows: `%APPDATA%\espanso\match\promptstash.yml`
   - Linux: `~/.config/espanso/match/promptstash.yml`
   - After placing the file: `espanso restart` (or it auto-reloads).
 
 #### Testing
-- [ ] Create a prompt, set an Espanso trigger (e.g. `:test`), save — verify trigger persists on reload.
-- [ ] Go to Settings > Data & export, click "Download Espanso package" — verify a `.yml` file downloads.
-- [ ] Open the file and verify YAML is valid: each prompt has a `trigger` and `replace` entry.
-- [ ] Verify prompts without a trigger get an auto-generated slug.
-- [ ] Run `npx tsc --noEmit` — zero errors.
+- [x] Create a prompt, set an Espanso trigger (e.g. `:test`), save — verify trigger persists on reload.
+- [x] Go to Settings > Data & export, click "Download Espanso package" — verify a `.yml` file downloads.
+- [x] Open the file and verify YAML is valid: each prompt has a `trigger` and `replace` entry.
+- [x] Verify prompts without a trigger get an auto-generated slug.
+- [x] Run `npx tsc --noEmit` — zero errors.
 
 **Commit message:** `Add Espanso export with per-prompt trigger field and YAML package download`
 
@@ -375,5 +375,5 @@ The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a R
 
 - [x] Issue #3 complete — committed and pushed
 - [x] Issue #6 complete — committed and pushed
-- [ ] Issue #7 complete — committed and pushed
-- [ ] Issue #8 complete — committed and pushed
+- [x] Issue #7 complete — committed and pushed
+- [x] Issue #8 complete — committed and pushed
