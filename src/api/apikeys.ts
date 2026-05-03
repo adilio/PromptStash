@@ -27,12 +27,17 @@ export async function createApiKey(name: string): Promise<{
   key_prefix: string;
   created_at: string;
 }> {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) throw new Error('Not authenticated');
+
   const rawKey = generateApiKey();
   const keyHash = await hashApiKey(rawKey);
   const keyPrefix = rawKey.slice(0, 10);
 
-  const { data, error } = await (supabase.from('api_keys' as any) as any)
+  const { data, error } = await supabase
+    .from('api_keys')
     .insert({
+      user_id: user.id,
       name,
       key_hash: keyHash,
       key_prefix: keyPrefix,
@@ -59,7 +64,8 @@ export async function listApiKeys(): Promise<Array<{
   created_at: string;
   last_used_at: string | null;
 }>> {
-  const { data, error } = await (supabase.from('api_keys' as any) as any)
+  const { data, error } = await supabase
+    .from('api_keys')
     .select('id, name, key_prefix, created_at, last_used_at')
     .order('created_at', { ascending: false });
 
@@ -68,7 +74,8 @@ export async function listApiKeys(): Promise<Array<{
 }
 
 export async function deleteApiKey(id: string): Promise<void> {
-  const { error } = await (supabase.from('api_keys' as any) as any)
+  const { error } = await supabase
+    .from('api_keys')
     .delete()
     .eq('id', id);
 

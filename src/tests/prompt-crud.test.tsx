@@ -125,9 +125,20 @@ describe('Prompt CRUD Operations', () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
-      select: mockSelect,
-    } as MockSupabaseQuery);
+    const mockTagSelect = vi.fn().mockReturnValue({
+      in: vi.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      }),
+    });
+
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce({
+        select: mockSelect,
+      } as MockSupabaseQuery)
+      .mockReturnValueOnce({
+        select: mockTagSelect,
+      } as MockSupabaseQuery);
 
     const result = await listPrompts('team-1');
 

@@ -88,7 +88,7 @@ export function PromptEditor() {
       setTitle(promptQuery.data.title);
       setBody(promptQuery.data.body_md);
       setSelectedTags(promptQuery.data.tags || []);
-      setEspansoTrigger((promptQuery.data as any).espanso_trigger ?? '');
+      setEspansoTrigger(promptQuery.data.espanso_trigger ?? '');
       initialLoadRef.current = true;
     }
   }, [promptQuery.data]);

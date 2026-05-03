@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       folders: {
         Row: {
           created_at: string
@@ -198,6 +228,7 @@ export type Database = {
         Row: {
           body_md: string
           created_at: string
+          espanso_trigger: string | null
           folder_id: string | null
           id: string
           owner_id: string
@@ -210,6 +241,7 @@ export type Database = {
         Insert: {
           body_md: string
           created_at?: string
+          espanso_trigger?: string | null
           folder_id?: string | null
           id?: string
           owner_id: string
@@ -222,6 +254,7 @@ export type Database = {
         Update: {
           body_md?: string
           created_at?: string
+          espanso_trigger?: string | null
           folder_id?: string | null
           id?: string
           owner_id?: string

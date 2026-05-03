@@ -23,6 +23,10 @@ const mockPrompt = {
   updated_at: '2024-01-02T00:00:00Z',
 };
 
+function getPrimarySaveButton() {
+  return screen.getAllByRole('button', { name: /save/i })[0];
+}
+
 // Mock router hooks
 const mockNavigate = vi.fn();
 let mockParams: { promptId?: string } = { promptId: 'new' };
@@ -98,7 +102,7 @@ describe('PromptEditor', () => {
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'My New Prompt');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = getPrimarySaveButton();
     await user.click(saveButton);
 
     await waitFor(() => {
@@ -119,7 +123,7 @@ describe('PromptEditor', () => {
 
     renderPromptEditor();
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = getPrimarySaveButton();
     await user.click(saveButton);
 
     // Should not call API
@@ -164,10 +168,10 @@ describe('PromptEditor', () => {
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = getPrimarySaveButton();
     await user.click(saveButton);
 
-    expect(screen.getByText(/saving/i)).toBeInTheDocument();
+    expect(saveButton).toHaveTextContent(/saving/i);
   });
 
   it('should disable save button while saving', async () => {
@@ -182,7 +186,7 @@ describe('PromptEditor', () => {
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = getPrimarySaveButton();
     await user.click(saveButton);
 
     expect(saveButton).toBeDisabled();
@@ -200,7 +204,7 @@ describe('PromptEditor', () => {
     const titleInput = screen.getByLabelText(/title/i);
     await user.type(titleInput, 'Test');
 
-    const saveButton = screen.getByRole('button', { name: /save/i });
+    const saveButton = getPrimarySaveButton();
     await user.click(saveButton);
 
     await waitFor(() => {

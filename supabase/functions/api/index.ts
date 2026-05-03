@@ -32,6 +32,29 @@ interface PromptWithTags extends Prompt {
   tags?: Tag[];
 }
 
+interface MembershipWithTeam {
+  teams: Team | Team[] | null;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at: string;
+}
+
+function extractTeam(membership: MembershipWithTeam): Team | null {
+  if (Array.isArray(membership.teams)) {
+    return membership.teams[0] ?? null;
+  }
+
+  return membership.teams;
+}
+
+function isTeam(team: Team | null): team is Team {
+  return team !== null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,7 +100,6 @@ serve(async (req) => {
     if (path === '/v1/prompts' && req.method === 'GET') {
       const workspace = url.searchParams.get('workspace');
       const search = url.searchParams.get('search');
-      const tag = url.searchParams.get('tag');
 
       if (!workspace) {
         return new Response(JSON.stringify({ error: 'Missing workspace parameter' }), {
@@ -94,7 +116,7 @@ serve(async (req) => {
 
       if (search) {
         const normalized = search.trim().replace(/[(),]/g, ' ').replace(/\s+/g, ' ');
-        query = query.textSearch('fts', normalized);
+        query = query.or(`title.plfts.${normalized},body_md.plfts.${normalized}`);
       }
 
       const { data: prompts, error } = await query;
@@ -250,7 +272,9 @@ serve(async (req) => {
 
       if (error) throw error;
 
-      const teams = memberships?.map((m: any) => m.teams).filter(Boolean) || [];
+      const teams = ((memberships as MembershipWithTeam[] | null) ?? [])
+        .map(extractTeam)
+        .filter(isTeam);
       return new Response(JSON.stringify({ data: teams }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

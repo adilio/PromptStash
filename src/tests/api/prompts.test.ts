@@ -28,6 +28,7 @@ function createQuery(result: { data?: unknown; error: Error | null }): MockSupab
     order: vi.fn(() => query),
     ilike: vi.fn(() => query),
     or: vi.fn(() => query),
+    in: vi.fn(() => query),
     insert: vi.fn(() => query),
     update: vi.fn(() => query),
     delete: vi.fn(() => query),
@@ -55,8 +56,9 @@ describe('Prompts API', () => {
         { id: '2', title: 'Another Prompt', team_id: 'team1' },
       ];
       const query = createQuery({ data: mockPrompts, error: null });
+      const tagsQuery = createQuery({ data: [], error: null });
 
-      vi.mocked(supabase.from).mockReturnValue(query);
+      vi.mocked(supabase.from).mockReturnValueOnce(query).mockReturnValueOnce(tagsQuery);
 
       const result = await listPrompts('team1');
 
@@ -64,12 +66,13 @@ describe('Prompts API', () => {
       expect(query.select).toHaveBeenCalledWith('*');
       expect(query.eq).toHaveBeenCalledWith('team_id', 'team1');
       expect(query.order).toHaveBeenCalledWith('updated_at', { ascending: false });
-      expect(result).toEqual(mockPrompts);
+      expect(result).toEqual(mockPrompts.map((prompt) => ({ ...prompt, tags: [] })));
     });
 
     it('should filter by folder', async () => {
       const query = createQuery({ data: [], error: null });
-      vi.mocked(supabase.from).mockReturnValue(query);
+      const tagsQuery = createQuery({ data: [], error: null });
+      vi.mocked(supabase.from).mockReturnValueOnce(query).mockReturnValueOnce(tagsQuery);
 
       await listPrompts('team1', 'folder1');
 
@@ -79,7 +82,8 @@ describe('Prompts API', () => {
 
     it('should filter by search query', async () => {
       const query = createQuery({ data: [], error: null });
-      vi.mocked(supabase.from).mockReturnValue(query);
+      const tagsQuery = createQuery({ data: [], error: null });
+      vi.mocked(supabase.from).mockReturnValueOnce(query).mockReturnValueOnce(tagsQuery);
 
       await listPrompts('team1', undefined, 'search');
 

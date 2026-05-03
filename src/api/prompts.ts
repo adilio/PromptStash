@@ -1,10 +1,22 @@
 import { supabase } from '@/lib/supabase';
 import { nanoid } from 'nanoid';
-import type { Prompt, PromptWithTags, Tag } from '@/lib/types';
+import type { PostgrestError } from '@supabase/supabase-js';
+import type { Database, Prompt, PromptWithTags, Tag } from '@/lib/types';
+
+type DatabasePromptInsert = Database['public']['Tables']['prompts']['Insert'];
 
 interface PromptTagJoin {
   tag_id: string;
   tags: Tag | Tag[] | null;
+}
+
+interface PromptListTagJoin extends PromptTagJoin {
+  prompt_id: string;
+}
+
+interface QueryResult<T> {
+  data: T | null;
+  error: PostgrestError | null;
 }
 
 function extractTag(join: PromptTagJoin): Tag | null {
@@ -32,7 +44,7 @@ export async function listPrompts(
     .from('prompts')
     .select('*')
     .eq('team_id', teamId)
-    .order('updated_at', { ascending: false }) as any;
+    .order('updated_at', { ascending: false });
 
   if (folderId) {
     query = query.eq('folder_id', folderId);
@@ -40,26 +52,27 @@ export async function listPrompts(
 
   if (searchQuery) {
     const normalized = normalizeFullTextSearchQuery(searchQuery);
-    query = query.textSearch('fts', normalized);
+    query = query.or(`title.plfts.${normalized},body_md.plfts.${normalized}`);
   }
 
   const { data: prompts, error } = await query;
 
   if (error) throw error;
+  const promptRows = prompts ?? [];
 
   // Get tags for all prompts
-  const promptIds = prompts.map((p: Prompt) => p.id);
+  const promptIds = promptRows.map((p: Prompt) => p.id);
   const { data: promptTags, error: tagsError } = await supabase
     .from('prompt_tags')
     .select('prompt_id, tags(*)')
-    .in('prompt_id', promptIds) as any;
+    .in('prompt_id', promptIds) as unknown as QueryResult<PromptListTagJoin[]>;
 
   if (tagsError) throw tagsError;
 
   // Group tags by prompt_id
   const tagsByPromptId = new Map<string, Tag[]>();
   for (const row of promptTags || []) {
-    const tag = row.tags;
+    const tag = extractTag(row);
     if (tag) {
       const promptId = row.prompt_id;
       const existing = tagsByPromptId.get(promptId) || [];
@@ -67,7 +80,7 @@ export async function listPrompts(
     }
   }
 
-  return prompts.map((p: Prompt) => ({
+  return promptRows.map((p: Prompt) => ({
     ...p,
     tags: tagsByPromptId.get(p.id) || [],
   }));
@@ -78,9 +91,10 @@ export async function getPrompt(id: string): Promise<PromptWithTags> {
     .from('prompts')
     .select('*')
     .eq('id', id)
-    .single() as any;
+    .single() as unknown as QueryResult<Prompt>;
 
   if (promptError) throw promptError;
+  if (!prompt) throw new Error('Prompt not found');
 
   // Get tags for this prompt
   const { data: promptTags, error: tagsError } = await supabase
@@ -130,22 +144,27 @@ export async function createPrompt(input: {
 }): Promise<Prompt> {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('Not authenticated');
+  const insertData: DatabasePromptInsert = {
+    team_id: input.team_id,
+    folder_id: input.folder_id || null,
+    owner_id: user.id,
+    title: input.title,
+    body_md: input.body_md,
+    visibility: input.visibility || 'private',
+  };
+
+  if (input.espanso_trigger) {
+    insertData.espanso_trigger = input.espanso_trigger;
+  }
 
   const { data, error } = await supabase
     .from('prompts')
-    .insert({
-      team_id: input.team_id,
-      folder_id: input.folder_id || null,
-      owner_id: user.id,
-      title: input.title,
-      body_md: input.body_md,
-      visibility: input.visibility || 'private',
-      espanso_trigger: input.espanso_trigger || null,
-    })
+    .insert(insertData)
     .select('*')
-    .single() as any;
+    .single() as unknown as QueryResult<Prompt>;
 
   if (error) throw error;
+  if (!data) throw new Error('Failed to create prompt');
   return data;
 }
 
@@ -165,9 +184,10 @@ export async function updatePrompt(
     .update(patch)
     .eq('id', id)
     .select('*')
-    .single() as any;
+    .single() as unknown as QueryResult<Prompt>;
 
   if (error) throw error;
+  if (!data) throw new Error('Failed to update prompt');
   return data;
 }
 
@@ -207,4 +227,3 @@ export async function makePromptPrivate(id: string): Promise<Prompt> {
   if (error) throw error;
   return data;
 }
-
