@@ -441,7 +441,7 @@ export function SignIn() {
             <button type="button" style={oauthBtnStyle} onClick={() => handleOAuth('google')} disabled={loading}>
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <path
-                  fill="#EA4335"
+                  fill="var(--ps-accent)"
                   d="M12 10.2v3.9h5.5c-.24 1.3-1.66 3.8-5.5 3.8a6 6 0 1 1 0-12 5.4 5.4 0 0 1 3.8 1.5l2.6-2.5A9.5 9.5 0 0 0 12 2a10 10 0 1 0 0 20c5.8 0 9.6-4 9.6-9.7 0-.7-.07-1.2-.16-1.7z"
                 />
               </svg>
