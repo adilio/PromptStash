@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate, useOutletContext, useSearchParams, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, Share2, Copy, Play } from 'lucide-react';
+import { ChevronLeft, Share2, Copy, Play, AlertCircle } from 'lucide-react';
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { Loading } from '@/components/Loading';
 import { TagInput } from '@/components/TagInput';
@@ -161,7 +161,12 @@ export function PromptEditor() {
       return;
     }
     if (!currentTeamId && isNew) {
-      toast({ title: 'Error', description: 'Please select a team', variant: 'destructive' });
+      toast({
+        title: 'No workspace',
+        description: 'Create a workspace in Settings before saving a prompt.',
+        variant: 'destructive',
+      });
+      navigate('/app/settings');
       return;
     }
     setSaving(true);
@@ -323,6 +328,42 @@ export function PromptEditor() {
           </button>
         </div>
       </div>
+
+      {/* No-workspace banner */}
+      {isNew && !currentTeamId && (
+        <div
+          style={{
+            padding: '10px 28px',
+            background: 'oklch(0.97 0.02 60)',
+            borderBottom: '1px solid oklch(0.88 0.05 60)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 13,
+            color: 'oklch(0.45 0.08 60)',
+          }}
+        >
+          <AlertCircle style={{ width: 14, height: 14, flexShrink: 0 }} />
+          <span>You need a workspace to save prompts.</span>
+          <button
+            onClick={() => navigate('/app/settings')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'oklch(0.45 0.08 60)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textUnderlineOffset: 2,
+            }}
+          >
+            Create workspace →
+          </button>
+        </div>
+      )}
 
       {/* Editor body */}
       <div

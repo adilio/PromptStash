@@ -257,6 +257,77 @@ What important questions does this material *not* answer?`,
   },
 ];
 
+function NoWorkspaceState() {
+  const navigate = useNavigate();
+  return (
+    <div
+      style={{
+        margin: '64px auto 0',
+        maxWidth: 400,
+        textAlign: 'center',
+        color: 'var(--ps-fg-muted)',
+      }}
+    >
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          margin: '0 auto 18px',
+          border: '1px solid var(--ps-hairline)',
+          borderRadius: 14,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--ps-fg-faint)',
+          background: 'var(--ps-bg-elev)',
+          boxShadow: 'var(--ps-shadow-sm)',
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      </div>
+      <h2
+        style={{
+          fontFamily: '"JetBrains Mono", monospace',
+          fontWeight: 500,
+          fontSize: 22,
+          lineHeight: 1.25,
+          letterSpacing: '-0.02em',
+          color: 'var(--ps-fg)',
+          margin: '0 0 8px',
+        }}
+      >
+        No workspace yet
+      </h2>
+      <p style={{ margin: '0 0 22px', fontSize: 14 }}>
+        Create a workspace first — prompts are organized inside workspaces.
+      </p>
+      <button
+        onClick={() => navigate('/app/settings')}
+        style={{
+          height: 34,
+          padding: '0 14px',
+          borderRadius: 8,
+          background: 'var(--ps-accent)',
+          color: 'var(--ps-accent-fg)',
+          border: 0,
+          fontFamily: 'inherit',
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        Create workspace
+      </button>
+    </div>
+  );
+}
+
 function EmptyDashboard({ onNewPrompt }: { onNewPrompt: (template?: Template) => void }) {
   const recipes = STARTER_TEMPLATES;
   return (
@@ -628,7 +699,7 @@ export function Dashboard() {
             {currentFolderName}
           </h1>
           <div style={{ marginTop: 4, color: 'var(--ps-fg-muted)', fontSize: 13 }}>
-            {isEmpty ? 'Save your first prompt to get started.' : `${filteredPrompts.length} prompt${filteredPrompts.length !== 1 ? 's' : ''}`}
+            {!currentTeamId ? 'Set up a workspace to get started.' : isEmpty ? 'Save your first prompt to get started.' : `${filteredPrompts.length} prompt${filteredPrompts.length !== 1 ? 's' : ''}`}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
@@ -913,13 +984,15 @@ export function Dashboard() {
       )}
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: isEmpty ? '0' : '24px 32px 64px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: isEmpty || !currentTeamId ? '0' : '24px 32px 64px' }}>
         {loading ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <PromptCardSkeleton key={i} />
             ))}
           </div>
+        ) : !currentTeamId ? (
+          <NoWorkspaceState />
         ) : isEmpty ? (
           <EmptyDashboard onNewPrompt={navigateToNewPrompt} />
         ) : filteredPrompts.length === 0 ? (
