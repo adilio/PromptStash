@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
@@ -67,6 +67,21 @@ export function SignIn() {
   const { toast } = useToast();
   const requestedRedirectPath = searchParams.get('redirect');
   const redirectPath = requestedRedirectPath?.startsWith('/') ? requestedRedirectPath : '/app';
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const hadLight = root.classList.contains('light');
+    const hadDark = root.classList.contains('dark');
+
+    root.classList.remove('light');
+    root.classList.add('dark');
+
+    return () => {
+      root.classList.remove('dark', 'light');
+      if (hadLight) root.classList.add('light');
+      if (hadDark) root.classList.add('dark');
+    };
+  }, []);
 
   const handlePasswordResetRequest = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
