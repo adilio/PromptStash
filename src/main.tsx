@@ -10,6 +10,8 @@ import { Dashboard } from './routes/app/Dashboard';
 import { PromptView } from './routes/app/PromptView';
 import { PromptEditor } from './routes/app/PromptEditor';
 import { Settings } from './routes/app/Settings';
+import { BundleList } from './routes/app/BundleList';
+import { BundleEditor } from './routes/app/BundleEditor';
 import { PublicPrompt } from './routes/public/PublicPrompt';
 import { InviteAccept } from './routes/public/InviteAccept';
 import { Toaster } from './components/ui/toaster';
@@ -41,6 +43,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="p/new" element={<PromptEditor />} />
               <Route path="p/:promptId" element={<PromptView />} />
               <Route path="p/:promptId/edit" element={<PromptEditor />} />
+              <Route path="bundles" element={<BundleList />} />
+              <Route path="bundles/new" element={<BundleEditor />} />
+              <Route path="bundles/:bundleId" element={<BundleEditor />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>

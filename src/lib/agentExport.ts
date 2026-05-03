@@ -1,4 +1,6 @@
-export type AgentFormat = 'agents' | 'claude' | 'copilot' | 'cursor' | 'windsurf' | 'generic';
+import type { Bundle, BundleItem, Prompt, AgentFormat } from '@/lib/types';
+
+export type { AgentFormat };
 
 export const AGENT_FORMATS: { id: AgentFormat; label: string; filename: string; description: string }[] = [
   { id: 'agents', label: 'AGENTS.md', filename: 'AGENTS.md', description: 'Community-standard agent instruction file' },
@@ -31,6 +33,44 @@ export function wrapPromptsForFormat(prompts: { title: string; body_md: string }
   }
 
   return prompts.map(p => `${p.title}\n\n${p.body_md}`).join('\n\n---\n\n');
+}
+
+export function bundleToFile(
+  bundle: Bundle,
+  items: (BundleItem & { prompt: Prompt })[],
+): { filename: string; content: string } {
+  const includedItems = items.filter(item => item.included);
+  const filename = filenameFor(bundle.target_format as AgentFormat);
+
+  const isMarkdown = bundle.target_format === 'agents' || bundle.target_format === 'claude' || bundle.target_format === 'copilot' || bundle.target_format === 'generic';
+
+  let content = '';
+
+  if (isMarkdown) {
+    content = `<!-- Source: PromptStash -->\n# ${bundle.name}\n`;
+    if (bundle.description) {
+      content += `\n${bundle.description}\n`;
+    }
+    content += `\n---\n\n`;
+
+    content += includedItems.map(item => {
+      const heading = item.heading_override || item.prompt.title;
+      return `## ${heading}\n\n${item.prompt.body_md}`;
+    }).join('\n\n');
+  } else {
+    content = `${bundle.name}\n`;
+    if (bundle.description) {
+      content += `\n${bundle.description}\n`;
+    }
+    content += `\n${'='.repeat(40)}\n\n`;
+
+    content += includedItems.map(item => {
+      const heading = item.heading_override || item.prompt.title;
+      return `${heading}\n\n${item.prompt.body_md}`;
+    }).join('\n\n---\n\n');
+  }
+
+  return { filename, content };
 }
 
 export function downloadFile(filename: string, content: string, mimeType?: string): void {

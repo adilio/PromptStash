@@ -17,3 +17,12 @@ export const promptKeys = {
   details: () => [...promptKeys.all, 'detail'] as const,
   detail: (promptId?: string) => [...promptKeys.details(), promptId ?? null] as const,
 };
+
+export const bundleKeys = {
+  all: ['bundles'] as const,
+  lists: () => [...bundleKeys.all, 'list'] as const,
+  list: (teamId?: string) =>
+    [...bundleKeys.lists(), teamId ?? null] as const,
+  details: () => [...bundleKeys.all, 'detail'] as const,
+  detail: (bundleId?: string) => [...bundleKeys.details(), bundleId ?? null] as const,
+};

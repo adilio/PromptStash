@@ -3,6 +3,21 @@
 This file is both a plan and a live progress tracker. Update task status as you work.
 After completing each issue, commit and push to `main`.
 
+The plan operationalizes the strategic direction in `FUTURE.md`: reposition PromptStash as the **instruction hub for AI coding agents** (AGENTS.md, CLAUDE.md, Copilot, Cursor, Windsurf), with first-class support for QRSPI-style stage-typed modules, composable bundles, and Dumb Zone–aware token budgets.
+
+**The cardinal constraint: do not impose any of this on a user who just wants to save a prompt.** The existing Dashboard → New prompt → write title and body → save flow must remain exactly that simple. Stages, bundles, token gauges, and agent-format dropdowns appear *only* when they are relevant — either because the user has opted in, or because their data already shows they're using the feature (e.g. stage filter chips appear only once at least one prompt in the workspace has a stage).
+
+Each new concept also ships with a short in-app explainer that links to its source material (Dex Horthy's QRSPI posts, the AGENTS.md spec, HumanLayer's Dumb Zone write-up, etc.) so curious users can learn the *why* without leaving the app, and skeptical users can dismiss them entirely.
+
+The six issues below are ordered so each unlocks the next:
+
+1. **Issue #10** — Multi-format agent file export. Establishes the wrapping/download plumbing that every later feature reuses, plus the `<ConceptInfo>` slot component every later feature plugs into.
+2. **Issue #11** — QRSPI stage typing on prompts. Adds the metadata bundles and linting will key off, behind the existing Advanced disclosure in the editor.
+3. **Issue #12** — Bundles. Lets users compose stage-typed modules into a single AGENTS.md/CLAUDE.md output. The Bundles nav item only appears once a bundle exists.
+4. **Issue #13** — Token budget and Dumb Zone indicator. Layers analysis on prompts and bundles, with a default "compact" mode that's a single token count and an optional full gauge.
+5. **Issue #14** — Agent instruction template gallery. Ships content (QRSPI starter harness + common modules) using the whole stack. Templates are sorted simple-first so the first thing a new user sees is "Code Review prompt", not an 8-stage QRSPI bundle.
+6. **Issue #15** — Concepts library and Learn page. Replaces the placeholder explainers from Issue #10 with full-length docs that cite their sources, and adds an `/app/learn` page for browsing them.
+
 ---
 
 ## Rules for the agent
@@ -20,360 +35,744 @@ After completing each issue, commit and push to `main`.
 - Do not add co-author lines, task references, or issue numbers in code comments.
 - Prefer editing existing files over creating new ones.
 - Do not introduce abstractions beyond what the task requires.
-- Match the style of surrounding code exactly (inline styles via `style={{}}`, CSS variables like `var(--ps-fg)`, `var(--ps-accent)`, etc.).
+- Match the style of surrounding code exactly: inline `style={{}}` with CSS variables (`var(--ps-fg)`, `var(--ps-accent)`, `var(--ps-bg-elev)`, `var(--ps-hairline)`, etc.). Do not introduce Tailwind utility classes in components that currently use inline styles.
+- Use TanStack Query for all server state. Mutations must invalidate the relevant `promptKeys.*` queries on success.
+- Use the existing `Dialog` from `src/components/ui/dialog.tsx` for any new modals. Use `useToast()` for user feedback.
+- New tables must enable RLS and define policies that mirror the existing `prompts` access model (team members read; editor/owner write) unless otherwise specified.
 
 ### Status legend
 - `[ ]` not started
 - `[~]` in progress
 - `[x]` complete
 
----
+### Progressive disclosure principles
 
-## Issue #3 — Make the app fully responsive and mobile-friendly
+Every issue below must follow these rules. They are non-negotiable — a reviewer who finds a violation should reject the PR.
 
-**GitHub issue:** https://github.com/adilio/PromptStash/issues/3
+1. **Default to invisible.** A new control or section may *only* be shown by default if it is essential to the simple "save a prompt" flow. Stages, bundles, agent formats, token gauges, lint warnings — all opt-in or auto-disclosed.
+2. **Auto-disclose from data, not toggles where possible.** Prefer "show this UI when the user has data that uses it" over "expose a settings checkbox." Examples:
+   - Stage filter chips on Dashboard appear only when at least one prompt in the workspace has `stage IS NOT NULL`.
+   - The Bundles sidebar nav item appears only when `bundles` count > 0 for the current team, OR when the user is currently inside a `/app/bundles/*` route.
+   - The stage badge on a `PromptCard` renders only when `prompt.stage` is set.
+   - The Dumb Zone gauge (full version) appears only inside `BundleEditor`. Per-prompt token pills are subtle (small dim text), not colored alarms, until the prompt exceeds a soft threshold.
+3. **Push advanced controls into existing "Advanced" surfaces.** The PromptEditor already has an Advanced `<details>` disclosure (containing the Espanso trigger). Stage selectors, agent-format selectors, and any other instruction-module metadata go *inside* that same disclosure. Do not add new always-visible form fields to the editor header.
+4. **Every new concept ships with a `<ConceptInfo conceptId="..." />` slot.** This is a small `i` icon that opens a popover with a 2-3 sentence summary plus a "Learn more →" link. It is the user's escape hatch for "what is this thing?" — never assume they know.
+5. **No jargon in default UI labels.** Use "Stage" not "QRSPI stage", "Token estimate" not "Dumb Zone risk", "Target agent" not "AGENTS.md format". Jargon belongs in the concept docs, not the buttons.
+6. **A user who never explores advanced features should never know they exist** — except for the "From template" button on Dashboard and a single "Learn" entry in the sidebar footer. Those two are the only standing invitations into the deeper feature set.
+7. **Settings has a single master switch as a fallback.** Add a "Show all advanced features" checkbox to Settings → Appearance. When on, every auto-disclosed surface is forced visible regardless of data state. Default off. This is for users who want to explore without first creating data.
 
-### Context
-The layout is built with a fixed-width sidebar (`Sidebar.tsx`) and a `Shell` that uses `flex h-screen`. On viewports below ~768px the sidebar overflows and the editor is unusable. The goal is a drawer-based sidebar on mobile, a single-column dashboard, and a thumb-friendly editor.
-
-### Key files
-- `src/components/Shell.tsx` — top-level flex container
-- `src/components/Sidebar.tsx` — fixed-width left sidebar
-- `src/routes/app/AppLayout.tsx` — manages `currentTeamId`, renders `Sidebar` + `Outlet`
-- `src/routes/app/Dashboard.tsx` — prompt grid, header, toolbar
-- `src/routes/app/PromptEditor.tsx` — editor layout and header
-- `src/routes/app/Settings.tsx` — settings layout
-- `src/routes/auth/SignIn.tsx` — sign-in page
-
-### Tasks
-
-#### Sidebar drawer
-- [x] Add `sidebarOpen` state (default `false` on mobile, `true` on desktop) to `AppLayout.tsx`.
-  - Use a `useEffect` that sets initial state based on `window.innerWidth >= 768`.
-  - Pass `sidebarOpen` and `setSidebarOpen` down to `Sidebar` as props.
-- [x] Add a `MobileTopBar` component inside `AppLayout` that renders only on mobile (`display: none` at `min-width: 768px` via a `<style>` tag or Tailwind's `hidden md:flex`).
-  - Shows the PromptStash brandmark on the left.
-  - Shows a hamburger icon button (`Menu` from lucide-react) on the right to toggle `sidebarOpen`.
-- [x] Update `Sidebar.tsx` to accept `open?: boolean` and `onClose?: () => void` props.
-  - On mobile (screen width < 768px): render as a fixed overlay drawer (`position: fixed`, full height, z-index 50, width 260px). When `open` is false, translate off-screen (`transform: translateX(-100%)`). Add a semi-transparent backdrop behind it that calls `onClose` on click.
-  - On desktop: render as normal (`position: static`, always visible). Ignore the `open` prop.
-  - Add a close button (`X` icon) inside the sidebar header that calls `onClose`, visible only on mobile.
-- [x] In `Shell.tsx`, ensure the main content area does not shrink below 0 and scrolls properly on mobile.
-
-#### Dashboard
-- [x] In `Dashboard.tsx`, change the prompt card grid from `repeat(auto-fill, minmax(280px, 1fr))` to `repeat(auto-fill, minmax(min(280px, 100%), 1fr))` so it collapses to a single column on narrow screens.
-- [x] Wrap the header `<div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>` so that on screens < 640px the action buttons (`ExportImportDialog`, `New prompt`) stack below the title or use `flex-wrap: wrap` with `gap: 8px`.
-- [x] Hide the toolbar search and filter row on mobile behind a toggle button (a filter icon) if the viewport is narrow — or simply ensure it wraps gracefully with `flex-wrap: wrap`.
-- [x] In list view (`PromptListRow`), the `gridTemplateColumns: '22px 1fr 160px 130px 32px'` will overflow on mobile. On narrow screens, hide the Tags and Updated columns and use a two-column grid (`22px 1fr`).
-
-#### Prompt Editor
-- [x] In `PromptEditor.tsx`, reduce the editor body padding from `28px 56px 80px` to `16px 20px 80px` on screens < 640px. Use a CSS-in-JS approach: read `window.innerWidth` in a `useMemo` or inject a `<style>` block. Alternatively, add a `responsivePadding` CSS class via a `<style>` tag in the component.
-- [x] Move the header action buttons (Share, Copy, Save) into a sticky bottom bar on mobile:
-  - When viewport < 640px, hide the header action buttons.
-  - Render a `<div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, ... }}>` containing Share, Copy, and Save.
-  - Make sure the fixed bar only appears when the editor route is active (it lives inside `PromptEditor`, so it naturally scopes itself).
-- [x] Ensure the title `<input>` font size reduces to ~22px on mobile so it doesn't overflow.
-
-#### Settings
-- [x] In `Settings.tsx`, the settings layout (sidebar nav + content) should stack vertically on mobile (column direction) instead of the side-by-side layout. On mobile, show the section nav as a horizontal scrollable tab strip at the top instead of a vertical list.
-
-#### Sign-in
-- [x] In `src/routes/auth/SignIn.tsx`, ensure the sign-in card is full-width with 16px horizontal padding on viewports < 480px.
-
-#### Testing
-- [ ] Manually verify at 375px (iPhone SE), 414px (iPhone Plus), 768px (iPad), and 1280px (desktop).
-- [ ] Verify no horizontal scroll at any of the above breakpoints.
-- [ ] Verify sidebar drawer opens and closes correctly on mobile.
-- [x] Run `npx tsc --noEmit` — zero errors.
-
-**Commit message:** `Make layout responsive with mobile sidebar drawer and adaptive editor`
+When a task in any issue conflicts with these principles, the principles win — adjust the task and note the deviation in the commit message.
 
 ---
 
-## Issue #6 — Comprehensive keyboard shortcuts and full keyboard navigation
+## Issue #10 — Multi-format agent file export (AGENTS.md, CLAUDE.md, Copilot, Cursor, Windsurf)
 
-**GitHub issue:** https://github.com/adilio/PromptStash/issues/6
-
-### Context
-Currently wired shortcuts:
-- `N` (global, not in input) — new prompt (`AppLayout.tsx` lines 40–59)
-- `Cmd/Ctrl+K` — open command palette (`CommandPalette.tsx` lines 50–62)
-- `Ctrl+S` — save prompt (`PromptEditor.tsx` via `useKeyboardShortcut`)
-
-The `useKeyboardShortcut` hook at `src/hooks/useKeyboardShortcut.ts` handles modifier matching and `window.addEventListener`. Use it wherever possible.
-
-### Key files
-- `src/hooks/useKeyboardShortcut.ts` — the existing hook
-- `src/routes/app/AppLayout.tsx` — global shortcut registration and sidebar state
-- `src/routes/app/Dashboard.tsx` — prompt list, search input
-- `src/routes/app/PromptEditor.tsx` — editor tabs, save, copy
-- `src/components/CommandPalette.tsx` — existing palette, needs shortcut hints
-- `src/routes/app/Settings.tsx` — already has a `shortcuts` section stub
-
-### Tasks
-
-#### New global shortcuts
-- [x] Register `Cmd/Ctrl+\` in `AppLayout.tsx` to toggle the sidebar (set `sidebarOpen = !sidebarOpen`). Use `useKeyboardShortcut` with `ctrlKey: true, key: '\\'`.
-- [x] Register `?` (no modifiers, not in an editable target) in `AppLayout.tsx` to open a shortcuts help modal. Add state `shortcutsHelpOpen` and pass it to a new `ShortcutsHelp` component. Guard against firing when focus is in an input (reuse the existing `isEditableTarget` helper already in `AppLayout.tsx`).
-
-#### Dashboard shortcuts
-- [x] Register `/` (no modifiers, not in editable target) in `Dashboard.tsx` to focus the search input. Use a `useRef` on the search `<input>` and call `.focus()` on keydown.
-- [x] Implement arrow-key navigation through the prompt list:
-  - Track a `focusedPromptIndex` state in `Dashboard.tsx` (default `-1`).
-  - On `ArrowDown`, increment index (capped at `filteredPrompts.length - 1`). On `ArrowUp`, decrement (floor 0). Don't fire when focus is in an editable element.
-  - Render a visual focus ring on the focused card/row using a border or background change.
-  - On `Enter`, navigate to the focused prompt: `navigate(`/app/p/${filteredPrompts[focusedPromptIndex].id}`)`.
-  - Reset `focusedPromptIndex` to `-1` when the prompt list changes.
-
-#### PromptEditor shortcuts
-- [x] Register `Cmd/Ctrl+1` to switch to the Write tab: `setTab('write')`. Use `useKeyboardShortcut`.
-- [x] Register `Cmd/Ctrl+2` to switch to the Preview tab: `setTab('preview')`.
-- [x] Register `Cmd/Ctrl+Shift+C` to copy the prompt body to clipboard. Reuse the existing clipboard logic already in the Copy button handler.
-
-#### ShortcutsHelp modal
-- [x] Create `src/components/ShortcutsHelp.tsx`. It renders a `Dialog` (use the existing `Dialog` component from `src/components/ui/dialog.tsx`).
-  - Title: "Keyboard shortcuts"
-  - Two-column grid of shortcut rows. Each row: left cell = key combo rendered in `<kbd>` style, right cell = description.
-  - List every shortcut in the app (include the pre-existing ones).
-  - Full shortcut table:
-    | Keys | Action |
-    |------|--------|
-    | `N` | New prompt |
-    | `?` | Open this help |
-    | `/` | Focus search |
-    | `Cmd K` | Command palette |
-    | `Cmd \` | Toggle sidebar |
-    | `Cmd S` | Save prompt |
-    | `Cmd 1` | Write tab |
-    | `Cmd 2` | Preview tab |
-    | `Cmd Shift C` | Copy prompt body |
-    | `↑ ↓` | Navigate prompt list |
-    | `Enter` | Open focused prompt |
-    | `Esc` | Close modal / palette |
-- [x] Wire `shortcutsHelpOpen` state from `AppLayout.tsx` into `ShortcutsHelp`.
-- [x] Render `<ShortcutsHelp>` inside `AppLayout.tsx` alongside `CommandPalette`.
-
-#### CommandPalette shortcut hints
-- [x] Add a `<span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ps-fg-faint)' }}>` after each action label in `CommandPalette.tsx` showing its shortcut (e.g. `N` next to "New Prompt").
-
-#### Settings — Shortcuts section
-- [x] In `Settings.tsx`, find the existing `shortcuts` section (it already exists in the `sections` array but likely has a placeholder body). Replace the placeholder with the same shortcut table from `ShortcutsHelp`, rendered as a read-only reference.
-
-#### Focus management and accessibility
-- [x] Ensure all `Dialog` modals in the app trap focus when open and return focus to the trigger element on close. The existing `Dialog` component from Radix UI (used via `src/components/ui/dialog.tsx`) handles this automatically — verify it is being used correctly in `ConfirmDialog`, `ExportImportDialog`, `ShareDialog`, and `VersionHistoryDialog`.
-- [ ] Add `tabIndex={0}` and `onKeyDown` (Enter/Space to activate) to any interactive `<div>` elements that are missing keyboard activation. Audit: `PromptCard.tsx`, `PromptListRow` in `Dashboard.tsx`, `NavItem` in `Sidebar.tsx`.
-
-#### Testing
-- [ ] Test every shortcut listed in the table above in a browser.
-- [ ] Verify shortcuts do NOT fire when typing in the title input, body textarea, or search input.
-- [ ] Verify `?` opens the help modal and `Esc` closes it.
-- [ ] Verify arrow keys navigate the dashboard prompt list.
-- [x] Run `npx tsc --noEmit` — zero errors.
-
-**Commit message:** `Add comprehensive keyboard shortcuts and navigation with shortcuts help modal`
-
----
-
-## Issue #7 — Programmatic access via a REST API with API key auth
-
-**GitHub issue:** https://github.com/adilio/PromptStash/issues/7
+**GitHub issue:** _to be filed_
 
 ### Context
-The app uses Supabase (client: `src/lib/supabase.ts`). The best approach for a REST API is Supabase Edge Functions (Deno), deployed under `supabase/functions/`. API keys are stored hashed (SHA-256) in a new `api_keys` table. The client UI for key management lives in `Settings.tsx`.
+Different AI coding agents expect system instructions in different files: `AGENTS.md` (the emerging community standard), `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursorrules`, `.windsurfrules`. Today PromptStash exports JSON (via `ExportImportDialog`) and YAML (via `src/lib/espanso.ts`) only. Adding native multi-format export per prompt and as a workspace-level bulk download is the first concrete step toward the "instruction hub" positioning in `FUTURE.md` §3.1 / §5.2.
+
+This issue is purely about the wrapping and download plumbing for individual prompts. Bundle-level composition lands in Issue #12.
 
 ### Key files
-- `src/lib/supabase.ts` — Supabase client
-- `src/lib/types.ts` — shared TypeScript types
-- `src/routes/app/Settings.tsx` — API key management UI goes in a new section here
-- `src/api/` — add `src/api/apikeys.ts` for client-side key CRUD
-- `supabase/functions/` — create this directory with Edge Functions
+- `supabase/migrations/<timestamp>_agent_format.sql` — new migration
+- `src/lib/database.types.ts` — regenerate or hand-edit to include the new column
+- `src/lib/types.ts` — add `AgentFormat` and extend `Prompt` typing if not flowing through automatically
+- `src/api/prompts.ts` — include `agent_format` in select queries and create/update payload types
+- `src/lib/agentExport.ts` — NEW: format wrappers and filename helpers
+- `src/lib/preferences.ts` — NEW: small `useShowAdvanced()` hook backed by localStorage
+- `src/content/concepts/` — NEW directory; placeholder concept stubs land here in this issue, full content in Issue #15
+- `src/components/ConceptInfo.tsx` — NEW: reusable info-icon → popover slot
+- `src/routes/app/PromptEditor.tsx` — target-agent selector inside the existing Advanced disclosure (next to Espanso trigger)
+- `src/routes/app/PromptView.tsx` — "Download as…" dropdown on the header
+- `src/routes/app/Settings.tsx` — bulk export subsection in the existing `data` section, plus the master "Show all advanced features" toggle in the `appearance` section
+- `src/components/ui/dropdown-menu.tsx` — already wraps Radix DropdownMenu; reuse it
+- `src/components/ui/popover.tsx` — already wraps Radix Popover; used by `ConceptInfo`
 
 ### Tasks
 
 #### Database migration
-- [x] Create `supabase/migrations/<timestamp>_api_keys.sql`:
+- [ ] Create `supabase/migrations/<UTC YYYYMMDDHHMMSS>_agent_format.sql`:
   ```sql
-  create table if not exists public.api_keys (
-    id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users(id) on delete cascade,
-    name text not null,
-    key_hash text not null unique,
-    key_prefix text not null,  -- first 8 chars of the raw key, shown in UI
-    created_at timestamptz not null default now(),
-    last_used_at timestamptz
-  );
+  alter table public.prompts
+    add column if not exists agent_format text;
 
-  alter table public.api_keys enable row level security;
-
-  create policy "Users manage own api keys"
-    on public.api_keys
-    for all
-    using (user_id = auth.uid())
-    with check (user_id = auth.uid());
+  alter table public.prompts
+    add constraint prompts_agent_format_check
+      check (agent_format is null or agent_format in
+        ('agents','claude','copilot','cursor','windsurf','generic'));
   ```
-- [x] Generate the migration timestamp using the current UTC timestamp in the format `YYYYMMDDHHMMSS`.
+- [ ] Update `src/lib/database.types.ts` so `prompts.Row`, `Insert`, and `Update` include `agent_format: string | null` (and the `Update` form makes it optional).
 
-#### Client-side API key management (`src/api/apikeys.ts`)
-- [x] Create `src/api/apikeys.ts` with the following functions:
-  - `generateApiKey(): string` — generates a random 32-byte hex string using `crypto.getRandomValues`. Format: `ps_` prefix + 64 hex chars (e.g. `ps_a1b2c3...`).
-  - `hashApiKey(rawKey: string): Promise<string>` — SHA-256 hash using `crypto.subtle.digest`. Returns hex string.
-  - `createApiKey(name: string): Promise<{ id: string; name: string; rawKey: string; key_prefix: string; created_at: string }>` — generates raw key, hashes it, inserts into `api_keys` table via Supabase, returns the raw key (only time it's available). The raw key is NOT stored.
-  - `listApiKeys(): Promise<Array<{ id: string; name: string; key_prefix: string; created_at: string; last_used_at: string | null }>>` — fetches all keys for the current user (no `key_hash` returned).
-  - `deleteApiKey(id: string): Promise<void>` — deletes a key by ID.
+#### Format wrappers
+- [ ] Create `src/lib/agentExport.ts` exporting:
+  - `export type AgentFormat = 'agents' | 'claude' | 'copilot' | 'cursor' | 'windsurf' | 'generic';`
+  - `export const AGENT_FORMATS: { id: AgentFormat; label: string; filename: string; description: string }[]` — labels and target filenames for each (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursorrules`, `.windsurfrules`, `prompt.md`).
+  - `export function filenameFor(format: AgentFormat): string`
+  - `export function wrapPromptForFormat(prompt: { title: string; body_md: string }, format: AgentFormat): string` — produces the file body. For markdown formats (`agents`, `claude`, `copilot`, `generic`) emit a header comment line + `# <title>` + body. For `cursor` and `windsurf`, emit plain text without a markdown title (just the body, since these files are read literally).
+  - `export function wrapPromptsForFormat(prompts: { title: string; body_md: string }[], format: AgentFormat): string` — concatenates with `## <title>` per prompt for markdown formats; double-newline separated for plain-text formats.
+  - `export function downloadFile(filename: string, content: string, mimeType?: string): void` — Blob + object URL + click + revoke. (Mirror the existing pattern in `src/lib/espanso.ts` callsite in `Settings.tsx`.)
 
-#### Settings UI — API Keys section
-- [x] In `Settings.tsx`, add `'api'` to the `Section` type and add `{ id: 'api', label: 'API access', icon: <Code .../> }` to the `sections` array. (The `Code` icon is already imported.)
-- [x] Add an API access section body:
-  - Header: "API Keys" with a description: "Use API keys to access your prompts programmatically. Keys are shown only once."
-  - A form: text input for key name + "Generate key" button.
-  - On submit: call `createApiKey(name)`, show the raw key in a read-only `<input>` with a copy button, display a warning: "Copy this key now — it won't be shown again."
-  - A table listing existing keys: columns = Name, Prefix (e.g. `ps_a1b2c3…`), Created, Last used, Revoke button.
-  - Revoking a key calls `deleteApiKey(id)` and removes it from the list.
-  - State: `apiKeys`, `newKeyName`, `justCreatedKey` (stores raw key temporarily until dismissed).
+#### Preferences hook (foundation for later issues)
+- [ ] Create `src/lib/preferences.ts`:
+  ```ts
+  const STORAGE_KEY = 'ps:show-advanced';
 
-#### Edge Functions
-- [x] Create directory `supabase/functions/api/`. All API routes will be one function with path-based dispatch.
-- [x] Create `supabase/functions/api/index.ts`:
-  - Parse `Authorization: Bearer <key>` header. If missing or malformed, return `401`.
-  - Hash the raw key and look up `api_keys` table by `key_hash`. If not found, return `401`.
-  - Fetch `user_id` from the matched row. Update `last_used_at = now()`.
-  - Dispatch on `req.method` + URL path:
+  export function getShowAdvanced(): boolean {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(STORAGE_KEY) === '1';
+  }
+  export function setShowAdvanced(value: boolean): void {
+    window.localStorage.setItem(STORAGE_KEY, value ? '1' : '0');
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+  }
+  export function useShowAdvanced(): [boolean, (v: boolean) => void] { /* useState + useEffect listening to 'storage' */ }
+  ```
+- [ ] Wire the master toggle in Settings → Appearance: a single checkbox row "Show all advanced features", with hint "Forces every advanced surface (stages, bundles, token gauges) visible regardless of whether you've used them yet. Off by default." Bound to `useShowAdvanced()`.
 
-  **GET /api/v1/prompts**
-  - Accepts query params: `workspace` (team_id), `search`, `tag`.
-  - Calls the same logic as `listPrompts` in `src/api/prompts.ts` but server-side via Supabase service role client.
-  - Returns `{ data: PromptWithTags[] }`.
+#### ConceptInfo slot (foundation for later issues)
+- [ ] Create `src/content/concepts/` directory with one stub file per concept this plan introduces: `agents-md.md`, `stages.md`, `bundles.md`, `dumb-zone.md`, `qrspi.md`, `context-engineering.md`. Each stub is just a heading + 2-3 sentence summary + a "References" heading with at least one link (placeholder content; Issue #15 fills these out fully). Sources to draw from come from `FUTURE.md`'s reference lists.
+- [ ] Create `src/components/ConceptInfo.tsx`:
+  ```tsx
+  type Props = { conceptId: string; label?: string };
+  // Renders a small `i` icon (lucide-react `Info`, 14px, color var(--ps-fg-faint)).
+  // On click: Popover with title + 2-3 sentence summary + "Learn more →" link to /app/learn/<conceptId>.
+  // Pulls summary from a static map in src/content/concepts/index.ts (id → { title, summary }).
+  // Issue #15 replaces the static map with a richer registry; the component API stays the same.
+  ```
+- [ ] Create `src/content/concepts/index.ts` exporting `CONCEPT_SUMMARIES: Record<string, { title: string; summary: string }>` populated from the stub files (manually transcribed to keep things simple in v1).
 
-  **GET /api/v1/prompts/:id**
-  - Returns `{ data: PromptWithTags }` or `{ error: 'Not found' }` with 404.
+#### PromptEditor
+- [ ] Add `agentFormat` state (`AgentFormat | ''`, default `''` meaning unset) inside `PromptEditor.tsx`.
+- [ ] Hydrate from `promptQuery.data?.agent_format ?? ''` in the existing data-loading effect.
+- [ ] Inside the Advanced `<details>` block (currently containing the Espanso trigger), add a "Target agent" row: label "Target agent" + `<ConceptInfo conceptId="agents-md" />` + a `<select>` populated from `AGENT_FORMATS`. Include an empty option labelled "Unspecified". Hint text: "Pick the agent file this prompt should be exported as."
+- [ ] Include `agent_format: agentFormat || null` in the `createPromptMutation` and `updatePromptMutation` payloads, and in the autosave payload.
+- [ ] Trigger autosave when `agentFormat` changes (add it to the autosave effect's dependency list).
 
-  **POST /api/v1/prompts**
-  - Body: `{ team_id, title, body_md, folder_id? }`.
-  - Validates required fields. Returns `{ data: Prompt }` with 201.
+#### PromptView
+- [ ] Add a "Download as…" `DropdownMenu` button to the existing header action area.
+- [ ] Menu items: one per `AgentFormat`, each showing the format label and filename in a smaller dim line.
+- [ ] On select, call `downloadFile(filenameFor(format), wrapPromptForFormat(prompt, format))`.
+- [ ] If the prompt has `agent_format` set, render a small marker next to the title in the header (e.g. "Target: AGENTS.md") so the user knows what the prompt is wired for.
 
-  **PATCH /api/v1/prompts/:id**
-  - Body: partial `{ title?, body_md?, folder_id? }`.
-  - Returns `{ data: Prompt }` or 404.
-
-  **DELETE /api/v1/prompts/:id**
-  - Returns `{ success: true }` or 404.
-
-  **GET /api/v1/workspaces**
-  - Returns all teams the user is a member of.
-  - Returns `{ data: Team[] }`.
-
-  - All responses include `Content-Type: application/json`.
-  - Rate limiting: implement a simple in-memory counter per `key_hash` (reset every 60s). Return 429 with `{ error: 'Rate limit exceeded' }` if > 60 requests/min. Note: Supabase Edge Functions are stateless per invocation, so use Supabase KV or a `rate_limits` table for persistence if needed; a simple approach is to count requests in a `rate_limits` table with a 60-second TTL row.
-
-- [x] Create `supabase/functions/api/cors.ts` that exports a `corsHeaders` object and a `handleCors(req)` function for preflight requests.
-
-#### In-app docs
-- [x] In the Settings API section, below the key management UI, add a "Usage" subsection showing:
-  - Base URL: display the Supabase Edge Function URL (read from `import.meta.env.VITE_SUPABASE_URL` + `/functions/v1/api`).
-  - Example curl snippets for: list prompts, get one prompt, create a prompt.
-  - Render snippets in a `<pre>` block styled with the existing monospace font.
+#### Settings — bulk export
+- [ ] In `Settings.tsx`, inside the `data` section body (after the existing JSON export and Espanso export blocks), add a new "Agent file export" subsection:
+  - Header + description: "Download all prompts in this workspace as a single agent file."
+  - A `<select>` for target format (same options as above).
+  - A "Download" button that calls `listPrompts(currentTeamId)` then `downloadFile(filenameFor(format), wrapPromptsForFormat(prompts, format))`.
+  - Loading state on the button while fetching.
 
 #### Testing
-- [x] Generate an API key in the Settings UI, copy it, and use curl to hit `GET /api/v1/workspaces` — verify it returns teams.
-- [x] Verify `GET /api/v1/prompts?workspace=<id>` returns prompts for that workspace.
-- [x] Verify that an invalid key returns 401.
-- [x] Verify the key is NOT retrievable after dismissing the "copy this key" dialog.
-- [x] Run `npx tsc --noEmit` — zero errors.
+- [ ] Manual: create a prompt, set Target agent to Cursor, save, reload — verify the value persists.
+- [ ] Manual: from PromptView click "Download as… AGENTS.md" — verify the file downloads and the content has the expected header and body.
+- [ ] Manual: from Settings → Data → Agent file export, pick CLAUDE.md, click Download — verify the file contains every prompt in the workspace separated by `## <title>`.
+- [ ] **Progressive disclosure check:** A new user who creates one prompt and saves it should never see the words "AGENTS.md", "Target agent", or any concept icon unless they expand the Advanced disclosure. Verify by inspecting the editor in its default collapsed state.
+- [ ] **ConceptInfo check:** Click the `i` icon next to "Target agent" — verify the popover renders with the placeholder summary and a "Learn more →" link (the link target page lands in Issue #15; for now it can be `/app/learn/agents-md` returning a 404-style placeholder).
+- [ ] Run `npx tsc --noEmit` — zero errors.
 
-**Commit message:** `Add programmatic API access with API key management and Edge Function endpoints`
+**Commit message:** `Add multi-format agent file export with ConceptInfo slot and advanced-features toggle`
 
 ---
 
-## Issue #8 — Espanso integration for inline prompt expansion
+## Issue #11 — QRSPI stage typing for instruction modules
 
-**GitHub issue:** https://github.com/adilio/PromptStash/issues/8
+**GitHub issue:** _to be filed_
 
 ### Context
-[Espanso](https://espanso.org) is a cross-platform text expander. Prompts exported as an Espanso package allow users to trigger full prompt bodies anywhere on their system by typing a short keyword. The integration is purely an export feature — no Espanso process is bundled. A stretch goal is to add a trigger field to each prompt.
+`FUTURE.md` (the QRSPI section) argues that prompts intended as agent instructions should be **stage-typed** so they can be composed into structured workflows: Question, Research, Design, Structure, Plan, Work, Implement, Review (PR). This is a small change to the data model with outsized payoff: it powers filtering today and bundle composition (Issue #12) and budget/lint awareness (Issue #13) tomorrow.
+
+We add a single nullable `stage` column on `prompts` rather than introducing a separate `instruction_modules` table. Prompts and instruction modules are conceptually the same entity in PromptStash; the `stage` field (plus `agent_format` from Issue #10) is what makes a prompt "an instruction module."
+
+**Disclosure rules for this issue:** Stage is a power-user feature. The selector lives inside the existing Advanced disclosure in `PromptEditor`, never in the header. The Dashboard filter strip and CommandPalette entries appear only when the workspace contains at least one prompt with a stage set (or when the master "Show advanced features" preference is on). The stage badge on a card renders only when the prompt has a stage. A user who never opens the Advanced disclosure will never encounter the word "stage" in the UI.
 
 ### Key files
-- `src/routes/app/Settings.tsx` — export lives in the `data` section
-- `src/routes/app/PromptEditor.tsx` — add optional trigger field to prompt form
-- `src/lib/types.ts` — may need to add `espanso_trigger?: string` to the `Prompt` type
-- `src/api/prompts.ts` — check if `espanso_trigger` can be stored in the existing schema (add a column if not)
-- `src/routes/app/Dashboard.tsx` — no changes needed
+- `supabase/migrations/<timestamp>_prompt_stage.sql` — new migration
+- `src/lib/database.types.ts` — regenerate or hand-edit
+- `src/lib/types.ts` — add `Stage` type and `STAGE_OPTIONS` constant
+- `src/api/prompts.ts` — include `stage` in selects and write payload types
+- `src/routes/app/PromptEditor.tsx` — stage selector
+- `src/routes/app/Dashboard.tsx` — stage filter chips, persist selection in URL
+- `src/components/PromptCard.tsx` — stage badge
+- `src/components/CommandPalette.tsx` — "Filter by stage: <stage>" entries
 
 ### Tasks
 
-#### Database — add trigger field
-- [x] Create `supabase/migrations/<timestamp>_espanso_trigger.sql`:
+#### Database migration
+- [ ] Create `supabase/migrations/<UTC YYYYMMDDHHMMSS>_prompt_stage.sql`:
   ```sql
   alter table public.prompts
-    add column if not exists espanso_trigger text;
+    add column if not exists stage text;
+
+  alter table public.prompts
+    add constraint prompts_stage_check
+      check (stage is null or stage in
+        ('question','research','design','structure','plan','work','implement','review'));
+
+  create index if not exists prompts_team_stage_idx
+    on public.prompts (team_id, stage);
   ```
-- [x] Add `espanso_trigger?: string | null` to the `Prompt` interface in `src/lib/types.ts`.
-- [x] In `src/api/prompts.ts`, include `espanso_trigger` in the select query and in the `createPrompt` / `updatePrompt` parameter types.
+- [ ] Update `src/lib/database.types.ts` to include `stage: string | null` on `prompts` Row/Insert/Update.
 
-#### Prompt editor — trigger field
-- [x] In `PromptEditor.tsx`, add `espansoTrigger` state (string, default `''`).
-- [x] When loading an existing prompt (`promptQuery.data`), set `espansoTrigger` from `promptQuery.data.espanso_trigger ?? ''`.
-- [x] In the editor body, below the Tags section, add an optional "Espanso trigger" field:
-  - A text input, placeholder `:prompt-name` (e.g. `:codereview`).
-  - Label: "Espanso trigger" with a hint: "Type this keyword anywhere on your system to expand the prompt."
-  - Only shown when the user expands an "Advanced" disclosure (a `<details>` / `<summary>` toggle) to keep the UI clean for users who don't use Espanso.
-  - Auto-populate the trigger on `onBlur` if empty and a title exists: slugify the title with a `:` prefix (e.g. "Code review" → `:code-review`).
-- [x] Include `espanso_trigger` in the `handleSave` payload for both create and update paths.
-- [x] Include it in the auto-save `updatePromptMutation` payload.
-
-#### Export function
-- [x] Create `src/lib/espanso.ts` that exports:
+#### Types
+- [ ] In `src/lib/types.ts` add:
   ```ts
-  function slugify(text: string): string
-  // Lowercases, replaces spaces/special chars with hyphens, strips leading/trailing hyphens.
+  export type Stage =
+    | 'question' | 'research' | 'design' | 'structure'
+    | 'plan' | 'work' | 'implement' | 'review';
 
-  function generateEspansoYaml(prompts: Prompt[]): string
-  // Returns a complete Espanso package YAML string.
-  // Format:
-  // matches:
-  //   - trigger: ":prompt-slug"
-  //     replace: |
-  //       <full prompt body>
-  // For prompts with espanso_trigger set, use that. Otherwise, fall back to `:` + slugify(title).
-  // Escape any `\` in the prompt body.
+  export const STAGE_OPTIONS: { id: Stage; label: string; short: string; color: string }[] = [
+    { id: 'question',  label: 'Question',  short: 'Q',  color: '...' },
+    { id: 'research',  label: 'Research',  short: 'R',  color: '...' },
+    { id: 'design',    label: 'Design',    short: 'D',  color: '...' },
+    { id: 'structure', label: 'Structure', short: 'S',  color: '...' },
+    { id: 'plan',      label: 'Plan',      short: 'P',  color: '...' },
+    { id: 'work',      label: 'Work',      short: 'W',  color: '...' },
+    { id: 'implement', label: 'Implement', short: 'I',  color: '...' },
+    { id: 'review',    label: 'Review/PR', short: 'PR', color: '...' },
+  ];
   ```
-- [x] The YAML output should include a header comment explaining the file and how to install it.
-  ```yaml
-  # PromptStash — Espanso export
-  # Generated: <ISO date>
-  # Install: place this file in your Espanso config/match directory
-  # See: https://espanso.org/docs/packages/creating-a-package/
-  ```
+  Pick distinct accent shades drawn from existing `var(--ps-accent)` ramp; do not add new top-level CSS variables for this — inline the hex/oklch.
 
-#### Settings — Export section
-- [x] In `Settings.tsx`, find the `data` section body. Add an "Espanso" subsection:
-  - Header: "Espanso export"
-  - Description: "Download your prompts as an Espanso match file. Drop the file into your Espanso config/match directory to expand prompts by keyword anywhere on your system."
-  - Button: "Download Espanso package".
-  - On click:
-    1. Fetch all prompts for `currentTeamId` via `listPrompts(currentTeamId)`.
-    2. Call `generateEspansoYaml(prompts)`.
-    3. Trigger a browser file download: create a `Blob` with `type: 'text/yaml'`, create an object URL, click a hidden `<a>` link, revoke the URL. Filename: `promptstash-espanso-<YYYY-MM-DD>.yml`.
-  - Show a loading state on the button while fetching prompts.
-- [x] Below the button, add an "Install guide" collapsible:
-  - macOS: `~/.config/espanso/match/promptstash.yml`
-  - Windows: `%APPDATA%\espanso\match\promptstash.yml`
-  - Linux: `~/.config/espanso/match/promptstash.yml`
-  - After placing the file: `espanso restart` (or it auto-reloads).
+#### API
+- [ ] In `src/api/prompts.ts`, include `stage` in the column list of every `select(...)` and add it to the `createPrompt` and `updatePrompt` parameter types.
+
+#### PromptEditor
+- [ ] Add `stage` state and hydrate from `promptQuery.data?.stage ?? ''`.
+- [ ] **Inside the Advanced `<details>` block** (the same one that holds Espanso trigger and Target agent from Issue #10), add a "Stage" row: label "Stage" + `<ConceptInfo conceptId="stages" />` + a `<select>` populated from `STAGE_OPTIONS`. Empty option = "No stage". Hint text below the row: "Tag this prompt as part of a Research → Plan → Implement workflow."
+- [ ] Do *not* add a stage selector to the editor header. Header stays clean.
+- [ ] Include `stage: stage || null` in create/update/autosave payloads. Add to autosave dependency list.
+
+#### Dashboard
+- [ ] Add a TanStack Query for `hasAnyStagedPrompt(currentTeamId)` returning `boolean` (count > 0 of prompts where `stage IS NOT NULL`). Implement as a lightweight Supabase head-count query. Cache key: `promptKeys.hasStaged(teamId)`.
+- [ ] Render the horizontal stage filter chips above the prompt grid **only when** `hasAnyStagedPrompt` is true *or* `useShowAdvanced()` returns true. When neither, render nothing — no empty container, no placeholder.
+- [ ] When chips render, place a `<ConceptInfo conceptId="stages" />` icon inline at the start of the strip so first-time encounters have an explainer.
+- [ ] Multi-select chip behavior; persist in `useSearchParams` (`?stages=research,plan`).
+- [ ] Filter the rendered prompts client-side by `stage in selectedStages` only when at least one chip is active. When no chip is selected, show all prompts (current behavior).
+- [ ] On mobile, allow horizontal scroll on the chip strip — match the existing Settings tab strip pattern.
+
+#### PromptCard / PromptListRow
+- [ ] In `PromptCard.tsx`, render a small colored stage badge under the title **only when** `prompt.stage` is set. Use the color from `STAGE_OPTIONS`. No placeholder when unset.
+- [ ] In `PromptListRow` (defined inside `Dashboard.tsx`), add an inline stage badge before the title text, again only when set. Hide on the narrow mobile column layout (already drops Tags/Updated).
+
+#### CommandPalette
+- [ ] Add stage filter entries ("Filter by stage: Question", etc.) **only when** `hasAnyStagedPrompt` is true or `useShowAdvanced()` is true. Suppress entirely otherwise — the palette should not surface concepts the user hasn't engaged with.
 
 #### Testing
-- [x] Create a prompt, set an Espanso trigger (e.g. `:test`), save — verify trigger persists on reload.
-- [x] Go to Settings > Data & export, click "Download Espanso package" — verify a `.yml` file downloads.
-- [x] Open the file and verify YAML is valid: each prompt has a `trigger` and `replace` entry.
-- [x] Verify prompts without a trigger get an auto-generated slug.
+- [ ] Manual: create a prompt, leave it un-staged — confirm no chip strip appears, no stage word anywhere except inside the Advanced disclosure.
+- [ ] Manual: open Advanced, set stage to Plan, save, reload — verify it persists and the chip strip + card badge now appear.
+- [ ] Manual: clear all stages from all prompts — verify the chip strip disappears again.
+- [ ] Manual: with no staged prompts, toggle Settings → Appearance → Show all advanced features → on. Verify chip strip appears with all 8 stages.
+- [ ] Manual: in Dashboard with at least one staged prompt, click the Plan chip — verify only Plan-stage prompts remain. URL contains `?stages=plan`.
+- [ ] Manual: ConceptInfo `i` icon next to the chip strip opens a popover summarizing stages.
+- [ ] Run `npx tsc --noEmit` — zero errors.
+
+**Commit message:** `Add QRSPI stage typing with auto-disclosed filter chips and badges`
+
+---
+
+## Issue #12 — Bundles: compose modules into a single AGENTS.md / CLAUDE.md export
+
+**GitHub issue:** _to be filed_
+
+### Context
+Multi-format export per prompt (Issue #10) plus stage typing (Issue #11) sets up the headline feature: **bundles**. A bundle is an ordered set of prompts (instruction modules) with a target format. Exporting a bundle produces one `AGENTS.md` (or `CLAUDE.md`, etc.) where each module appears as a section. This is the surface that turns PromptStash into a harness-configuration console — see `FUTURE.md` §3.4, §5.3, and the QRSPI implications section.
+
+Scope is intentionally limited: no GitHub repo sync (deferred to Future Ideas), no per-bundle variables (deferred to a later issue once we see usage). Just CRUD, ordering, and download.
+
+### Key files
+- `supabase/migrations/<timestamp>_bundles.sql` — new migration with two tables and RLS
+- `src/lib/database.types.ts` — extend with the new tables
+- `src/lib/types.ts` — `Bundle`, `BundleItem`, `BundleWithItems`
+- `src/api/bundles.ts` — NEW: CRUD
+- `src/lib/queryClient.ts` — add `bundleKeys` factory mirroring `promptKeys`
+- `src/lib/agentExport.ts` — extend with `bundleToFile()`
+- `src/main.tsx` — add `/app/bundles` and `/app/bundles/:id` routes
+- `src/routes/app/BundleList.tsx` — NEW
+- `src/routes/app/BundleEditor.tsx` — NEW
+- `src/components/Sidebar.tsx` — add "Bundles" nav item
+- `src/components/CommandPalette.tsx` — "New bundle", "Open bundle…" entries
+- `src/hooks/useDragAndDrop.ts` — reuse for item reordering
+
+### Tasks
+
+#### Database migration
+- [x] Create `supabase/migrations/<UTC YYYYMMDDHHMMSS>_bundles.sql`:
+  ```sql
+  create table if not exists public.bundles (
+    id uuid primary key default gen_random_uuid(),
+    team_id uuid not null references public.teams(id) on delete cascade,
+    name text not null,
+    description text,
+    target_format text not null
+      check (target_format in ('agents','claude','copilot','cursor','windsurf','generic')),
+    created_by uuid not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  );
+
+  create trigger bundles_set_updated_at
+    before update on public.bundles
+    for each row execute function moddatetime(updated_at);
+
+  create table if not exists public.bundle_items (
+    bundle_id uuid not null references public.bundles(id) on delete cascade,
+    prompt_id uuid not null references public.prompts(id) on delete cascade,
+    position integer not null,
+    included boolean not null default true,
+    heading_override text,
+    primary key (bundle_id, prompt_id)
+  );
+
+  create index if not exists bundle_items_bundle_position_idx
+    on public.bundle_items (bundle_id, position);
+
+  alter table public.bundles enable row level security;
+  alter table public.bundle_items enable row level security;
+
+  create policy "bundles_read"   on public.bundles
+    for select using (is_team_member(team_id));
+  create policy "bundles_write"  on public.bundles
+    for all using (
+      exists (select 1 from public.memberships m
+              where m.team_id = bundles.team_id
+                and m.user_id = auth.uid()
+                and m.role in ('owner','editor'))
+    ) with check (
+      exists (select 1 from public.memberships m
+              where m.team_id = bundles.team_id
+                and m.user_id = auth.uid()
+                and m.role in ('owner','editor'))
+    );
+
+  create policy "bundle_items_read" on public.bundle_items
+    for select using (
+      exists (select 1 from public.bundles b
+              where b.id = bundle_items.bundle_id
+                and is_team_member(b.team_id))
+    );
+  create policy "bundle_items_write" on public.bundle_items
+    for all using (
+      exists (select 1 from public.bundles b
+              join public.memberships m on m.team_id = b.team_id
+              where b.id = bundle_items.bundle_id
+                and m.user_id = auth.uid()
+                and m.role in ('owner','editor'))
+    ) with check (
+      exists (select 1 from public.bundles b
+              join public.memberships m on m.team_id = b.team_id
+              where b.id = bundle_items.bundle_id
+                and m.user_id = auth.uid()
+                and m.role in ('owner','editor'))
+    );
+  ```
+- [x] Regenerate / hand-edit `src/lib/database.types.ts` to add both tables.
+
+#### Types and query keys
+- [x] In `src/lib/types.ts` add:
+  ```ts
+  export type Bundle = Database['public']['Tables']['bundles']['Row'];
+  export type BundleItem = Database['public']['Tables']['bundle_items']['Row'];
+  export type BundleWithItems = Bundle & { items: (BundleItem & { prompt: Prompt })[] };
+  ```
+- [x] In `src/lib/queryClient.ts` add a `bundleKeys` factory mirroring the shape of `promptKeys` (`all`, `lists`, `list(teamId)`, `details`, `detail(id)`).
+
+#### API layer
+- [x] Create `src/api/bundles.ts` with:
+  - `listBundles(teamId: string): Promise<Bundle[]>` — ordered by `updated_at desc`.
+  - `getBundle(id: string): Promise<BundleWithItems>` — joins `bundle_items` with `prompts`, sorted by `position asc`.
+  - `createBundle(input: { team_id; name; description?; target_format }): Promise<Bundle>`.
+  - `updateBundle(id, patch): Promise<Bundle>`.
+  - `deleteBundle(id): Promise<void>`.
+  - `addBundleItem(bundleId, promptId): Promise<BundleItem>` — assigns next available `position`.
+  - `removeBundleItem(bundleId, promptId): Promise<void>`.
+  - `reorderBundleItems(bundleId, orderedPromptIds: string[]): Promise<void>` — single update setting positions in order.
+  - `setBundleItemIncluded(bundleId, promptId, included: boolean): Promise<void>`.
+  - `setBundleItemHeadingOverride(bundleId, promptId, heading: string | null): Promise<void>`.
+
+#### Routes and navigation
+- [x] In `src/main.tsx` add child routes under `AppLayout`: `/app/bundles` → `BundleList`, `/app/bundles/new` → `BundleEditor`, `/app/bundles/:id` → `BundleEditor`.
+- [x] In `src/components/Sidebar.tsx` add a "Bundles" `NavItem` (Layers icon from lucide-react) **with auto-disclosure**:
+  - Render only when at least one of these is true: `bundles.length > 0` for the current team (use a TanStack Query keyed `bundleKeys.list(teamId)` already in flight from the layout), OR the current route matches `/app/bundles*`, OR `useShowAdvanced()` returns true.
+  - When the nav item is hidden but the user navigates to `/app/bundles` directly (e.g. from the template gallery in Issue #14), it should temporarily appear because the route-match condition fires.
+- [x] Pass through `currentTeamId` via outlet context (already provided).
+
+#### Bundle list page
+- [x] Create `src/routes/app/BundleList.tsx`:
+  - Page header: title "Bundles" + `<ConceptInfo conceptId="bundles" />`, description "Compose modules into a single agent file like AGENTS.md or CLAUDE.md.", "New bundle" button.
+  - Table or card grid with columns: Name, Target format, # modules, Updated, Actions (Open, Download, Delete).
+  - Reuse `EmptyState` when there are no bundles. The empty-state CTA: "Create a bundle from scratch" + "Browse template gallery" (the latter opens the Issue #14 gallery if available, else falls back to a tooltip "Coming soon").
+
+#### Bundle editor page
+- [x] Create `src/routes/app/BundleEditor.tsx`. Layout: two-column on desktop, stacked on mobile.
+  - **Left:**
+    - Name input.
+    - Description textarea.
+    - Target format select (`AGENT_FORMATS` from `src/lib/agentExport.ts`).
+    - Save button (auto-save on debounce mirrors PromptEditor).
+    - Ordered list of items. Each row shows: drag handle, title, stage badge (from Issue #11), included checkbox, heading override input (collapsed behind a small "Edit heading" toggle), remove button.
+    - "Add module" button → opens a Combobox/CommandPalette-style picker listing all prompts in `currentTeamId` not already in the bundle. Filter by stage chip.
+  - **Right:**
+    - Sticky preview pane rendering `bundleToFile(bundle, items, prompts).content` inside a `<pre>` with the existing monospace styling.
+    - "Download" button at the top of the preview (calls `downloadFile` with the rendered output).
+- [x] Use `useDragAndDrop` for reorder; on drop, call `reorderBundleItems`.
+- [x] On any item mutation, invalidate `bundleKeys.detail(id)` so the preview re-renders.
+
+#### Export wrapper
+- [x] In `src/lib/agentExport.ts` add:
+  ```ts
+  export function bundleToFile(
+    bundle: Bundle,
+    items: (BundleItem & { prompt: Prompt })[],
+  ): { filename: string; content: string }
+  ```
+  - Filename comes from `filenameFor(bundle.target_format)`.
+  - Content begins with a header comment: `# <bundle.name>` then `<bundle.description>` (if any) then a horizontal rule.
+  - For each `included` item in `position` order, render `## <heading_override or item.prompt.title>` followed by `item.prompt.body_md`. Skip excluded items.
+  - For plain-text formats (`cursor`, `windsurf`), use a row of dashes as a section separator instead of `##`.
+
+#### CommandPalette
+- [x] Add entries: "New bundle" → navigate to `/app/bundles/new`. "Open bundle…" → list existing bundles.
+
+#### Testing
+- [x] Manual: create a bundle, add 3 prompts, reorder, exclude one, download — verify the resulting `AGENTS.md` has the right sections in the right order.
+- [x] Manual: switch the target format from AGENTS.md to `.cursorrules` — verify the preview switches to plain-text section separators and the download has filename `.cursorrules`.
+- [x] Manual: delete a prompt that's in a bundle — verify the bundle item disappears (cascade) and the editor still opens cleanly.
+- [x] **Progressive disclosure check:** A workspace with zero bundles must not show "Bundles" in the sidebar. Create one bundle — the nav item appears. Delete it — the nav item disappears again.
+- [x] **Direct-link check:** With zero bundles, navigate to `/app/bundles` directly — the page loads, the sidebar nav item temporarily appears (route match), and the empty state is shown with a "Create a bundle from scratch" CTA.
+- [x] **ConceptInfo check:** Click the `i` icon next to "Bundles" in the page header — popover renders with the bundles summary.
 - [x] Run `npx tsc --noEmit` — zero errors.
 
-**Commit message:** `Add Espanso export with per-prompt trigger field and YAML package download`
+**Commit message:** `Add bundles with auto-disclosed sidebar nav for composing agent file exports`
+
+---
+
+## Issue #13 — Token budget and Dumb Zone indicator
+
+**GitHub issue:** _to be filed_
+
+### Context
+Per `FUTURE.md`'s context-engineering section, agents degrade past roughly 40% of their context window — Dex Horthy's "Dumb Zone." PromptStash should surface token estimates so users can keep modules small and bundles in the smart zone. This issue adds a lightweight token estimator and an indicator that flows from per-prompt to per-bundle.
+
+We use a character-count heuristic (chars ÷ 4) for v1 to avoid pulling in `js-tiktoken` (≈1 MB). The number is approximate, which is fine for the indicator's purpose.
+
+**Disclosure rules for this issue:** The token count is informational, not alarming. In `PromptEditor` it sits next to the existing word counter as a single neutral pill — no color until the prompt crosses a generous soft threshold (e.g. > 8000 tokens). On `PromptCard` and `PromptListRow`, the token count renders as small dim text only when the prompt has body content > 1000 chars (most short prompts don't need it). The full color-coded "Dumb Zone" gauge only appears in `BundleEditor`, where users are explicitly composing for a model context. Per-prompt UI never uses the words "Dumb Zone".
+
+### Key files
+- `src/lib/tokens.ts` — NEW: estimator and zone helpers
+- `src/components/PromptCard.tsx` — token badge
+- `src/routes/app/Dashboard.tsx` (`PromptListRow`) — token column on desktop
+- `src/routes/app/PromptEditor.tsx` — replace/augment the existing word/token counter
+- `src/routes/app/BundleEditor.tsx` — aggregate budget gauge
+
+### Tasks
+
+#### Estimator
+- [ ] Create `src/lib/tokens.ts`:
+  ```ts
+  export type Zone = 'safe' | 'warning' | 'danger';
+
+  export const MODEL_CONTEXTS = {
+    'claude-sonnet': 200_000,
+    'claude-opus':   200_000,
+    'gpt-5':         400_000,
+    default:         200_000,
+  } as const;
+  export type ModelKey = keyof typeof MODEL_CONTEXTS;
+
+  export const ZONE_THRESHOLDS = { safe: 0.40, warning: 0.60 };
+
+  export function estimateTokens(text: string): number {
+    if (!text) return 0;
+    return Math.ceil(text.length / 4);
+  }
+
+  export function getZone(tokens: number, contextSize: number): Zone {
+    const ratio = tokens / contextSize;
+    if (ratio < ZONE_THRESHOLDS.safe)    return 'safe';
+    if (ratio < ZONE_THRESHOLDS.warning) return 'warning';
+    return 'danger';
+  }
+
+  export function zoneColor(zone: Zone): string {
+    if (zone === 'safe')    return 'oklch(0.72 0.16 150)'; // green
+    if (zone === 'warning') return 'oklch(0.78 0.16 80)';  // amber
+    return 'oklch(0.65 0.20 25)';                          // red
+  }
+  ```
+
+#### PromptEditor
+- [ ] Next to the existing word counter, render a neutral "≈ N tokens" pill. Default styling: dim (`color: var(--ps-fg-faint)`, transparent background). When tokens exceed 8000 (`SOFT_THRESHOLD`), promote to amber styling (`zoneColor('warning')`); above 16000, red. No green styling for small prompts — small prompts don't need an alarm signal saying "you're fine."
+- [ ] Recompute on the same debounce as the existing word count.
+- [ ] Do NOT use the words "Dumb Zone" anywhere in the editor UI. The amber/red coloring is the only signal.
+
+#### PromptCard / PromptListRow
+- [ ] In `PromptCard.tsx`, render `≈ N tok` as small dim text in the existing meta row **only when** `prompt.body_md.length > 1000`. Short prompts get nothing — keeps cards quiet.
+- [ ] In `PromptListRow`, add a tokens column between Tags and Updated on desktop, again only populated when `body_md.length > 1000`. Hide on the narrow mobile layout entirely.
+
+#### BundleEditor
+- [ ] Above (or below) the preview pane, render a "Context budget" panel:
+  - Header: "Context budget" + `<ConceptInfo conceptId="dumb-zone" />`.
+  - Sum tokens across `included` items.
+  - A model selector (`claude-sonnet`, `claude-opus`, `gpt-5`) — local to this view, not persisted on the bundle.
+  - A horizontal bar gauge: filled portion = `tokens / contextSize`, colored by `zoneColor(getZone(...))`. Two thin tick marks at 40% and 60%.
+  - Below the bar: `≈ N tokens • X% of <model> context • Zone: <Safe|Warning|Danger>`.
+  - When zone is `warning` or `danger`, render an inline message: "This bundle is approaching the Dumb Zone — consider splitting modules or moving detail into sub-agent instructions." Tone matches existing helper text. The "Dumb Zone" wording is OK *here* because the user is in a feature-aware view and the ConceptInfo icon explains it.
+
+#### Testing
+- [ ] Manual: open a small prompt (~50 tokens) in the editor — pill is dim, no color, just "≈ 50 tokens". Paste in 80k characters of lorem ipsum — pill goes amber, then red.
+- [ ] Manual: on Dashboard, prompts with short bodies show no token text. Edit one to be long — the dim text appears.
+- [ ] Manual: in a bundle, include enough modules to exceed 40% of 200k — gauge turns amber and the warning message appears with the ConceptInfo icon clickable.
+- [ ] Manual: switch the bundle model selector to `gpt-5` (400k) — the same bundle drops back to safe.
+- [ ] **Progressive disclosure check:** A user who never opens a bundle should never see the words "Dumb Zone" in the UI.
+- [ ] Run `npx tsc --noEmit` — zero errors.
+
+**Commit message:** `Add token estimation and Dumb Zone gauge for bundles with quiet per-prompt counts`
+
+---
+
+## Issue #14 — Agent instruction template gallery
+
+**GitHub issue:** _to be filed_
+
+### Context
+With format export, stage typing, bundles, and budgets in place, the final piece is **content**: a curated gallery that lets a new user instantiate a working QRSPI harness or a code-review module in one click. This is `FUTURE.md` §3.6 / §5.5, and it's where the new positioning becomes tangible to users who just signed up.
+
+Templates are static TypeScript modules in `src/lib/templates/` — no DB table needed. Selecting a template calls existing `createPrompt` and `createBundle` APIs to materialize it into the current workspace.
+
+### Key files
+- `src/lib/templates/` — NEW directory of seed content
+- `src/lib/templates/index.ts` — registry
+- `src/lib/templates/qrspi.ts` — 8-stage QRSPI bundle
+- `src/lib/templates/agents-md-basic.ts` — minimal AGENTS.md skeleton
+- `src/lib/templates/code-review.ts`
+- `src/lib/templates/git-workflow.ts`
+- `src/lib/templates/testing.ts`
+- `src/lib/templates/markdown-style.ts`
+- `src/components/TemplateGallery.tsx` — NEW dialog
+- `src/routes/app/Dashboard.tsx` — "From template" button
+- `src/components/CommandPalette.tsx` — "Browse templates" entry
+
+### Tasks
+
+#### Template registry
+- [ ] Create `src/lib/templates/index.ts`:
+  ```ts
+  import type { AgentFormat, Stage } from '../types';
+
+  export type PromptTemplate = {
+    title: string;
+    body_md: string;
+    stage?: Stage;
+    agent_format?: AgentFormat;
+  };
+
+  export type BundleTemplate = {
+    name: string;
+    description: string;
+    target_format: AgentFormat;
+    items: PromptTemplate[];
+  };
+
+  export type Template =
+    | { kind: 'prompt'; id: string; category: string; description: string; prompt: PromptTemplate }
+    | { kind: 'bundle'; id: string; category: string; description: string; bundle: BundleTemplate };
+
+  export type Difficulty = 'starter' | 'intermediate' | 'advanced';
+
+  export const TEMPLATES: (Template & { difficulty: Difficulty })[] = [
+    // Order matters — gallery renders in this order.
+    // Starters first so a brand-new user sees approachable content above QRSPI.
+    codeReviewTemplate,        // starter, single prompt
+    gitWorkflowTemplate,       // starter, single prompt
+    testingTemplate,           // starter, single prompt
+    markdownStyleTemplate,     // starter, single prompt
+    agentsMdBasicTemplate,     // intermediate, single prompt — first encounter with agent files
+    qrspiTemplate,             // advanced, 8-stage bundle — last
+  ];
+  ```
+- [ ] Author `qrspi.ts`: a `BundleTemplate` with target `agents` and 8 prompt items (one per stage) following the QRSPI breakdown in `FUTURE.md`. Each item's body should be a short, opinionated instruction set — not generic placeholder text. Keep each under ~400 tokens. Difficulty: advanced.
+- [ ] Author `agents-md-basic.ts`: a single-prompt template with a minimal AGENTS.md skeleton (project overview, build/test commands, code style, PR conventions sections). Difficulty: intermediate. `agent_format: 'agents'`.
+- [ ] Author `code-review.ts`: prompt template, no stage required, format-agnostic, ~300 token instruction set. Difficulty: starter.
+- [ ] Author `git-workflow.ts`: prompt template covering branch naming, commit messages, PR conventions. Difficulty: starter.
+- [ ] Author `testing.ts`: prompt template covering test placement, naming, mocks vs integration tests. Difficulty: starter.
+- [ ] Author `markdown-style.ts`: prompt template covering doc formatting conventions. Difficulty: starter.
+
+#### Template gallery dialog
+- [ ] Create `src/components/TemplateGallery.tsx`:
+  - Uses `Dialog` from `src/components/ui/dialog.tsx`. Wide content (max-w 720px on desktop, full-width on mobile).
+  - Header: "Browse templates", short description: "Pre-built prompts and bundles you can drop into your workspace.", difficulty filter pills (Starter / Intermediate / Advanced — defaults to Starter highlighted, but no items hidden).
+  - Body: scrollable grid of cards, rendered in registry order. Each card: name, difficulty badge, kind badge (Prompt or Bundle), description, list of contained items for bundles with stage badges, "Use template" button.
+  - For advanced templates (QRSPI), include `<ConceptInfo conceptId="qrspi" />` next to the name so users can read about the workflow before instantiating.
+  - "Use template" action:
+    - For `kind: 'prompt'`: call `createPrompt({ team_id: currentTeamId, title, body_md, stage, agent_format })`. On success, navigate to `/app/p/<id>/edit`.
+    - For `kind: 'bundle'`: create each item prompt sequentially via `createPrompt`, then `createBundle({ team_id, name, target_format })`, then `addBundleItem` for each new prompt. On success, navigate to `/app/bundles/<id>`.
+  - Show a loading state on the card during instantiation; toast on success/failure.
+
+#### Dashboard integration
+- [ ] In `Dashboard.tsx`, add a subtle "From template" button next to "New prompt" in the header. Use a secondary/ghost style so "New prompt" stays the primary CTA. On mobile, collapse into the existing overflow/wrap behavior.
+- [ ] In the empty-state view (no prompts yet), surface a one-line invitation under the "New prompt" button: "Or browse templates →" linking to the gallery. This is the only place the gallery is highlighted to brand-new users — once they have any prompts, the standing CTA becomes secondary.
+
+#### CommandPalette
+- [ ] Add a "Browse templates" entry that opens the gallery (lift gallery state up to `AppLayout` if needed, or wire via a route — simplest path: gallery state in `AppLayout`, command palette toggles it).
+
+#### Testing
+- [ ] Manual: as a brand-new user with zero prompts, the empty state shows "New prompt" prominently and "Or browse templates →" as a quieter secondary action.
+- [ ] Manual: open the gallery, confirm the first cards visible are starter prompts (Code Review, Git Workflow), with QRSPI at the bottom.
+- [ ] Manual: instantiate the Code Review prompt — verify it opens at `/app/p/<id>/edit`. Stage stays unset (template doesn't force one).
+- [ ] Manual: instantiate the QRSPI bundle — verify 8 prompts and 1 bundle appear in the workspace, opening at `/app/bundles/<id>`. Confirm the Bundles sidebar nav item now appears (Issue #12 auto-disclosure).
+- [ ] Manual: instantiate the same bundle twice — verify it does not collide (creates new prompts and a new bundle each time).
+- [ ] Manual: click the ConceptInfo icon on the QRSPI card — popover renders with summary + "Learn more →" link.
+- [ ] Run `npx tsc --noEmit` — zero errors.
+
+**Commit message:** `Add agent instruction template gallery sorted starter-first with QRSPI as advanced option`
+
+---
+
+## Issue #15 — Concepts library and Learn page
+
+**GitHub issue:** _to be filed_
+
+### Context
+By this point, every advanced surface (Target agent dropdown, Stage selector, Bundles, Dumb Zone gauge, QRSPI templates) has a `<ConceptInfo>` slot pulling from a placeholder summary. This issue replaces those placeholders with full concept docs that cite their sources, and adds a dedicated `/app/learn` page so curious users can browse the why behind each feature.
+
+The Learn page is the single standing invitation in the sidebar footer for users who don't engage with feature-level discovery. It must be skimmable: short summaries, why-it-matters, how-PromptStash-uses-it, and annotated references drawn from `FUTURE.md` (Dex Horthy's QRSPI posts, the AGENTS.md spec, HumanLayer's Dumb Zone write-ups, Vaibhav's Agentic RAG talk, etc.).
+
+### Key files
+- `src/content/concepts/*.md` — full content for each concept (replace stubs from Issue #10)
+- `src/content/concepts/index.ts` — registry promoted from a flat summary map to a richer record with body and references
+- `src/components/ConceptInfo.tsx` — no API change; updated implementation pulls richer data
+- `src/main.tsx` — add `/app/learn` and `/app/learn/:id` routes
+- `src/routes/app/Learn.tsx` — NEW: index page listing all concepts
+- `src/routes/app/LearnConcept.tsx` — NEW: single-concept page rendering markdown via `MarkdownViewer`
+- `src/components/Sidebar.tsx` — add "Learn" link to the sidebar footer (always visible)
+- `src/components/CommandPalette.tsx` — add "Open Learn" + per-concept "Learn: <Concept>" entries
+
+### Tasks
+
+#### Concept registry
+- [ ] Promote `src/content/concepts/index.ts` from a `Record<string, { title; summary }>` to a richer registry:
+  ```ts
+  export type ConceptReference = { label: string; url: string; note?: string };
+  export type Concept = {
+    id: string;
+    title: string;
+    summary: string;          // 2-3 sentences for the popover
+    body: string;             // full markdown for the Learn page
+    why: string;              // markdown, "why this matters" paragraph
+    howPromptStashUses: string; // markdown, concrete tie-in to features in this app
+    references: ConceptReference[];
+    related?: string[];       // concept ids
+  };
+  export const CONCEPTS: Record<string, Concept> = { /* … */ };
+  ```
+- [ ] One concept entry per file under `src/content/concepts/`. Either keep them as `.md` with frontmatter and a tiny build-time loader, or just hand-author TypeScript objects — the latter is simpler and avoids adding a markdown loader to Vite. Pick TypeScript for v1.
+- [ ] Authoring rules:
+  - Plain English, ~150-300 words for `body`.
+  - Avoid jargon in the first paragraph.
+  - References: at least 2 per concept, each with a one-line note explaining what the link adds.
+
+#### Concepts to author
+- [ ] `agents-md` — What AGENTS.md is, why a community standard helps, how PromptStash treats it as the default target format. References: agents.md site, openai/agents.md repo, GitHub Copilot's AGENTS.md adoption blog.
+- [ ] `claude-md` — Same shape as `agents-md` but framed around Claude Code's `CLAUDE.md`. References: Anthropic Claude Code docs (the link the user can click rather than us guessing the URL — leave the URL slot for the implementer to fill from official Anthropic docs).
+- [ ] `stages` — What stage typing means, summary of QRSPI stages, why tagging modules helps composition. References: Dex Horthy's `betterquestions.ai` "necessary evolution of RPI" post, HumanLayer "advanced context engineering" GitHub doc.
+- [ ] `bundles` — What a bundle is, why composing many small modules beats one giant prompt, link to `dumb-zone` and `stages` as related. No external references needed; this is a PromptStash concept.
+- [ ] `dumb-zone` — Summary of the ~40% context utilization rule, why agent quality degrades, how the gauge maps to it. References: HumanLayer "skill issue: harness engineering" blog, the LinkedIn post Dex links from `FUTURE.md`.
+- [ ] `qrspi` — Full QRSPI workflow walkthrough (Question → Research → Design → Structure → Plan → Work → Implement → Pull Request), with the betterquestions.ai post and `qrspi-agent` npm/GitHub references.
+- [ ] `context-engineering` — The umbrella concept; summarize Dex/Vaibhav's framing. References: HumanLayer blog index, Boundary ML podcast episode listed in `FUTURE.md`.
+
+#### ConceptInfo updates
+- [ ] In `src/components/ConceptInfo.tsx`, swap the static summary lookup for `CONCEPTS[id]?.summary`. The "Learn more →" link target becomes `/app/learn/<id>`.
+- [ ] If `id` is missing from `CONCEPTS`, render nothing (degrades gracefully if a future surface references a concept that hasn't been authored yet).
+
+#### Learn index page
+- [ ] Create `src/routes/app/Learn.tsx`:
+  - Header: "Learn", description: "Background on the concepts behind PromptStash's instruction-module features."
+  - Render a card grid of all `CONCEPTS`, sorted alphabetically by title. Each card shows title, summary, and a "Read →" affordance.
+  - Search input that filters by title/summary substring.
+
+#### Learn concept page
+- [ ] Create `src/routes/app/LearnConcept.tsx`:
+  - Title + summary block.
+  - Body markdown rendered via existing `MarkdownViewer` component.
+  - "Why this matters" section.
+  - "How PromptStash uses it" section.
+  - "References" — vertical list, each item: link (opens in new tab) + the one-line note.
+  - "Related concepts" — chips linking to other Learn pages.
+  - Back link to `/app/learn`.
+
+#### Sidebar footer link
+- [ ] In `src/components/Sidebar.tsx`, add a "Learn" `NavItem` to the footer area (next to settings/sign-out). Use `BookOpen` icon. **Always visible** — this is the canonical entry point for users who never engage with auto-disclosed features.
+
+#### CommandPalette
+- [ ] Add "Open Learn" entry navigating to `/app/learn`.
+- [ ] Add per-concept entries: "Learn: AGENTS.md", "Learn: Stages", "Learn: Dumb Zone", etc., each navigating to `/app/learn/<id>`.
+
+#### Testing
+- [ ] Manual: from a fresh install, click "Learn" in the sidebar footer — index page renders with all concepts.
+- [ ] Manual: open each concept page — verify summary, body, why, how-PromptStash, and at least 2 references render.
+- [ ] Manual: click an external reference link — opens in new tab.
+- [ ] Manual: in any feature view (Bundle editor, stage chip strip, Target agent dropdown), click the `i` icon — popover summary matches the Learn page summary, "Learn more →" navigates correctly.
+- [ ] Manual: search the Learn index for "context" — only matching concepts show.
+- [ ] **Cardinal-constraint check:** create a brand-new account, create one prompt, save it. The only place where you encountered any of these concept words ("AGENTS.md", "stage", "bundle", "Dumb Zone", "QRSPI") was the optional Learn link in the sidebar footer.
+- [ ] Run `npx tsc --noEmit` — zero errors.
+
+**Commit message:** `Add Learn page and full concept docs replacing placeholder ConceptInfo summaries`
 
 ---
 
 ## Completion checklist
 
-- [x] Issue #3 complete — committed and pushed
-- [x] Issue #6 complete — committed and pushed
-- [x] Issue #7 complete — committed and pushed
-- [x] Issue #8 complete — committed and pushed
+- [ ] Issue #10 complete — committed and pushed
+- [ ] Issue #11 complete — committed and pushed
+- [ ] Issue #12 complete — committed and pushed
+- [ ] Issue #13 complete — committed and pushed
+- [ ] Issue #14 complete — committed and pushed
+- [ ] Issue #15 complete — committed and pushed
+
+After all six issues land, perform the **end-to-end progressive disclosure audit**:
+
+1. Sign up as a brand-new user. Create one workspace.
+2. Create a prompt with title and body. Save it. Confirm: no concept icons, no stage chips, no Bundles nav, no token gauges, no advanced jargon visible anywhere except inside the Advanced disclosure on the editor and the optional "Learn" link in the sidebar footer.
+3. Open the Advanced disclosure once. Confirm: Target agent and Stage selectors appear with `i` icons; clicking them shows summaries and lets you reach the Learn page.
+4. Browse the gallery. Instantiate the QRSPI bundle. Confirm: Bundles nav appears, stage badges appear on the new prompts, the chip strip on Dashboard appears.
+5. Toggle Settings → Appearance → Show all advanced features → on. Confirm every previously-hidden surface is now visible regardless of data state.
+
+If any step surfaces an advanced feature when the user hasn't asked for it (and step 1's setup didn't include it), file a bug against the originating issue.
+
+---
+
+## Future ideas (not in this batch)
+
+These are flagged in `FUTURE.md` but deliberately deferred until the five issues above are shipped and the new positioning has been validated.
+
+### GitHub repo sync
+Connect a GitHub repo to a workspace; map a bundle to a path (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) and push generated files via PRs. Adds a CD pipeline for instruction files and is the deepest moat against generic note tools (Obsidian, Notion). Requires GitHub App + OAuth, branch/PR plumbing, and conflict detection. High implementation cost; defer until at least one team is using bundles in anger.
+
+### Repo import / inventory
+Scan a connected repo for existing `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, and `.cursorrules`; parse sections and import as prompts/bundles. Cuts onboarding friction for users adopting PromptStash mid-project.
+
+### Variables and per-project overrides
+Extend the existing prompt body with typed variables (`{{repo_name | string}}`, `{{stack | enum:typescript,python}}`) plus per-bundle default values. Lets one module serve many repos. Tightly complements bundles and repo sync — implement after sync exists so we know what overrides are actually needed.
+
+### Agent-format linting
+Static analysis over instruction modules: flag missing build/test sections, instruction-budget violations (count of bullet points), conflicting rules across stages, ambiguous phrasing. Lightweight v1 = a handful of heuristics. Strong differentiator vs generic prompt managers.
+
+### Lightweight community sharing
+Public/private flag on bundles plus a discovery gallery. Users can fork community bundles into their workspace. Adds content gravity once enough public bundles exist.
+
+### MCP server / espanso-style local sync
+An MCP server that exposes a workspace's instruction modules to local agents; same idea for syncing bundles to a local directory the way Espanso export already does for individual prompts.
+
+### Claude Desktop and Codex desktop integrations
+Both Claude Desktop and OpenAI's Codex desktop/CLI apps have first-class "cowork" surfaces for collaborating with an agent on a real workstation: Claude Desktop has Projects (custom instructions + uploaded knowledge), Skills, and MCP server support; Codex has its desktop app, the `codex` CLI, and the `qrspi-agent`-style harness pattern that reads stage prompts from disk. PromptStash should plug into these directly so a bundle authored in the web app shows up wherever the user actually works with their agent.
+
+Concrete integration surfaces worth exploring, roughly in order of impact:
+
+- **MCP server (canonical entry point).** Ship a small MCP server (Node or Deno) that authenticates with a PromptStash API key and exposes: `listBundles`, `getBundle`, `listPrompts`, `getPrompt`, `searchModules(stage?, agentFormat?)`. Both Claude Desktop and Codex desktop support adding MCP servers via their settings UI; a single server covers both. This is the lowest-effort, highest-leverage entry point because it works with any MCP-aware client present and future.
+- **Claude Desktop Projects sync.** When a user connects a Project, push a chosen bundle's rendered AGENTS.md/CLAUDE.md content into the Project's custom instructions field, and optionally upload selected modules as Project knowledge files. Two-way sync (read changes back from the Project) is a stretch goal — start with one-way push driven from PromptStash.
+- **Claude Desktop Skills export.** A Skill is essentially a packaged instruction module with optional supporting files. Add an export path that materializes a stage-typed module (or a small bundle) as a Skill bundle the user can drop into Claude Desktop's skills directory. Stage tagging maps naturally onto Skill metadata.
+- **Codex desktop / CLI sync.** The `qrspi-agent` package already expects a project layout with AGENTS.md plus a `.qrspi/` directory of stage prompts. Add a one-button "Export to Codex project" action that writes that layout into a chosen local directory (via a small companion helper or a `npx promptstash sync` CLI). Pairs naturally with the QRSPI starter bundle from Issue #14.
+- **Cowork / shared session hooks.** Both apps are leaning into shared agent sessions where one user kicks off a task and a teammate watches or takes over. PromptStash bundles are a perfect fit for "what instructions did this session start with?" — explore exposing a read-only public bundle URL the cowork session can pin, or a webhook that timestamps which bundle version was active for a given session.
+- **Companion CLI (`npx promptstash`).** Even before deep app-specific integrations, a tiny CLI that authenticates with an API key and writes bundles to disk (or stdout) covers most of these use cases at low cost: `promptstash bundle pull <id> > AGENTS.md`, `promptstash bundle sync <id> --dir ~/projects/foo` for periodic refresh.
+
+Open questions to resolve before implementation: Claude Desktop and Codex authentication models for third-party connectors (token vs. OAuth vs. local-only); whether MCP alone covers the cowork story or whether vendor-specific APIs are needed; how versioning and conflict resolution should behave when a Project's custom instructions are edited outside PromptStash.

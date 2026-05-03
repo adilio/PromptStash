@@ -2,6 +2,8 @@ import type { Database } from './database.types';
 
 export type { Database } from './database.types';
 
+export type AgentFormat = 'agents' | 'claude' | 'copilot' | 'cursor' | 'windsurf' | 'generic';
+
 export type Team = Database['public']['Tables']['teams']['Row'];
 export type Membership = Database['public']['Tables']['memberships']['Row'];
 export type Invite = Database['public']['Tables']['invites']['Row'];
@@ -30,3 +32,7 @@ export const STAGE_OPTIONS: { id: Stage; label: string; short: string; color: st
   { id: 'implement', label: 'Implement', short: 'I',  color: 'oklch(0.72 0.16 60)' },
   { id: 'review',    label: 'Review/PR', short: 'PR', color: 'oklch(0.65 0.18 30)' },
 ];
+
+export type Bundle = Database['public']['Tables']['bundles']['Row'];
+export type BundleItem = Database['public']['Tables']['bundle_items']['Row'];
+export type BundleWithItems = Bundle & { items: (BundleItem & { prompt: Prompt })[] };

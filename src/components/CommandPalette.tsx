@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Folder, Plus, Filter } from 'lucide-react';
+import { FileText, Folder, Plus, Filter, Package } from 'lucide-react';
 import { listFolders } from '@/api/folders';
 import { listPrompts } from '@/api/prompts';
+import { listBundles } from '@/api/bundles';
 import {
   Command,
   CommandEmpty,
@@ -13,7 +14,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { promptKeys } from '@/lib/queryClient';
+import { promptKeys, bundleKeys } from '@/lib/queryClient';
 import { useShowAdvanced } from '@/lib/preferences';
 import { STAGE_OPTIONS } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
@@ -68,6 +69,13 @@ export function CommandPalette({
   const showAdvanced = useShowAdvanced();
   const showStageFilters = hasAnyStagedPrompt || showAdvanced;
 
+  const bundlesQuery = useQuery({
+    queryKey: bundleKeys.list(currentTeamId),
+    queryFn: () => listBundles(currentTeamId!),
+    enabled: !!currentTeamId && open,
+  });
+  const bundles = bundlesQuery.data ?? [];
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -113,6 +121,24 @@ export function CommandPalette({
                   >
                     <Filter className="mr-2 h-4 w-4" />
                     <span>Filter by stage: {stageOption.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {(bundles.length > 0 || showAdvanced) && (
+              <CommandGroup heading="Bundles">
+                <CommandItem value="new bundle" onSelect={() => runCommand(() => navigate('/app/bundles/new'))}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span>New bundle</span>
+                </CommandItem>
+                {bundles.map((bundle) => (
+                  <CommandItem
+                    key={bundle.id}
+                    value={`bundle ${bundle.name}`}
+                    onSelect={() => runCommand(() => navigate(`/app/bundles/${bundle.id}`))}
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    <span>{bundle.name}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>

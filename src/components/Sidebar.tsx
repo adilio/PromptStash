@@ -12,11 +12,16 @@ import {
   Moon,
   Sun,
   X,
+  Layers,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listTeams } from '@/api/teams';
 import { listFolders } from '@/api/folders';
+import { listBundles } from '@/api/bundles';
 import { useTheme } from '@/hooks/useTheme';
+import { useShowAdvanced } from '@/lib/preferences';
+import { useQuery } from '@tanstack/react-query';
+import { bundleKeys } from '@/lib/queryClient';
 import type { Team, Folder as FolderType } from '@/lib/types';
 
 interface SidebarProps {
@@ -143,6 +148,17 @@ export function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const showAdvanced = useShowAdvanced();
+
+  const bundlesQuery = useQuery({
+    queryKey: bundleKeys.list(currentTeamId),
+    queryFn: () => listBundles(currentTeamId!),
+    enabled: !!currentTeamId,
+  });
+  const bundles = bundlesQuery.data ?? [];
+  const hasBundles = bundles.length > 0;
+  const isOnBundleRoute = location.pathname.startsWith('/app/bundles');
+  const showBundlesNav = hasBundles || isOnBundleRoute || showAdvanced;
 
   useEffect(() => {
     const handleResize = () => {
@@ -481,6 +497,17 @@ export function Sidebar({
           if (isMobile) onClose?.();
         }}
       />
+      {showBundlesNav && (
+        <NavItem
+          icon={<Layers style={{ width: 16, height: 16 }} />}
+          label="Bundles"
+          active={location.pathname.startsWith('/app/bundles')}
+          onClick={() => {
+            navigate('/app/bundles');
+            if (isMobile) onClose?.();
+          }}
+        />
+      )}
 
       {/* Folders section */}
       <div
