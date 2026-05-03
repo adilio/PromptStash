@@ -29,7 +29,8 @@ The community-driven nature of AGENTS.md means it evolves with best practices. T
 You can also export individual prompts to AGENTS.md format, and use the "Target agent" selector to specify that a prompt should be exported as AGENTS.md. This makes PromptStash a convenient editor for maintaining your AGENTS.md file over time.`,
     references: [
       { label: 'agents.md specification', url: 'https://agents.md', note: 'Official specification and documentation' },
-      { label: 'OpenAI agents.md repo', url: 'https://github.com/openai/agents-md', note: 'Reference implementation and examples' },
+      { label: 'agents.md spec repo', url: 'https://github.com/agentsmd/agents.md', note: 'Source repo for the AGENTS.md spec and website' },
+      { label: 'OpenAI Agents Python AGENTS.md', url: 'https://github.com/openai/openai-agents-python/blob/main/AGENTS.md', note: 'Real-world example of AGENTS.md in an OpenAI repo' },
       { label: 'GitHub Copilot docs', url: 'https://docs.github.com/en/copilot', note: 'GitHub\'s documentation on Copilot instruction files' },
     ],
     related: ['claude-md', 'bundles', 'stages'],
@@ -50,8 +51,8 @@ For teams standardized on Claude Code, CLAUDE.md ensures that every developer ge
 
 This makes PromptStash a convenient way to maintain your CLAUDE.md file over time. You can edit sections as individual prompts, compose them into a bundle, and export the complete file whenever you make changes.`,
     references: [
-      { label: 'Claude Code documentation', url: 'https://docs.anthropic.com/en/docs/claude-code', note: 'Official Claude Code documentation' },
-      { label: 'Customizing Claude Code', url: 'https://docs.anthropic.com/en/docs/claude-code/overview', note: 'How to configure Claude Code for your project' },
+      { label: 'Claude Code overview', url: 'https://docs.anthropic.com/en/docs/claude-code/overview', note: 'Official Claude Code documentation' },
+      { label: 'Claude Code product page', url: 'https://www.anthropic.com/product/claude-code', note: 'Anthropic\'s product page for Claude Code' },
     ],
     related: ['agents-md', 'bundles', 'context-engineering'],
   },
@@ -61,7 +62,7 @@ This makes PromptStash a convenient way to maintain your CLAUDE.md file over tim
     summary: 'Tag prompts as part of a structured workflow (Research, Plan, Implement, etc.) to organize and compose them into bundles.',
     body: `Stage typing is a way to categorize prompts by their role in a larger workflow. Rather than treating all prompts as equivalent, stages recognize that different prompts serve different purposes in the process of getting work done with an AI agent.
 
-PromptStash supports eight stages inspired by Dex Horthy's QRSPI methodology (BetterQuestions.ai) and the broader context-engineering work coming out of HumanLayer, including their "Advanced Context Engineering for Coding Agents" guide:
+PromptStash supports eight stages inspired by [Dex Horthy](https://www.humanlayer.dev)'s QRSPI methodology (introduced in his ["From RPI to QRSPI"](https://www.youtube.com/watch?v=5MWl3eRXVQk) talk) and the broader context-engineering work coming out of [HumanLayer](https://www.humanlayer.dev), including their ["Advanced Context Engineering for Coding Agents"](https://github.com/humanlayer/advanced-context-engineering-for-coding-agents) write-up:
 - **Question**: Clarifying what needs to be done
 - **Research**: Gathering context and information
 - **Design**: Planning the solution approach
@@ -79,8 +80,9 @@ For teams, stages provide a shared language for discussing AI-assisted workflows
 
 When composing bundles, stages help ensure you have complete coverage of your workflow. You can see at a glance if your bundle is missing a critical stage, and the bundle editor shows stage badges for each included prompt.`,
     references: [
-      { label: 'QRSPI methodology', url: 'https://betterquestions.ai', note: 'Dex Horthy\'s blog on the QRSPI methodology' },
-      { label: 'Advanced context engineering', url: 'https://github.com/humanlayer/context-engineering', note: 'HumanLayer\'s guide to context engineering with stages' },
+      { label: 'From RPI to QRSPI (talk)', url: 'https://www.youtube.com/watch?v=5MWl3eRXVQk', note: 'Dex Horthy introducing the QRSPI workflow and stages' },
+      { label: 'Advanced Context Engineering for Coding Agents', url: 'https://github.com/humanlayer/advanced-context-engineering-for-coding-agents', note: 'HumanLayer\'s repo on context engineering with staged workflows' },
+      { label: 'ace-fca write-up', url: 'https://github.com/humanlayer/advanced-context-engineering-for-coding-agents/blob/main/ace-fca.md', note: 'Main write-up inside the ACE-FCA repo' },
     ],
     related: ['qrspi', 'bundles', 'context-engineering'],
   },
@@ -88,7 +90,7 @@ When composing bundles, stages help ensure you have complete coverage of your wo
     id: 'bundles',
     title: 'Bundles',
     summary: "Ordered collections of prompts that work together as complete instruction sets for AI agents.",
-    body: `Bundles are PromptStash's way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export. The approach echoes the modular-harness philosophy Dex Horthy and the HumanLayer team describe in their "Skill Issue" write-up and their context-engineering talks: keep each piece small and composable so the harness, not a single mega-prompt, carries the workflow.
+    body: `Bundles are PromptStash's way of composing multiple prompts into a cohesive instruction set. Instead of one giant prompt that tries to do everything, bundles let you break instructions into focused modules and then combine them for export. The approach echoes the modular-harness philosophy [Dex Horthy](https://www.humanlayer.dev) and the [HumanLayer](https://www.humanlayer.dev) team describe in ["Skill Issue: Harness Engineering for Coding Agents"](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents) and their [Advanced Context Engineering for Coding Agents](https://github.com/humanlayer/advanced-context-engineering-for-coding-agents) write-up: keep each piece small and composable so the harness, not a single mega-prompt, carries the workflow.
 
 A bundle contains:
 - A name and description
@@ -106,7 +108,8 @@ The token budget gauge addresses a critical issue: AI models perform worse when 
 
 You can download bundles directly from the bundle editor, and soon you'll be able to sync them to GitHub repositories automatically. Bundles also integrate with the template gallery: instantiating the QRSPI template creates a bundle with eight staged prompts.`,
     references: [
-      { label: 'Dumb Zone', url: 'https://github.com/adilio/PromptStash/blob/main/FUTURE.md', note: 'See the Dumb Zone concept for more on token budgets' },
+      { label: 'Skill Issue: Harness Engineering for Coding Agents', url: 'https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents', note: 'HumanLayer post on harness engineering and modular prompt composition' },
+      { label: 'Advanced Context Engineering for Coding Agents', url: 'https://github.com/humanlayer/advanced-context-engineering-for-coding-agents', note: 'Companion repo with the canonical context-engineering material' },
     ],
     related: ['dumb-zone', 'stages', 'agents-md'],
   },
@@ -114,7 +117,7 @@ You can download bundles directly from the bundle editor, and soon you'll be abl
     id: 'dumb-zone',
     title: 'Dumb Zone',
     summary: "The point where an AI model's context is too full (typically >40% of the window), leading to degraded performance.",
-    body: `The "Dumb Zone" is a term popularized by Dex Horthy and the HumanLayer team, most notably in their "Skill Issue" post and Dex's "Advanced Context Engineering for Coding Agents" talk, to describe the point at which an AI model's performance degrades due to context window saturation. Their rule of thumb, drawn from running coding agents in production, is that things start falling apart somewhere around 40% of the model's maximum context length.
+    body: `The "Dumb Zone" is a term popularized by [Dex Horthy](https://www.humanlayer.dev) and the [HumanLayer](https://www.humanlayer.dev) team, most notably in their ["Skill Issue: Harness Engineering for Coding Agents"](https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents) post and Dex's ["Advanced Context Engineering for Agents"](https://www.youtube.com/watch?v=IS_y40zY-hc) talk, to describe the point at which an AI model's performance degrades due to context window saturation. Their rule of thumb, drawn from running coding agents in production, is that things start falling apart somewhere around 40% of the model's maximum context length.
 
 When an AI model operates in the Dumb Zone, you might see:
 - Reduced ability to follow complex instructions
@@ -132,8 +135,9 @@ Smart practitioners keep their instructions lean and focused. Rather than dumpin
 
 The gauge changes color based on which zone you're in: green for safe, amber for warning (>40%), and red for danger (>60%). This makes it easy to see at a glance whether your instructions are optimized for model performance.`,
     references: [
-      { label: 'HumanLayer: Skill Issue', url: 'https://humanlayer.io/skill-issue', note: 'Blog post on harness engineering and the Dumb Zone' },
-      { label: 'Dex Horthy on context saturation', url: 'https://www.linkedin.com/feed/update/urn:li:activity:7168220456152014848/', note: 'LinkedIn post on context window performance' },
+      { label: 'Skill Issue: Harness Engineering for Coding Agents', url: 'https://www.humanlayer.dev/blog/skill-issue-harness-engineering-for-coding-agents', note: 'HumanLayer\'s canonical write-up on harness engineering and the Dumb Zone' },
+      { label: 'Advanced Context Engineering for Agents (talk)', url: 'https://www.youtube.com/watch?v=IS_y40zY-hc', note: 'Dex Horthy on context budgets and the 40% threshold' },
+      { label: 'ACE-FCA repo', url: 'https://github.com/humanlayer/advanced-context-engineering-for-coding-agents', note: 'Companion repo for the talk, including the ace-fca.md write-up' },
     ],
     related: ['bundles', 'context-engineering'],
   },
@@ -141,7 +145,7 @@ The gauge changes color based on which zone you're in: green for safe, amber for
     id: 'qrspi',
     title: 'QRSPI',
     summary: 'A methodology for breaking down complex tasks into stages: Question, Research, Structure, Plan, and Implement.',
-    body: `QRSPI (Question, Research, Structure, Plan, Implement) is a methodology developed by Dex Horthy of HumanLayer for structured AI-human collaboration. He's written about it on BetterQuestions.ai and shipped a reference implementation as the qrspi-agent npm package; the same ideas underpin his "Advanced Context Engineering for Coding Agents" talk. QRSPI recognizes that the best outcomes come from breaking complex work into discrete stages, each with its own prompts and context.
+    body: `QRSPI (Question, Research, Structure, Plan, Implement) is a methodology developed by [Dex Horthy](https://www.humanlayer.dev) of [HumanLayer](https://www.humanlayer.dev) for structured AI-human collaboration. Dex introduces it in his ["From RPI to QRSPI"](https://www.youtube.com/watch?v=5MWl3eRXVQk) talk, and the [qrspi-agent](https://www.npmjs.com/package/qrspi-agent) npm package provides a reference implementation. QRSPI recognizes that the best outcomes come from breaking complex work into discrete stages, each with its own prompts and context.
 
 The eight stages in PromptStash's QRSPI implementation are:
 1. **Question**: Clarify what's being asked. Restate the problem, identify constraints, flag ambiguities.
@@ -161,9 +165,10 @@ By explicitly staging the work, you create clear handoff points between human an
 
 You can customize each stage prompt to match your workflow, then compose them into a bundle for export as AGENTS.md or another format. The stage badges on prompts help you see at a glance which phase each prompt serves.`,
     references: [
-      { label: 'BetterQuestions.ai', url: 'https://betterquestions.ai', note: 'Dex Horthy\'s blog on QRSPI and AI collaboration' },
+      { label: 'From RPI to QRSPI (talk)', url: 'https://www.youtube.com/watch?v=5MWl3eRXVQk', note: 'Dex Horthy\'s primary explainer of QRSPI' },
       { label: 'qrspi-agent npm package', url: 'https://www.npmjs.com/package/qrspi-agent', note: 'Reference implementation of QRSPI as an agent harness' },
-      { label: 'QRSPI GitHub repo', url: 'https://github.com/dexhorthy/qrspi-agent', note: 'Source code for the qrspi-agent package' },
+      { label: 'qrspi-agent GitHub repo', url: 'https://github.com/nixihz/qrspi-agent', note: 'Source code for the qrspi-agent package' },
+      { label: 'qrspi-agent on libraries.io', url: 'https://libraries.io/npm/qrspi-agent', note: 'Package metadata and stage/CLI documentation' },
     ],
     related: ['stages', 'bundles', 'context-engineering'],
   },
@@ -171,7 +176,7 @@ You can customize each stage prompt to match your workflow, then compose them in
     id: 'context-engineering',
     title: 'Context Engineering',
     summary: 'The practice of designing and optimizing prompts for AI agents to improve performance and outcomes.',
-    body: `Context engineering is the discipline of designing inputs to AI systems to produce optimal outputs. The term has been pushed into wider use by practitioners like Dex Horthy and the HumanLayer team (see their open-source "context-engineering" guide and Dex's "Advanced Context Engineering for Coding Agents" talk) and by AI engineering communities such as the one around the Boundary ML podcast. It encompasses prompt writing, but also includes structuring information, managing token budgets, and designing workflows that play to AI strengths while avoiding weaknesses.
+    body: `Context engineering is the discipline of designing inputs to AI systems to produce optimal outputs. The term has been pushed into wider use by practitioners like [Dex Horthy](https://www.humanlayer.dev) and the [HumanLayer](https://www.humanlayer.dev) team (see their [Advanced Context Engineering for Coding Agents](https://github.com/humanlayer/advanced-context-engineering-for-coding-agents) repo and [Dex's talk of the same name](https://www.youtube.com/watch?v=IS_y40zY-hc)) and by AI engineering communities such as the one around the [BAML / Boundary ML podcast](https://boundaryml.com/podcast). It encompasses prompt writing, but also includes structuring information, managing token budgets, and designing workflows that play to AI strengths while avoiding weaknesses.
 
 Key principles of context engineering include:
 - **Modularity**: Break instructions into focused modules rather than monolithic prompts
@@ -188,8 +193,10 @@ Practitioners who invest in context engineering see dramatically better outcomes
 
 The template gallery includes context-engineered prompts like the QRSPI harness, and the concept docs explain the "why" behind each feature so you can apply these principles in your own workflows.`,
     references: [
-      { label: 'HumanLayer context engineering', url: 'https://github.com/humanlayer/context-engineering', note: 'Comprehensive guide to context engineering techniques' },
-      { label: 'Boundary ML podcast', url: 'https://boundaryml.com/blog', note: 'Podcast on AI engineering with context experts' },
+      { label: 'Advanced Context Engineering for Coding Agents', url: 'https://github.com/humanlayer/advanced-context-engineering-for-coding-agents', note: 'HumanLayer\'s comprehensive guide to context engineering techniques' },
+      { label: 'Advanced Context Engineering for Agents (talk)', url: 'https://www.youtube.com/watch?v=IS_y40zY-hc', note: 'Dex Horthy\'s talk on context engineering for coding agents' },
+      { label: 'Agentic RAG + Context Engineering (BAML podcast)', url: 'https://boundaryml.com/podcast/2025-10-21-agentic-rag-context-engineering', note: 'Vaibhav and Dex on context engineering and Agentic RAG' },
+      { label: 'BAML podcast index', url: 'https://boundaryml.com/podcast', note: 'AI Engineering podcast covering context-engineering topics' },
     ],
     related: ['dumb-zone', 'stages', 'qrspi'],
   },
