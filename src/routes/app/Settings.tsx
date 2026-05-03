@@ -358,14 +358,46 @@ export function Settings() {
 
   return (
     <div
+      id="settings-container"
       style={{
         height: '100%',
         display: 'grid',
         gridTemplateColumns: '220px 1fr',
       }}
     >
+      <style>{`
+        @media (max-width: 639px) {
+          #settings-container {
+            grid-template-columns: 1fr !important;
+          }
+          #settings-nav {
+            border-right: none !important;
+            border-bottom: 1px solid var(--ps-hairline-soft) !important;
+            padding: 12px 16px !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+          }
+          #settings-nav h2 {
+            display: none !important;
+          }
+          #settings-nav button {
+            width: auto !important;
+            height: 28px !important;
+            padding: 0 12px !important;
+            margin-bottom: 0 !important;
+          }
+          #settings-content {
+            padding: 32px 16px !important;
+          }
+        }
+      `}</style>
       {/* Settings nav */}
       <nav
+        id="settings-nav"
         style={{
           background: 'var(--ps-bg-sunken)',
           borderRight: '1px solid var(--ps-hairline-soft)',
@@ -419,7 +451,7 @@ export function Settings() {
       </nav>
 
       {/* Settings content */}
-      <div style={{ overflow: 'auto', padding: '56px 64px', maxWidth: 760 }}>
+      <div id="settings-content" style={{ overflow: 'auto', padding: '56px 64px', maxWidth: 760 }}>
         {section === 'account' && (
           <>
             <h2 style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500, fontSize: 24, letterSpacing: '-0.02em', margin: '0 0 6px', color: 'var(--ps-fg)' }}>Account</h2>

@@ -11,6 +11,7 @@ import {
   Clock,
   Moon,
   Sun,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { listTeams } from '@/api/teams';
@@ -25,6 +26,8 @@ interface SidebarProps {
   onFolderChange?: (folderId: string | null) => void;
   onFolderDrop?: (folderId: string | null) => void;
   onNewPrompt?: () => void;
+  open?: boolean;
+  onClose?: () => void;
 }
 
 function BrandMark({ size = 20 }: { size?: number }) {
@@ -129,14 +132,38 @@ export function Sidebar({
   onFolderChange,
   onFolderDrop,
   onNewPrompt,
+  open,
+  onClose,
 }: SidebarProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, open]);
 
   useEffect(() => {
     loadTeams();
@@ -180,20 +207,42 @@ export function Sidebar({
 
   const rootFolders = folders.filter((f) => !f.parent_id);
 
+  const sidebarStyle: React.CSSProperties = {
+    width: 260,
+    flexShrink: 0,
+    background: 'var(--ps-bg-sunken)',
+    borderRight: '1px solid var(--ps-hairline-soft)',
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '18px 12px',
+    gap: 4,
+    overflowY: 'auto',
+  };
+
+  if (isMobile) {
+    sidebarStyle.position = 'fixed';
+    sidebarStyle.top = 0;
+    sidebarStyle.bottom = 0;
+    sidebarStyle.left = 0;
+    sidebarStyle.zIndex = 50;
+    sidebarStyle.transform = open ? 'translateX(0)' : 'translateX(-100%)';
+    sidebarStyle.transition = 'transform 200ms ease-out';
+  }
+
   return (
-    <nav
-      style={{
-        width: 240,
-        flexShrink: 0,
-        background: 'var(--ps-bg-sunken)',
-        borderRight: '1px solid var(--ps-hairline-soft)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '18px 12px',
-        gap: 4,
-        overflowY: 'auto',
-      }}
-    >
+    <>
+      {isMobile && open && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            zIndex: 40,
+          }}
+        />
+      )}
+      <nav style={sidebarStyle}>
       {/* Brand */}
       <div
         style={{
@@ -218,6 +267,27 @@ export function Sidebar({
         >
           PromptStash
         </span>
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              marginLeft: 'auto',
+              appearance: 'none',
+              border: 0,
+              background: 'transparent',
+              color: 'var(--ps-fg-faint)',
+              cursor: 'pointer',
+              padding: 4,
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X style={{ width: 16, height: 16 }} />
+          </button>
+        )}
       </div>
 
       {/* Workspace switcher */}
@@ -347,7 +417,10 @@ export function Sidebar({
       {/* New Prompt button */}
       <button
         type="button"
-        onClick={onNewPrompt}
+        onClick={() => {
+          onNewPrompt?.();
+          if (isMobile) onClose?.();
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -392,6 +465,7 @@ export function Sidebar({
         onClick={() => {
           onFolderChange?.(null);
           navigate('/app');
+          if (isMobile) onClose?.();
         }}
       />
       <NavItem
@@ -401,6 +475,7 @@ export function Sidebar({
         onClick={() => {
           onFolderChange?.(null);
           navigate('/app');
+          if (isMobile) onClose?.();
         }}
       />
 
@@ -444,6 +519,7 @@ export function Sidebar({
         const handleClick = () => {
           onFolderChange?.(folder.id);
           navigate(`/app/f/${folder.id}`);
+          if (isMobile) onClose?.();
         };
 
         const handleDrop = (e: React.DragEvent) => {
@@ -529,7 +605,10 @@ export function Sidebar({
         <NavItem
           icon={<Settings style={{ width: 16, height: 16 }} />}
           label="Settings"
-          href="/app/settings"
+          onClick={() => {
+            navigate('/app/settings');
+            if (isMobile) onClose?.();
+          }}
         />
         <NavItem
           icon={<LogOut style={{ width: 16, height: 16 }} />}
@@ -565,5 +644,6 @@ export function Sidebar({
         </button>
       </div>
     </nav>
+    </>
   );
 }

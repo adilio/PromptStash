@@ -62,7 +62,7 @@ function PromptListRow({
         cursor: 'pointer',
         opacity: isDragging ? 0.5 : 1,
       }}
-      className="group"
+      className="group list-row"
       onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'var(--ps-bg-sunken)')}
       onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
     >
@@ -109,7 +109,7 @@ function PromptListRow({
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, overflow: 'hidden' }}>
+      <div className="list-row-tags" style={{ display: 'flex', gap: 4, overflow: 'hidden' }}>
         {tags.slice(0, 2).map((t) => (
           <span
             key={t.id}
@@ -129,6 +129,7 @@ function PromptListRow({
       </div>
 
       <span
+        className="list-row-updated"
         style={{
           fontSize: 12,
           color: 'var(--ps-fg-faint)',
@@ -670,6 +671,7 @@ export function Dashboard() {
           justifyContent: 'space-between',
           gap: 24,
           background: 'var(--ps-bg)',
+          flexWrap: 'wrap',
         }}
       >
         <div>
@@ -744,6 +746,7 @@ export function Dashboard() {
             position: 'sticky',
             top: 0,
             zIndex: 5,
+            flexWrap: 'wrap',
           }}
         >
           {/* Search */}
@@ -986,7 +989,7 @@ export function Dashboard() {
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', padding: isEmpty || !currentTeamId ? '0' : '24px 32px 64px' }}>
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 14 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <PromptCardSkeleton key={i} />
             ))}
@@ -1022,7 +1025,18 @@ export function Dashboard() {
               overflow: 'hidden',
             }}
           >
+            <style>{`
+              @media (max-width: 639px) {
+                .list-header-row, .list-row {
+                  grid-template-columns: 22px 1fr 32px !important;
+                }
+                .list-header-tags, .list-header-updated, .list-row-tags, .list-row-updated {
+                  display: none !important;
+                }
+              }
+            `}</style>
             <div
+              className="list-header-row"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '22px 1fr 160px 130px 32px',
@@ -1039,8 +1053,8 @@ export function Dashboard() {
             >
               <span />
               <span>Title</span>
-              <span>Tags</span>
-              <span style={{ textAlign: 'right' }}>Updated</span>
+              <span className="list-header-tags">Tags</span>
+              <span className="list-header-updated" style={{ textAlign: 'right' }}>Updated</span>
               <span />
             </div>
             {filteredPrompts.map((prompt) => (
@@ -1060,7 +1074,7 @@ export function Dashboard() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
               gap: 14,
             }}
           >

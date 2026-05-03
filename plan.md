@@ -48,43 +48,43 @@ The layout is built with a fixed-width sidebar (`Sidebar.tsx`) and a `Shell` tha
 ### Tasks
 
 #### Sidebar drawer
-- [ ] Add `sidebarOpen` state (default `false` on mobile, `true` on desktop) to `AppLayout.tsx`.
+- [x] Add `sidebarOpen` state (default `false` on mobile, `true` on desktop) to `AppLayout.tsx`.
   - Use a `useEffect` that sets initial state based on `window.innerWidth >= 768`.
   - Pass `sidebarOpen` and `setSidebarOpen` down to `Sidebar` as props.
-- [ ] Add a `MobileTopBar` component inside `AppLayout` that renders only on mobile (`display: none` at `min-width: 768px` via a `<style>` tag or Tailwind's `hidden md:flex`).
+- [x] Add a `MobileTopBar` component inside `AppLayout` that renders only on mobile (`display: none` at `min-width: 768px` via a `<style>` tag or Tailwind's `hidden md:flex`).
   - Shows the PromptStash brandmark on the left.
   - Shows a hamburger icon button (`Menu` from lucide-react) on the right to toggle `sidebarOpen`.
-- [ ] Update `Sidebar.tsx` to accept `open?: boolean` and `onClose?: () => void` props.
+- [x] Update `Sidebar.tsx` to accept `open?: boolean` and `onClose?: () => void` props.
   - On mobile (screen width < 768px): render as a fixed overlay drawer (`position: fixed`, full height, z-index 50, width 260px). When `open` is false, translate off-screen (`transform: translateX(-100%)`). Add a semi-transparent backdrop behind it that calls `onClose` on click.
   - On desktop: render as normal (`position: static`, always visible). Ignore the `open` prop.
   - Add a close button (`X` icon) inside the sidebar header that calls `onClose`, visible only on mobile.
-- [ ] In `Shell.tsx`, ensure the main content area does not shrink below 0 and scrolls properly on mobile.
+- [x] In `Shell.tsx`, ensure the main content area does not shrink below 0 and scrolls properly on mobile.
 
 #### Dashboard
-- [ ] In `Dashboard.tsx`, change the prompt card grid from `repeat(auto-fill, minmax(280px, 1fr))` to `repeat(auto-fill, minmax(min(280px, 100%), 1fr))` so it collapses to a single column on narrow screens.
-- [ ] Wrap the header `<div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>` so that on screens < 640px the action buttons (`ExportImportDialog`, `New prompt`) stack below the title or use `flex-wrap: wrap` with `gap: 8px`.
-- [ ] Hide the toolbar search and filter row on mobile behind a toggle button (a filter icon) if the viewport is narrow — or simply ensure it wraps gracefully with `flex-wrap: wrap`.
-- [ ] In list view (`PromptListRow`), the `gridTemplateColumns: '22px 1fr 160px 130px 32px'` will overflow on mobile. On narrow screens, hide the Tags and Updated columns and use a two-column grid (`22px 1fr`).
+- [x] In `Dashboard.tsx`, change the prompt card grid from `repeat(auto-fill, minmax(280px, 1fr))` to `repeat(auto-fill, minmax(min(280px, 100%), 1fr))` so it collapses to a single column on narrow screens.
+- [x] Wrap the header `<div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>` so that on screens < 640px the action buttons (`ExportImportDialog`, `New prompt`) stack below the title or use `flex-wrap: wrap` with `gap: 8px`.
+- [x] Hide the toolbar search and filter row on mobile behind a toggle button (a filter icon) if the viewport is narrow — or simply ensure it wraps gracefully with `flex-wrap: wrap`.
+- [x] In list view (`PromptListRow`), the `gridTemplateColumns: '22px 1fr 160px 130px 32px'` will overflow on mobile. On narrow screens, hide the Tags and Updated columns and use a two-column grid (`22px 1fr`).
 
 #### Prompt Editor
-- [ ] In `PromptEditor.tsx`, reduce the editor body padding from `28px 56px 80px` to `16px 20px 80px` on screens < 640px. Use a CSS-in-JS approach: read `window.innerWidth` in a `useMemo` or inject a `<style>` block. Alternatively, add a `responsivePadding` CSS class via a `<style>` tag in the component.
-- [ ] Move the header action buttons (Share, Copy, Save) into a sticky bottom bar on mobile:
+- [x] In `PromptEditor.tsx`, reduce the editor body padding from `28px 56px 80px` to `16px 20px 80px` on screens < 640px. Use a CSS-in-JS approach: read `window.innerWidth` in a `useMemo` or inject a `<style>` block. Alternatively, add a `responsivePadding` CSS class via a `<style>` tag in the component.
+- [x] Move the header action buttons (Share, Copy, Save) into a sticky bottom bar on mobile:
   - When viewport < 640px, hide the header action buttons.
   - Render a `<div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, ... }}>` containing Share, Copy, and Save.
   - Make sure the fixed bar only appears when the editor route is active (it lives inside `PromptEditor`, so it naturally scopes itself).
-- [ ] Ensure the title `<input>` font size reduces to ~22px on mobile so it doesn't overflow.
+- [x] Ensure the title `<input>` font size reduces to ~22px on mobile so it doesn't overflow.
 
 #### Settings
-- [ ] In `Settings.tsx`, the settings layout (sidebar nav + content) should stack vertically on mobile (column direction) instead of the side-by-side layout. On mobile, show the section nav as a horizontal scrollable tab strip at the top instead of a vertical list.
+- [x] In `Settings.tsx`, the settings layout (sidebar nav + content) should stack vertically on mobile (column direction) instead of the side-by-side layout. On mobile, show the section nav as a horizontal scrollable tab strip at the top instead of a vertical list.
 
 #### Sign-in
-- [ ] In `src/routes/auth/SignIn.tsx`, ensure the sign-in card is full-width with 16px horizontal padding on viewports < 480px.
+- [x] In `src/routes/auth/SignIn.tsx`, ensure the sign-in card is full-width with 16px horizontal padding on viewports < 480px.
 
 #### Testing
 - [ ] Manually verify at 375px (iPhone SE), 414px (iPhone Plus), 768px (iPad), and 1280px (desktop).
 - [ ] Verify no horizontal scroll at any of the above breakpoints.
 - [ ] Verify sidebar drawer opens and closes correctly on mobile.
-- [ ] Run `npx tsc --noEmit` — zero errors.
+- [x] Run `npx tsc --noEmit` — zero errors.
 
 **Commit message:** `Make layout responsive with mobile sidebar drawer and adaptive editor`
 

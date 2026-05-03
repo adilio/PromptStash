@@ -169,6 +169,7 @@ export function SignIn() {
 
   return (
     <div
+      id="signin-container"
       style={{
         display: 'grid',
         gridTemplateColumns: '1.05fr 1fr',
@@ -176,8 +177,30 @@ export function SignIn() {
         background: 'var(--ps-bg)',
       }}
     >
+      <style>{`
+        @media (max-width: 767px) {
+          #signin-container {
+            grid-template-columns: 1fr !important;
+          }
+          #editorial-aside {
+            display: none !important;
+          }
+          #signin-form-container {
+            padding: 32px 16px !important;
+          }
+          #signin-form {
+            max-width: 100% !important;
+          }
+        }
+        @media (min-width: 480px) and (max-width: 767px) {
+          #signin-form-container {
+            padding: 48px 32px !important;
+          }
+        }
+      `}</style>
       {/* Editorial aside */}
       <aside
+        id="editorial-aside"
         style={{
           background: 'var(--ps-bg-sunken)',
           borderRight: '1px solid var(--ps-hairline-soft)',
@@ -309,6 +332,7 @@ export function SignIn() {
 
       {/* Sign-in form */}
       <div
+        id="signin-form-container"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -317,7 +341,7 @@ export function SignIn() {
           background: 'var(--ps-bg)',
         }}
       >
-        <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 360 }}>
+        <form id="signin-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 360 }}>
           <h1
             style={{
               fontSize: 26,

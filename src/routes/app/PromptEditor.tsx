@@ -219,6 +219,7 @@ export function PromptEditor() {
           alignItems: 'center',
           gap: 12,
           background: 'var(--ps-bg)',
+          flexWrap: 'wrap',
         }}
       >
         <button
@@ -251,13 +252,22 @@ export function PromptEditor() {
           Back
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ps-fg-faint)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ps-fg-faint)', minWidth: 0, overflow: 'hidden' }}>
           <span>Workspace</span>
           <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 6 6 6-6 6" /></svg>
-          <span style={{ color: 'var(--ps-fg)', fontWeight: 500 }}>{title || (isNew ? 'New Prompt' : 'Untitled')}</span>
+          <span style={{ color: 'var(--ps-fg)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title || (isNew ? 'New Prompt' : 'Untitled')}</span>
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <style>{`
+          @media (min-width: 640px) {
+            .mobile-action-bar { display: none !important; }
+          }
+          @media (max-width: 639px) {
+            .desktop-action-buttons { display: none !important; }
+          }
+        `}</style>
+
+        <div className="desktop-action-buttons" style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           {!isNew && (
             <div
               style={{
@@ -367,6 +377,7 @@ export function PromptEditor() {
 
       {/* Editor body */}
       <div
+        id="editor-body"
         style={{
           flex: 1,
           overflow: 'auto',
@@ -377,6 +388,16 @@ export function PromptEditor() {
           boxSizing: 'border-box',
         }}
       >
+        <style>{`
+          @media (max-width: 639px) {
+            #editor-body {
+              padding: 16px 20px 80px !important;
+            }
+            #prompt-title {
+              font-size: 22px !important;
+            }
+          }
+        `}</style>
         {/* Title */}
         <label
           htmlFor="prompt-title"
@@ -566,6 +587,69 @@ export function PromptEditor() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Mobile action bar */}
+      <div className="mobile-action-bar" style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'var(--ps-bg)',
+        borderTop: '1px solid var(--ps-hairline-soft)',
+        padding: '10px 16px',
+        display: 'flex',
+        gap: 8,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        zIndex: 10,
+      }}>
+        <div style={{ fontSize: 11, color: 'var(--ps-fg-faint)' }}>
+          {saveStatusText}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button
+            style={{ ...ghostBtnStyle, height: 32, padding: '0 12px' }}
+            title="Share"
+          >
+            <Share2 style={{ width: 14, height: 14 }} />
+          </button>
+          <button
+            style={{ ...ghostBtnStyle, height: 32, padding: '0 12px' }}
+            title="Copy prompt"
+            onClick={async () => {
+              if (body) {
+                await navigator.clipboard.writeText(body);
+                toast({ title: 'Copied to clipboard' });
+              }
+            }}
+          >
+            <Copy style={{ width: 14, height: 14 }} />
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              height: 32,
+              padding: '0 12px',
+              borderRadius: 7,
+              background: 'var(--ps-accent)',
+              color: 'var(--ps-accent-fg)',
+              border: 0,
+              fontFamily: 'inherit',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Play style={{ width: 12, height: 12 }} />
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   );
