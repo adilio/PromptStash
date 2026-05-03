@@ -6,6 +6,7 @@ import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
 import { listPrompts } from '@/api/prompts';
+import { getApiBaseUrl } from '@/lib/api';
 import { generateEspansoYaml } from '@/lib/espanso';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
@@ -213,6 +214,7 @@ export function Settings() {
   const [espansoLoading, setEspansoLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
     loadTeams();
@@ -1025,7 +1027,7 @@ export function Settings() {
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>Base URL</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 4 }}>API base URL</div>
                   <code style={{
                     display: 'block',
                     background: 'var(--ps-bg-sunken)',
@@ -1036,8 +1038,13 @@ export function Settings() {
                     color: 'var(--ps-fg)',
                     overflow: 'auto',
                   }}>
-                    {import.meta.env.VITE_SUPABASE_URL}/functions/v1/api
+                    {apiBaseUrl}
                   </code>
+                  {!import.meta.env.VITE_API_BASE_URL && (
+                    <div style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6, lineHeight: 1.5 }}>
+                      This points to the Supabase Edge Function deployment. Set <code style={{ background: 'var(--ps-bg-sunken)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>VITE_API_BASE_URL</code> to show a custom API domain.
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
@@ -1068,7 +1075,7 @@ export function Settings() {
                     color: 'var(--ps-fg)',
                     overflow: 'auto',
                   }}><code>{`curl -H "Authorization: Bearer ps_your_key" \\
-  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts?workspace=TEAM_ID"`}</code></pre>
+  "${apiBaseUrl}/v1/prompts?workspace=TEAM_ID"`}</code></pre>
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
@@ -1082,7 +1089,7 @@ export function Settings() {
                     color: 'var(--ps-fg)',
                     overflow: 'auto',
                   }}><code>{`curl -H "Authorization: Bearer ps_your_key" \\
-  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts/PROMPT_ID"`}</code></pre>
+  "${apiBaseUrl}/v1/prompts/PROMPT_ID"`}</code></pre>
                 </div>
 
                 <div style={{ marginBottom: 12 }}>
@@ -1099,7 +1106,7 @@ export function Settings() {
   -H "Authorization: Bearer ps_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{"team_id":"TEAM_ID","title":"My Prompt","body_md":"Prompt content"}' \\
-  "${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1/prompts"`}</code></pre>
+  "${apiBaseUrl}/v1/prompts"`}</code></pre>
                 </div>
               </div>
             </SettingsCard>

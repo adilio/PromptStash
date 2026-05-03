@@ -52,7 +52,7 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        sans: ['"DM Sans"', 'Inter', ...defaultTheme.fontFamily.sans],
         mono: ['"JetBrains Mono"', ...defaultTheme.fontFamily.mono],
         display: ['"JetBrains Mono"', ...defaultTheme.fontFamily.mono],
       },

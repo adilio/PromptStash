@@ -186,7 +186,10 @@ For Netlify with external DNS:
    ```bash
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key
+   VITE_API_BASE_URL=https://your-api.example.com
    ```
+
+   `VITE_API_BASE_URL` is optional. If it is not set, the API usage screen falls back to the Supabase Edge Function URL: `VITE_SUPABASE_URL/functions/v1/api`.
 
 ### Cloudflare Pages
 
@@ -197,6 +200,7 @@ For Netlify with external DNS:
 3. Add environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_API_BASE_URL` if you proxy the Edge Function through a custom API domain
 4. Update Supabase Auth settings with your production URL
 
 ### Netlify

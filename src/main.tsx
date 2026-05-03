@@ -15,6 +15,10 @@ import { InviteAccept } from './routes/public/InviteAccept';
 import { Toaster } from './components/ui/toaster';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { queryClient } from './lib/queryClient';
+import '@fontsource/dm-sans/400.css';
+import '@fontsource/dm-sans/500.css';
+import '@fontsource/dm-sans/600.css';
+import '@fontsource/dm-sans/700.css';
 import './app.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
