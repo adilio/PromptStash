@@ -187,14 +187,19 @@ export function SignIn() {
           }
           #signin-form-container {
             padding: 32px 16px !important;
+            align-items: flex-start !important;
+            padding-top: 48px !important;
           }
           #signin-form {
             max-width: 100% !important;
           }
+          #mobile-brand {
+            display: flex !important;
+          }
         }
         @media (min-width: 480px) and (max-width: 767px) {
           #signin-form-container {
-            padding: 48px 32px !important;
+            padding: 64px 32px !important;
           }
         }
       `}</style>
@@ -342,6 +347,29 @@ export function SignIn() {
         }}
       >
         <form id="signin-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 360 }}>
+          <div
+            id="mobile-brand"
+            style={{
+              display: 'none',
+              alignItems: 'center',
+              gap: 10,
+              marginBottom: 40,
+            }}
+          >
+            <BrandMark size={28} />
+            <span
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontWeight: 600,
+                fontSize: 22,
+                lineHeight: 1,
+                letterSpacing: '-0.04em',
+                color: 'var(--ps-fg)',
+              }}
+            >
+              PromptStash
+            </span>
+          </div>
           <h1
             style={{
               fontSize: 26,
@@ -491,7 +519,7 @@ export function SignIn() {
                 viewBox="0 0 24 24"
                 width="16"
                 height="16"
-                fill="currentColor"
+                fill="var(--ps-accent)"
                 aria-hidden="true"
               >
                 <path d="M12 2a10 10 0 0 0-3.16 19.5c.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.1-1.47-1.1-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.86v2.76c0 .27.16.58.67.48A10 10 0 0 0 12 2" />
