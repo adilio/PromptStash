@@ -117,6 +117,33 @@ const btnPrimaryStyle: React.CSSProperties = {
   gap: 5,
 };
 
+const providerLabel: Record<string, string> = {
+  email: 'Email',
+  google: 'Google',
+  github: 'GitHub',
+};
+
+function ProviderBadge({ provider }: { provider: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 24,
+        padding: '0 9px',
+        borderRadius: 999,
+        background: 'var(--ps-bg-sunken)',
+        border: '1px solid var(--ps-hairline)',
+        color: 'var(--ps-fg)',
+        fontSize: 12,
+        fontWeight: 500,
+      }}
+    >
+      {providerLabel[provider] ?? provider}
+    </span>
+  );
+}
+
 function SegControl({
   options,
   value,
@@ -171,6 +198,7 @@ export function Settings() {
   const [inviteLink, setInviteLink] = useState('');
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [authProviders, setAuthProviders] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -204,6 +232,7 @@ export function Settings() {
 
       setProfileName(getDisplayName(user));
       setProfileEmail(user.email ?? '');
+      setAuthProviders(getAuthProviders(user));
     } catch (error) {
       toast({
         title: 'Error',
@@ -211,6 +240,30 @@ export function Settings() {
         variant: 'destructive',
       });
     }
+  };
+
+  const getAuthProviders = (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']>) => {
+    const providers = new Set<string>();
+
+    user.identities?.forEach((identity) => {
+      if (identity.provider) {
+        providers.add(identity.provider);
+      }
+    });
+
+    if (user.app_metadata.provider) {
+      providers.add(user.app_metadata.provider);
+    }
+
+    if (user.email) {
+      providers.add('email');
+    }
+
+    return Array.from(providers).sort((a, b) => {
+      if (a === 'email') return -1;
+      if (b === 'email') return 1;
+      return a.localeCompare(b);
+    });
   };
 
   const handleSaveProfile = async () => {
@@ -387,6 +440,16 @@ export function Settings() {
                 </SettingsRow>
                 <SettingsRow label="Email" hint="Your primary login address.">
                   <input style={inputStyle} type="email" value={profileEmail} readOnly />
+                </SettingsRow>
+                <SettingsRow
+                  label="Sign-in methods"
+                  hint="Methods with this verified email open the same PromptStash account."
+                >
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 260 }}>
+                    {authProviders.map((provider) => (
+                      <ProviderBadge key={provider} provider={provider} />
+                    ))}
+                  </div>
                 </SettingsRow>
                 <SettingsRow label="Save changes" hint="Updates how your name appears in PromptStash.">
                   <button
