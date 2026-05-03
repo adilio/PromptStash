@@ -71,6 +71,14 @@ describe('PromptEditor', () => {
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
   });
 
+  it('should focus the title input for a new prompt', async () => {
+    renderPromptEditor();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/title/i)).toHaveFocus();
+    });
+  });
+
   it('should render editor for explicit new route without loading a prompt', () => {
     mockParams = {};
 

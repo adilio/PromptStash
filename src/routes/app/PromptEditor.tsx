@@ -40,6 +40,7 @@ export function PromptEditor() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const initialLoadRef = useRef(true);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const isNew = !promptId || promptId === 'new';
   const initialFolderId = searchParams.get('folder');
@@ -61,6 +62,18 @@ export function PromptEditor() {
     enabled: !!promptId && !isNew,
   });
   const loading = promptQuery.isLoading;
+
+  useEffect(() => {
+    if (!isNew || loading) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [isNew, loading, location.key]);
 
   const createPromptMutation = useMutation({
     mutationFn: createPrompt,
@@ -438,6 +451,7 @@ export function PromptEditor() {
           Title
         </label>
         <input
+          ref={titleInputRef}
           id="prompt-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
