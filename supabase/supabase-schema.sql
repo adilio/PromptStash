@@ -1,6 +1,8 @@
 -- PromptStash Database Schema
 -- Run this SQL in the Supabase SQL Editor after creating your project
 
+create extension if not exists moddatetime;
+
 -- Create tables
 create table public.teams (
   id uuid primary key default gen_random_uuid(),
@@ -33,6 +35,11 @@ create table public.prompts (
   owner_id uuid not null,
   title text not null,
   body_md text not null,
+  agent_format text check (agent_format is null or agent_format in
+    ('agents','claude','copilot','cursor','windsurf','generic')),
+  stage text check (stage is null or stage in
+    ('question','research','design','structure','plan','work','implement','review')),
+  espanso_trigger text,
   visibility text not null default 'private' check (visibility in ('private','team','public')),
   public_slug text unique,
   created_at timestamptz not null default now(),
@@ -44,6 +51,9 @@ create index prompts_title_fts_idx
 
 create index prompts_body_md_fts_idx
   on public.prompts using gin (to_tsvector('english', coalesce(body_md, '')));
+
+create index prompts_team_stage_idx
+  on public.prompts (team_id, stage);
 
 create table public.prompt_versions (
   id uuid primary key default gen_random_uuid(),
@@ -91,6 +101,40 @@ create table public.invites (
   created_at timestamptz not null default now()
 );
 
+create table public.api_keys (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  key_hash text not null unique,
+  key_prefix text not null,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz
+);
+
+create table public.bundles (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.teams(id) on delete cascade,
+  name text not null,
+  description text,
+  target_format text not null
+    check (target_format in ('agents','claude','copilot','cursor','windsurf','generic')),
+  created_by uuid not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.bundle_items (
+  bundle_id uuid not null references public.bundles(id) on delete cascade,
+  prompt_id uuid not null references public.prompts(id) on delete cascade,
+  position integer not null,
+  included boolean not null default true,
+  heading_override text,
+  primary key (bundle_id, prompt_id)
+);
+
+create index bundle_items_bundle_position_idx
+  on public.bundle_items (bundle_id, position);
+
 -- Enable Row Level Security
 alter table public.teams enable row level security;
 alter table public.memberships enable row level security;
@@ -101,6 +145,9 @@ alter table public.tags enable row level security;
 alter table public.prompt_tags enable row level security;
 alter table public.shares enable row level security;
 alter table public.invites enable row level security;
+alter table public.api_keys enable row level security;
+alter table public.bundles enable row level security;
+alter table public.bundle_items enable row level security;
 
 -- Helper function to check team membership
 create or replace function public.is_team_member(t_id uuid)
@@ -262,9 +309,57 @@ create policy invites_update_owners on public.invites
     where t.id = team_id and t.owner_id = auth.uid()
   ));
 
--- Trigger for updated_at timestamp
-create extension if not exists moddatetime;
+-- RLS Policies for API keys
+create policy "Users manage own api keys"
+  on public.api_keys
+  for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
 
+-- RLS Policies for bundles
+create policy bundles_read on public.bundles
+  for select using (public.is_team_member(team_id));
+
+create policy bundles_write on public.bundles
+  for all using (exists(
+    select 1 from public.memberships m
+    where m.team_id = bundles.team_id
+      and m.user_id = auth.uid()
+      and m.role in ('owner','editor')
+  )) with check (exists(
+    select 1 from public.memberships m
+    where m.team_id = bundles.team_id
+      and m.user_id = auth.uid()
+      and m.role in ('owner','editor')
+  ));
+
+create policy bundle_items_read on public.bundle_items
+  for select using (exists(
+    select 1 from public.bundles b
+    where b.id = bundle_items.bundle_id
+      and public.is_team_member(b.team_id)
+  ));
+
+create policy bundle_items_write on public.bundle_items
+  for all using (exists(
+    select 1 from public.bundles b
+    join public.memberships m on m.team_id = b.team_id
+    where b.id = bundle_items.bundle_id
+      and m.user_id = auth.uid()
+      and m.role in ('owner','editor')
+  )) with check (exists(
+    select 1 from public.bundles b
+    join public.memberships m on m.team_id = b.team_id
+    where b.id = bundle_items.bundle_id
+      and m.user_id = auth.uid()
+      and m.role in ('owner','editor')
+  ));
+
+-- Trigger for updated_at timestamp
 create trigger update_prompts_updated_at
 before update on public.prompts
+for each row execute procedure moddatetime (updated_at);
+
+create trigger bundles_set_updated_at
+before update on public.bundles
 for each row execute procedure moddatetime (updated_at);

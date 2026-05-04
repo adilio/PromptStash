@@ -55,15 +55,17 @@ npm install
    - Set Site URL to `http://localhost:5173`
    - Enable Email provider
 
-### 3. Run Database Migrations
+### 3. Set Up the Database
 
-Copy the contents of `supabase/migrations/` and run them in your Supabase SQL Editor in order. This will:
+For a new Supabase project, run `supabase/supabase-schema.sql` in the Supabase SQL Editor. For an existing project, run any missing files from `supabase/migrations/` in filename order. This will:
 - Create all tables (teams, prompts, folders, tags, invites, api_keys, etc.)
 - Enable Row Level Security
 - Set up RLS policies
 - Add triggers for `updated_at` timestamps
 - Add GIN full-text search indexes on `title` and `body_md`
 - Add the `espanso_trigger` column to prompts
+
+If a client request such as `/rest/v1/bundles?...` returns 404, the Supabase project is missing that table or PostgREST has not reloaded its schema cache. Run the bundles migration, then reload the schema cache from the Supabase dashboard if needed.
 
 ### 4. Configure Environment
 
@@ -121,6 +123,8 @@ npm run test:ui      # Run tests with UI
 - **shares**: Individual prompt sharing with public slugs
 - **invites**: Email-based team invitations with expiry, tokens, and role assignment
 - **api_keys**: Hashed API keys for programmatic access (key hash stored, raw key never persisted)
+- **bundles**: Ordered prompt collections for exporting agent instruction files
+- **bundle_items**: Prompt membership, ordering, inclusion, and heading overrides within bundles
 
 All tables have Row Level Security enabled. Users can only access data from teams they belong to. API keys are scoped to the key owner.
 
