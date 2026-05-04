@@ -66,6 +66,7 @@ function SettingsRow({
 }) {
   return (
     <div
+      className="settings-row"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -79,7 +80,7 @@ function SettingsRow({
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ps-fg)' }}>{label}</div>
         {hint && <div style={{ fontSize: 12.5, color: 'var(--ps-fg-faint)', marginTop: 2 }}>{hint}</div>}
       </div>
-      <div style={{ flexShrink: 0 }}>{children}</div>
+      <div className="settings-row-action" style={{ flexShrink: 0 }}>{children}</div>
     </div>
   );
 }
@@ -236,11 +237,22 @@ export function Settings() {
   const apiBaseUrl = getApiBaseUrl();
 
   useEffect(() => {
-    loadTeams();
     loadProfile();
-    loadApiKeys();
-    loadOpenRouterStatus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (section === 'workspace') {
+      void loadTeams();
+    }
+
+    if (section === 'api') {
+      void loadApiKeys();
+    }
+
+    if (section === 'models') {
+      void loadOpenRouterStatus();
+    }
+  }, [section]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadApiKeys = async () => {
     try {
@@ -577,6 +589,21 @@ export function Settings() {
           #settings-content {
             padding: 32px 16px !important;
           }
+          .settings-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .settings-row-action {
+            width: 100% !important;
+          }
+          .openrouter-key-controls {
+            width: 100% !important;
+            justify-content: stretch !important;
+          }
+          .openrouter-key-controls input {
+            min-width: 0 !important;
+            flex: 1 !important;
+          }
         }
       `}</style>
       {/* Settings nav */}
@@ -827,7 +854,7 @@ export function Settings() {
                     label={openRouterStatus.connected ? 'Replace API key' : 'API key'}
                     hint="Paste the key once. After saving, only its prefix is visible here."
                   >
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <div className="openrouter-key-controls" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <input
                         type="password"
                         value={openRouterKey}
