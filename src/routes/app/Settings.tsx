@@ -76,7 +76,7 @@ function SettingsRow({
         gap: 12,
       }}
     >
-      <div>
+      <div className="settings-row-label" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ps-fg)' }}>{label}</div>
         {hint && <div style={{ fontSize: 12.5, color: 'var(--ps-fg-faint)', marginTop: 2 }}>{hint}</div>}
       </div>
@@ -562,47 +562,95 @@ export function Settings() {
       }}
     >
       <style>{`
-        @media (max-width: 639px) {
+        @media (max-width: 767px) {
           #settings-container {
             grid-template-columns: 1fr !important;
           }
           #settings-nav {
             border-right: none !important;
             border-bottom: 1px solid var(--ps-hairline-soft) !important;
-            padding: 12px 16px !important;
+            padding: 10px 14px !important;
             overflow-x: auto !important;
             overflow-y: hidden !important;
             white-space: nowrap !important;
             display: flex !important;
             align-items: center !important;
-            gap: 6px !important;
+            gap: 4px !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          #settings-nav::-webkit-scrollbar {
+            display: none;
           }
           #settings-nav h2 {
             display: none !important;
           }
           #settings-nav button {
             width: auto !important;
-            height: 28px !important;
+            height: 32px !important;
             padding: 0 12px !important;
             margin-bottom: 0 !important;
+            flex-shrink: 0 !important;
           }
           #settings-content {
-            padding: 32px 16px !important;
+            padding: 24px 16px 64px !important;
+            max-width: 100% !important;
           }
           .settings-row {
             flex-direction: column !important;
             align-items: stretch !important;
+            gap: 8px !important;
+          }
+          .settings-row-label {
+            flex: none !important;
           }
           .settings-row-action {
             width: 100% !important;
           }
+          .settings-row-action input,
+          .settings-row-action select,
+          .settings-row-action textarea {
+            width: 100% !important;
+          }
+          .settings-row-action button {
+            min-height: 36px !important;
+          }
           .openrouter-key-controls {
             width: 100% !important;
+            flex-wrap: wrap !important;
             justify-content: stretch !important;
           }
           .openrouter-key-controls input {
             min-width: 0 !important;
-            flex: 1 !important;
+            flex: 1 1 100% !important;
+          }
+          .openrouter-key-controls button {
+            flex: 0 0 auto !important;
+          }
+          .invite-form-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .agent-export-row {
+            flex-wrap: wrap !important;
+          }
+          .agent-export-row select {
+            flex: 1 1 100% !important;
+            min-width: 0 !important;
+          }
+          .api-key-create-form {
+            flex-wrap: wrap !important;
+          }
+          .api-key-create-form input {
+            flex: 1 1 100% !important;
+          }
+          .just-created-key-actions {
+            flex-wrap: wrap !important;
+          }
+          .just-created-key-actions input {
+            flex: 1 1 100% !important;
+          }
+          .api-keys-table {
+            font-size: 12px !important;
           }
         }
       `}</style>
@@ -980,7 +1028,7 @@ export function Settings() {
                 Create invite links for your team.
               </div>
               <form onSubmit={handleCreateInvite} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px auto', gap: 8 }}>
+                <div className="invite-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 140px auto', gap: 8 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6 }}>Email</label>
                     <input
@@ -1191,7 +1239,7 @@ export function Settings() {
                 <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
                   Download all prompts in this workspace as a single agent file.
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+                <div className="agent-export-row" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
                   <select
                     value={agentExportFormat}
                     onChange={(e) => setAgentExportFormat(e.target.value)}
@@ -1228,7 +1276,7 @@ export function Settings() {
               <div style={{ borderTop: 'none' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>API Keys</div>
                 <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>Generate keys to access your prompts via API.</div>
-                <form onSubmit={handleCreateApiKey} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <form onSubmit={handleCreateApiKey} className="api-key-create-form" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                   <input
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
@@ -1256,7 +1304,7 @@ export function Settings() {
                     <div style={{ fontSize: 12, color: 'oklch(0.45 0.06 60)', marginBottom: 12 }}>
                       Copy this key now — it won't be shown again.
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="just-created-key-actions" style={{ display: 'flex', gap: 8 }}>
                       <input
                         value={justCreatedKey.rawKey}
                         readOnly
@@ -1285,8 +1333,8 @@ export function Settings() {
                 )}
 
                 {apiKeys.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <div style={{ marginTop: 16, overflowX: 'auto' }}>
+                    <table className="api-keys-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 480 }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--ps-hairline)', textAlign: 'left' }}>
                           <th style={{ padding: '8px 0', fontWeight: 600, color: 'var(--ps-fg-faint)', fontSize: 11 }}>Name</th>
