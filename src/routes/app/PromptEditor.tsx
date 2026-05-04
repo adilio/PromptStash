@@ -7,6 +7,7 @@ import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { Loading } from '@/components/Loading';
 import { TagInput } from '@/components/TagInput';
 import { ConceptInfo } from '@/components/ConceptInfo';
+import { PromptRunner } from '@/components/PromptRunner';
 import { getPrompt, createPrompt, updatePrompt } from '@/api/prompts';
 import { listTags, createTag, addTagToPrompt, removeTagFromPrompt } from '@/api/tags';
 import { useToast } from '@/components/ui/use-toast';
@@ -816,6 +817,8 @@ export function PromptEditor() {
             )}
           </div>
         )}
+
+        <PromptRunner prompt={body} />
       </div>
 
       {/* Mobile action bar */}

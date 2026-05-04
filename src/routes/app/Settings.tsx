@@ -5,6 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
+import {
+  deleteOpenRouterApiKey,
+  getOpenRouterStatus,
+  setOpenRouterApiKey,
+  type OpenRouterStatus,
+} from '@/api/openrouter';
 import { listPrompts } from '@/api/prompts';
 import { getApiBaseUrl } from '@/lib/api';
 import { generateEspansoYaml } from '@/lib/espanso';
@@ -217,6 +223,13 @@ export function Settings() {
   const [espansoLoading, setEspansoLoading] = useState(false);
   const [agentExportFormat, setAgentExportFormat] = useState('agents');
   const [agentExportLoading, setAgentExportLoading] = useState(false);
+  const [openRouterKey, setOpenRouterKey] = useState('');
+  const [openRouterStatus, setOpenRouterStatus] = useState<OpenRouterStatus>({
+    connected: false,
+    key_prefix: null,
+    updated_at: null,
+  });
+  const [openRouterLoading, setOpenRouterLoading] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const [showAdvanced, setShowAdvanced] = useShowAdvanced();
@@ -226,6 +239,7 @@ export function Settings() {
     loadTeams();
     loadProfile();
     loadApiKeys();
+    loadOpenRouterStatus();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadApiKeys = async () => {
@@ -234,6 +248,15 @@ export function Settings() {
       setApiKeys(keys);
     } catch (error) {
       console.error('Failed to load API keys:', error);
+    }
+  };
+
+  const loadOpenRouterStatus = async () => {
+    try {
+      const status = await getOpenRouterStatus();
+      setOpenRouterStatus(status);
+    } catch (error) {
+      console.error('Failed to load OpenRouter status:', error);
     }
   };
 
@@ -415,6 +438,44 @@ export function Settings() {
         description: error instanceof Error ? error.message : 'Could not delete API key',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSaveOpenRouterKey = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!openRouterKey.trim()) return;
+    setOpenRouterLoading(true);
+    try {
+      const status = await setOpenRouterApiKey(openRouterKey.trim());
+      setOpenRouterStatus(status);
+      setOpenRouterKey('');
+      toast({ title: 'OpenRouter connected' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not save OpenRouter key',
+        variant: 'destructive',
+      });
+    } finally {
+      setOpenRouterLoading(false);
+    }
+  };
+
+  const handleDeleteOpenRouterKey = async () => {
+    setOpenRouterLoading(true);
+    try {
+      await deleteOpenRouterApiKey();
+      setOpenRouterStatus({ connected: false, key_prefix: null, updated_at: null });
+      setOpenRouterKey('');
+      toast({ title: 'OpenRouter disconnected' });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Could not remove OpenRouter key',
+        variant: 'destructive',
+      });
+    } finally {
+      setOpenRouterLoading(false);
     }
   };
 
@@ -677,20 +738,138 @@ export function Settings() {
           <>
             <h2 style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500, fontSize: 24, letterSpacing: '-0.02em', margin: '0 0 6px', color: 'var(--ps-fg)' }}>Models &amp; keys</h2>
             <p style={{ color: 'var(--ps-fg-muted)', margin: '0 0 32px', maxWidth: '56ch', fontSize: 14 }}>
-              Bring your own keys — we never train on your prompts.
+              Connect provider keys for server-side prompt test runs.
             </p>
             <SettingsCard>
-              {[
-                { name: 'Anthropic', model: 'Claude Sonnet', status: 'Not connected' },
-                { name: 'OpenAI', model: 'GPT-4.1', status: 'Not connected' },
-                { name: 'Google', model: 'Gemini 2.5 Pro', status: 'Not connected' },
-              ].map((p, i) => (
-                <SettingsRow key={i} label={p.name} hint={p.model}>
-                  <button style={p.status === 'Connected' ? btnSecondaryStyle : btnPrimaryStyle}>
-                    {p.status === 'Connected' ? 'Manage' : 'Connect'}
-                  </button>
+              <div style={{ borderTop: 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>OpenRouter</div>
+                <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
+                  PromptStash stores this key server-side and only uses it to send your prompt test runs to OpenRouter.
+                  The raw key is never returned to your browser after saving.
+                </div>
+
+                <div
+                  style={{
+                    background: 'var(--ps-bg-sunken)',
+                    border: '1px solid var(--ps-hairline-soft)',
+                    borderRadius: 8,
+                    padding: '12px 14px',
+                    marginBottom: 14,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 6 }}>
+                    How your key is handled
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                      color: 'var(--ps-fg-muted)',
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {[
+                      'Sent over your authenticated Supabase session when you save it.',
+                      'Stored server-side so prompt runs can happen without exposing provider keys in the app.',
+                      'Shown later only as a short prefix so you can recognize which key is connected.',
+                      'Not stored in local storage, returned in API responses, or included in client-side prompt run requests.',
+                    ].map((item) => (
+                      <div key={item} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: 'var(--ps-accent)',
+                            flexShrink: 0,
+                            marginTop: 7,
+                          }}
+                        />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <SettingsRow
+                  label="Status"
+                  hint={
+                    openRouterStatus.connected && openRouterStatus.updated_at
+                      ? `Updated ${new Date(openRouterStatus.updated_at).toLocaleDateString()}`
+                      : 'Add a key to enable prompt runs.'
+                  }
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      height: 24,
+                      padding: '0 9px',
+                      borderRadius: 999,
+                      background: openRouterStatus.connected ? 'var(--ps-accent-soft)' : 'var(--ps-bg-sunken)',
+                      border: '1px solid var(--ps-hairline)',
+                      color: openRouterStatus.connected ? 'var(--ps-accent)' : 'var(--ps-fg-muted)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {openRouterStatus.connected
+                      ? `Connected ${openRouterStatus.key_prefix ?? ''}...`
+                      : 'Not connected'}
+                  </span>
                 </SettingsRow>
-              ))}
+
+                <form onSubmit={handleSaveOpenRouterKey}>
+                  <SettingsRow
+                    label={openRouterStatus.connected ? 'Replace API key' : 'API key'}
+                    hint="Paste the key once. After saving, only its prefix is visible here."
+                  >
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <input
+                        type="password"
+                        value={openRouterKey}
+                        onChange={(event) => setOpenRouterKey(event.target.value)}
+                        placeholder="sk-or-..."
+                        autoComplete="off"
+                        style={{ ...inputStyle, width: 280 }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={openRouterLoading || !openRouterKey.trim()}
+                        style={
+                          openRouterLoading || !openRouterKey.trim()
+                            ? { ...btnPrimaryStyle, opacity: 0.65, cursor: 'not-allowed' }
+                            : btnPrimaryStyle
+                        }
+                      >
+                        {openRouterLoading ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </SettingsRow>
+                </form>
+
+                {openRouterStatus.connected && (
+                  <SettingsRow label="Disconnect" hint="Removes the saved OpenRouter key.">
+                    <button
+                      type="button"
+                      onClick={handleDeleteOpenRouterKey}
+                      disabled={openRouterLoading}
+                      style={{
+                        ...btnSecondaryStyle,
+                        color: 'hsl(var(--destructive))',
+                        borderColor: 'hsl(var(--destructive) / 0.3)',
+                        opacity: openRouterLoading ? 0.65 : 1,
+                        cursor: openRouterLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      Remove key
+                    </button>
+                  </SettingsRow>
+                )}
+              </div>
             </SettingsCard>
           </>
         )}

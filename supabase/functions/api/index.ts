@@ -43,6 +43,30 @@ interface Team {
   created_at: string;
 }
 
+interface OpenRouterRunRequest {
+  prompt?: unknown;
+  model?: unknown;
+  temperature?: unknown;
+  max_completion_tokens?: unknown;
+}
+
+interface OpenRouterChatResult {
+  id?: string;
+  model?: string;
+  choices?: Array<{
+    finish_reason?: string | null;
+    message?: {
+      content?: unknown;
+    };
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    cost?: number | null;
+  };
+}
+
 function extractTeam(membership: MembershipWithTeam): Team | null {
   if (Array.isArray(membership.teams)) {
     return membership.teams[0] ?? null;
@@ -55,9 +79,162 @@ function isTeam(team: Team | null): team is Team {
   return team !== null;
 }
 
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function getSupabaseServiceClient() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+function extractOpenRouterContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && 'text' in part) {
+          const text = (part as { text?: unknown }).text;
+          return typeof text === 'string' ? text : '';
+        }
+        return '';
+      })
+      .join('');
+  }
+
+  return '';
+}
+
+function openRouterErrorMessage(status: number, fallback: string): string {
+  if (status === 401) return 'OpenRouter rejected the saved API key.';
+  if (status === 402) return 'OpenRouter account has insufficient credits.';
+  if (status === 404) return 'OpenRouter could not find that model.';
+  if (status === 408 || status === 524) return 'OpenRouter request timed out.';
+  if (status === 413) return 'The prompt is too large for this request.';
+  if (status === 429) return 'OpenRouter rate limit exceeded. Try again later.';
+  if (status === 502 || status === 503 || status === 529) return 'The selected provider is unavailable right now.';
+  return fallback;
+}
+
+async function handleOpenRouterRequest(req: Request, path: string): Promise<Response> {
+  if (path !== '/v1/openrouter/run' || req.method !== 'POST') {
+    return jsonResponse({ error: 'Not found' }, 404);
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return jsonResponse({ error: 'Missing or invalid authorization header' }, 401);
+  }
+
+  const accessToken = authHeader.replace('Bearer ', '');
+  const supabase = getSupabaseServiceClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    return jsonResponse({ error: 'Invalid session' }, 401);
+  }
+
+  const body = (await req.json().catch(() => null)) as OpenRouterRunRequest | null;
+  const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
+  const model = typeof body?.model === 'string' ? body.model.trim() : '';
+  const temperature = typeof body?.temperature === 'number' ? body.temperature : 0.7;
+  const maxCompletionTokens =
+    typeof body?.max_completion_tokens === 'number' ? body.max_completion_tokens : 800;
+
+  if (!prompt) {
+    return jsonResponse({ error: 'Prompt content is required' }, 400);
+  }
+
+  if (!model) {
+    return jsonResponse({ error: 'Model is required' }, 400);
+  }
+
+  if (temperature < 0 || temperature > 2) {
+    return jsonResponse({ error: 'Temperature must be between 0 and 2' }, 400);
+  }
+
+  if (!Number.isInteger(maxCompletionTokens) || maxCompletionTokens < 16 || maxCompletionTokens > 32000) {
+    return jsonResponse({ error: 'Max output tokens must be between 16 and 32000' }, 400);
+  }
+
+  const { data: integration, error: integrationError } = await supabase
+    .from('model_integrations')
+    .select('api_key')
+    .eq('user_id', user.id)
+    .eq('provider', 'openrouter')
+    .single();
+
+  if (integrationError || !integration?.api_key) {
+    return jsonResponse({ error: 'Add an OpenRouter API key in Settings before running prompts.' }, 400);
+  }
+
+  const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${integration.api_key}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': Deno.env.get('OPENROUTER_HTTP_REFERER') ?? req.headers.get('Origin') ?? 'https://promptstash.app',
+      'X-Title': Deno.env.get('OPENROUTER_APP_TITLE') ?? 'PromptStash',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature,
+      max_completion_tokens: maxCompletionTokens,
+      stream: false,
+    }),
+  });
+
+  const payload = await openRouterResponse.json().catch(() => null);
+
+  if (!openRouterResponse.ok) {
+    const providerMessage =
+      typeof payload?.error?.message === 'string'
+        ? payload.error.message
+        : 'OpenRouter request failed';
+    return jsonResponse(
+      { error: openRouterErrorMessage(openRouterResponse.status, providerMessage) },
+      openRouterResponse.status
+    );
+  }
+
+  const result = payload as OpenRouterChatResult;
+  const choice = result.choices?.[0];
+  const content = extractOpenRouterContent(choice?.message?.content);
+
+  return jsonResponse({
+    data: {
+      content,
+      model: result.model ?? model,
+      id: result.id ?? null,
+      finish_reason: choice?.finish_reason ?? null,
+      usage: result.usage ?? null,
+    },
+  });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  const url = new URL(req.url);
+  const path = url.pathname.replace('/functions/v1/api', '');
+
+  if (path.startsWith('/v1/openrouter/')) {
+    return handleOpenRouterRequest(req, path);
   }
 
   const authHeader = req.headers.get('Authorization');
@@ -71,9 +248,7 @@ serve(async (req) => {
   const rawKey = authHeader.replace('Bearer ', '');
   const keyHash = await hashKey(rawKey);
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = getSupabaseServiceClient();
 
   const { data: keyData, error: keyError } = await supabase
     .from('api_keys')
@@ -92,9 +267,6 @@ serve(async (req) => {
     .from('api_keys')
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', keyData.id);
-
-  const url = new URL(req.url);
-  const path = url.pathname.replace('/functions/v1/api', '');
 
   try {
     if (path === '/v1/prompts' && req.method === 'GET') {

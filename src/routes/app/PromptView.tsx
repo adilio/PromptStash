@@ -9,6 +9,7 @@ import { ShareDialog } from '@/components/ShareDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { VersionHistoryDialog } from '@/components/VersionHistoryDialog';
 import { Loading } from '@/components/Loading';
+import { PromptRunner } from '@/components/PromptRunner';
 import { getPrompt, deletePrompt } from '@/api/prompts';
 import { useToast } from '@/components/ui/use-toast';
 import { promptKeys } from '@/lib/queryClient';
@@ -167,6 +168,7 @@ export function PromptView() {
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-4xl mx-auto">
           <MarkdownViewer content={prompt.body_md} />
+          <PromptRunner prompt={prompt.body_md} />
         </div>
       </div>
 

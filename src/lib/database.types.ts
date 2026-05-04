@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      model_integrations: {
+        Row: {
+          api_key: string
+          created_at: string
+          key_prefix: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          key_prefix: string
+          provider: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          key_prefix?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       folders: {
         Row: {
           created_at: string
@@ -458,7 +485,24 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { invite_token: string }; Returns: string }
+      delete_openrouter_api_key: { Args: Record<PropertyKey, never>; Returns: undefined }
+      get_openrouter_integration_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          connected: boolean
+          key_prefix: string | null
+          updated_at: string | null
+        }[]
+      }
       is_team_member: { Args: { t_id: string }; Returns: boolean }
+      set_openrouter_api_key: {
+        Args: { openrouter_api_key: string }
+        Returns: {
+          connected: boolean
+          key_prefix: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
