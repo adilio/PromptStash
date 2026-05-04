@@ -5,6 +5,7 @@ import type { MockSupabaseQuery } from '../mocks/supabase';
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
+    rpc: vi.fn(),
     from: vi.fn(),
     auth: {
       getUser: vi.fn(),
@@ -20,10 +21,29 @@ describe('Teams API', () => {
       data: { user: { id: 'user1' } },
       error: null,
     });
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: [],
+      error: { code: '42883', message: 'Could not find function list_user_teams' },
+    });
   });
 
   describe('listTeams', () => {
-    it('should list teams for current user', async () => {
+    it('should list teams through the user teams RPC', async () => {
+      const mockTeams = [
+        { id: 'team1', name: 'Team 1' },
+        { id: 'team2', name: 'Team 2' },
+      ];
+
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: mockTeams, error: null });
+
+      const result = await listTeams();
+
+      expect(supabase.rpc).toHaveBeenCalledWith('list_user_teams');
+      expect(supabase.from).not.toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+    });
+
+    it('should fall back to direct queries when the RPC is not installed yet', async () => {
       const mockTeams = [
         { id: 'team1', name: 'Team 1' },
         { id: 'team2', name: 'Team 2' },
@@ -36,6 +56,7 @@ describe('Teams API', () => {
 
       const mockMembershipsQuery = {
         select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       };
 
@@ -50,6 +71,7 @@ describe('Teams API', () => {
       expect(mockTeamsQuery.select).toHaveBeenCalledWith('*');
       expect(mockTeamsQuery.order).toHaveBeenCalledWith('name', { ascending: true });
       expect(mockMembershipsQuery.select).toHaveBeenCalledWith('teams(*)');
+      expect(mockMembershipsQuery.eq).toHaveBeenCalledWith('user_id', 'user1');
       expect(result).toHaveLength(2);
     });
 
@@ -61,6 +83,7 @@ describe('Teams API', () => {
 
       const mockMembershipsQuery = {
         select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: [
             { teams: { id: 'team1', name: 'Adilio', created_at: '2024-01-01' } },
@@ -88,6 +111,7 @@ describe('Teams API', () => {
 
       const mockMembershipsQuery = {
         select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: [
             { teams: { id: 'team1', name: 'Adilio', created_at: '2024-01-01' } },

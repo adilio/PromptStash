@@ -14,14 +14,33 @@ function extractMembershipTeam(row: MembershipTeamRow): Team | null {
 }
 
 export async function listTeams(): Promise<Team[]> {
+  const { data: rpcTeams, error: rpcError } = await supabase.rpc('list_user_teams');
+
+  if (!rpcError) {
+    return (rpcTeams ?? []).sort((a: Team, b: Team) => a.name.localeCompare(b.name));
+  }
+
+  if (
+    !rpcError.message?.includes('list_user_teams') &&
+    !rpcError.message?.includes('schema cache') &&
+    rpcError.code !== '42883'
+  ) {
+    throw rpcError;
+  }
+
   const { data: ownedTeams, error: ownedTeamsError } = await supabase
     .from('teams')
     .select('*')
     .order('name', { ascending: true });
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data: memberships, error: membershipsError } = await supabase
     .from('memberships')
     .select('teams(*)')
+    .eq('user_id', user?.id ?? '')
     .order('created_at', { ascending: true });
 
   if (ownedTeamsError && membershipsError) {

@@ -19,6 +19,9 @@ create table public.memberships (
   primary key (team_id, user_id)
 );
 
+create index memberships_user_id_idx
+  on public.memberships (user_id);
+
 create table public.folders (
   id uuid primary key default gen_random_uuid(),
   team_id uuid references public.teams(id) on delete cascade,
@@ -167,6 +170,20 @@ returns boolean language sql stable as $$
     select 1 from public.memberships m
     where m.team_id = t_id and m.user_id = auth.uid()
   );
+$$;
+
+create or replace function public.list_user_teams()
+returns setof public.teams
+language sql
+security definer
+set search_path = public
+as $$
+  select distinct t.*
+  from public.teams t
+  left join public.memberships m on m.team_id = t.id
+  where t.owner_id = auth.uid()
+     or m.user_id = auth.uid()
+  order by t.name asc;
 $$;
 
 create or replace function public.accept_invite(invite_token uuid)
@@ -410,6 +427,7 @@ create policy "Users manage own api keys"
   with check (user_id = auth.uid());
 
 revoke all on public.model_integrations from anon, authenticated;
+grant execute on function public.list_user_teams() to authenticated;
 grant execute on function public.set_openrouter_api_key(text) to authenticated;
 grant execute on function public.get_openrouter_integration_status() to authenticated;
 grant execute on function public.delete_openrouter_api_key() to authenticated;

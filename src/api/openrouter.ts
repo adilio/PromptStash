@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage } from '@/lib/utils';
 
 export const OPENROUTER_MODELS = [
   { id: 'openai/gpt-4.1', label: 'OpenAI GPT-4.1' },
@@ -49,10 +50,25 @@ function normalizeStatus(value: unknown): OpenRouterStatus {
   };
 }
 
+function throwOpenRouterIntegrationError(error: unknown): never {
+  const message = getErrorMessage(error, 'Could not save OpenRouter key');
+
+  if (
+    message.includes('set_openrouter_api_key') ||
+    message.includes('get_openrouter_integration_status') ||
+    message.includes('delete_openrouter_api_key') ||
+    message.includes('schema cache')
+  ) {
+    throw new Error('OpenRouter setup is not installed yet. Apply the latest Supabase migrations and try again.');
+  }
+
+  throw new Error(message);
+}
+
 export async function getOpenRouterStatus(): Promise<OpenRouterStatus> {
   const { data, error } = await supabase.rpc('get_openrouter_integration_status');
 
-  if (error) throw error;
+  if (error) throwOpenRouterIntegrationError(error);
   return normalizeStatus(data);
 }
 
@@ -61,14 +77,14 @@ export async function setOpenRouterApiKey(apiKey: string): Promise<OpenRouterSta
     openrouter_api_key: apiKey,
   });
 
-  if (error) throw error;
+  if (error) throwOpenRouterIntegrationError(error);
   return normalizeStatus(data);
 }
 
 export async function deleteOpenRouterApiKey(): Promise<void> {
   const { error } = await supabase.rpc('delete_openrouter_api_key');
 
-  if (error) throw error;
+  if (error) throwOpenRouterIntegrationError(error);
 }
 
 export async function runPromptWithOpenRouter(input: RunPromptInput): Promise<RunPromptResult> {

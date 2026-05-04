@@ -495,6 +495,7 @@ export type Database = {
         }[]
       }
       is_team_member: { Args: { t_id: string }; Returns: boolean }
+      list_user_teams: { Args: Record<PropertyKey, never>; Returns: Database['public']['Tables']['teams']['Row'][] }
       set_openrouter_api_key: {
         Args: { openrouter_api_key: string }
         Returns: {
