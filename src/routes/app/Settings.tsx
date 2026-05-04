@@ -465,7 +465,7 @@ export function Settings() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Could not save OpenRouter key',
+        description: getErrorMessage(error, 'Could not save OpenRouter key'),
         variant: 'destructive',
       });
     } finally {
@@ -483,7 +483,7 @@ export function Settings() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Could not remove OpenRouter key',
+        description: getErrorMessage(error, 'Could not remove OpenRouter key'),
         variant: 'destructive',
       });
     } finally {
