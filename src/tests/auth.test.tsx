@@ -125,4 +125,27 @@ describe('Authentication', () => {
     expect(createTeam).toHaveBeenCalledWith('Personal Workspace');
     expect(window.localStorage.getItem('promptstash.currentTeamId')).toBe('new-team');
   });
+
+  it('should render the app even if workspace loading stalls', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-1' } as MockUser,
+          access_token: 'token',
+        },
+      },
+      error: null,
+    });
+    vi.mocked(listTeams).mockImplementation(
+      () => new Promise(() => {
+        // Simulates a Supabase request that never resolves.
+      })
+    );
+
+    renderAppLayout();
+
+    await waitFor(() => {
+      expect(screen.getByText('Sidebar')).toBeInTheDocument();
+    });
+  });
 });

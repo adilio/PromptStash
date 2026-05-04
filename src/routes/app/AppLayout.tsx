@@ -162,8 +162,10 @@ export function AppLayout() {
         return;
       }
 
-      await ensureWorkspace();
       setLoading(false);
+      void ensureWorkspace().catch((workspaceError) => {
+        console.error('Workspace setup failed:', workspaceError);
+      });
     } catch (error) {
       console.error('Auth check failed:', error);
       setLoading(false);
