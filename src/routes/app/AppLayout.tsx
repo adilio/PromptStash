@@ -11,6 +11,8 @@ import { TemplateGallery } from '@/components/TemplateGallery';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import type { Stage } from '@/lib/types';
 
+const CURRENT_TEAM_STORAGE_KEY = 'promptstash.currentTeamId';
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -47,7 +49,9 @@ function BrandMark({ size = 20 }: { size?: number }) {
 
 export function AppLayout() {
   const [loading, setLoading] = useState(true);
-  const [currentTeamId, setCurrentTeamId] = useState<string>();
+  const [currentTeamId, setCurrentTeamIdState] = useState<string | undefined>(() => {
+    return window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY) ?? undefined;
+  });
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [folderDropHandler, setFolderDropHandler] = useState<((folderId: string | null) => void) | undefined>();
@@ -56,6 +60,11 @@ export function AppLayout() {
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const setCurrentTeamId = (teamId: string) => {
+    window.localStorage.setItem(CURRENT_TEAM_STORAGE_KEY, teamId);
+    setCurrentTeamIdState(teamId);
+  };
 
   useEffect(() => {
     const handleResize = () => {

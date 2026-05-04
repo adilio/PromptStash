@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
 
 describe('Utils', () => {
   describe('cn (className utility)', () => {
@@ -51,6 +51,20 @@ describe('Utils', () => {
       expect(result).toContain('class1');
       expect(result).toContain('class2');
       expect(result).not.toContain('class3');
+    });
+  });
+
+  describe('getErrorMessage', () => {
+    it('should read messages from Error instances', () => {
+      expect(getErrorMessage(new Error('Boom'))).toBe('Boom');
+    });
+
+    it('should read messages from Supabase-style error objects', () => {
+      expect(getErrorMessage({ message: 'RLS blocked this row' })).toBe('RLS blocked this row');
+    });
+
+    it('should fall back for unknown values', () => {
+      expect(getErrorMessage(null, 'Fallback')).toBe('Fallback');
     });
   });
 });

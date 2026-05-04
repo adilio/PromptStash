@@ -196,7 +196,7 @@ export function Sidebar({
     try {
       const data = await listTeams();
       setTeams(data);
-      if (data.length > 0 && !currentTeamId) {
+      if (data.length > 0 && (!currentTeamId || !data.some((team) => team.id === currentTeamId))) {
         onTeamChange?.(data[0].id);
       }
     } catch (error) {

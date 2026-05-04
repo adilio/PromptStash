@@ -8,6 +8,7 @@ import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
 import { listPrompts } from '@/api/prompts';
 import { getApiBaseUrl } from '@/lib/api';
 import { generateEspansoYaml } from '@/lib/espanso';
+import { getErrorMessage } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import { useShowAdvanced } from '@/lib/preferences';
@@ -324,7 +325,7 @@ export function Settings() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     }
@@ -343,7 +344,7 @@ export function Settings() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: getErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -723,8 +724,10 @@ export function Settings() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {teams.map((team) => (
-                  <div
+                  <button
                     key={team.id}
+                    type="button"
+                    onClick={() => setCurrentTeamId?.(team.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -733,6 +736,9 @@ export function Settings() {
                       border: '1px solid var(--ps-hairline)',
                       borderRadius: 8,
                       background: team.id === currentTeamId ? 'var(--ps-accent-soft)' : 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      width: '100%',
                     }}
                   >
                     <div>
@@ -757,7 +763,7 @@ export function Settings() {
                         Current
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </SettingsCard>

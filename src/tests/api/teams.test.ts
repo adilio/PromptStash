@@ -29,19 +29,82 @@ describe('Teams API', () => {
         { id: 'team2', name: 'Team 2' },
       ];
 
-      const mockQuery = {
+      const mockTeamsQuery = {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockTeams, error: null }),
       };
 
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as MockSupabaseQuery);
+      const mockMembershipsQuery = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      vi.mocked(supabase.from)
+        .mockReturnValueOnce(mockTeamsQuery as MockSupabaseQuery)
+        .mockReturnValueOnce(mockMembershipsQuery as MockSupabaseQuery);
 
       const result = await listTeams();
 
       expect(supabase.from).toHaveBeenCalledWith('teams');
-      expect(mockQuery.select).toHaveBeenCalledWith('*');
-      expect(mockQuery.order).toHaveBeenCalledWith('name', { ascending: true });
+      expect(supabase.from).toHaveBeenCalledWith('memberships');
+      expect(mockTeamsQuery.select).toHaveBeenCalledWith('*');
+      expect(mockTeamsQuery.order).toHaveBeenCalledWith('name', { ascending: true });
+      expect(mockMembershipsQuery.select).toHaveBeenCalledWith('teams(*)');
       expect(result).toHaveLength(2);
+    });
+
+    it('should include teams available through memberships', async () => {
+      const mockTeamsQuery = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+
+      const mockMembershipsQuery = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            { teams: { id: 'team1', name: 'Adilio', created_at: '2024-01-01' } },
+          ],
+          error: null,
+        }),
+      };
+
+      vi.mocked(supabase.from)
+        .mockReturnValueOnce(mockTeamsQuery as MockSupabaseQuery)
+        .mockReturnValueOnce(mockMembershipsQuery as MockSupabaseQuery);
+
+      const result = await listTeams();
+
+      expect(result).toEqual([
+        { id: 'team1', name: 'Adilio', created_at: '2024-01-01' },
+      ]);
+    });
+
+    it('should use membership teams if direct team listing fails', async () => {
+      const mockTeamsQuery = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'Direct list failed' } }),
+      };
+
+      const mockMembershipsQuery = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            { teams: { id: 'team1', name: 'Adilio', created_at: '2024-01-01' } },
+          ],
+          error: null,
+        }),
+      };
+
+      vi.mocked(supabase.from)
+        .mockReturnValueOnce(mockTeamsQuery as MockSupabaseQuery)
+        .mockReturnValueOnce(mockMembershipsQuery as MockSupabaseQuery);
+
+      const result = await listTeams();
+
+      expect(result).toEqual([
+        { id: 'team1', name: 'Adilio', created_at: '2024-01-01' },
+      ]);
     });
   });
 

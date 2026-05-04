@@ -1,14 +1,46 @@
 import { supabase } from '@/lib/supabase';
 import type { Team, Membership } from '@/lib/types';
 
+type MembershipTeamRow = {
+  teams: Team | Team[] | null;
+};
+
+function extractMembershipTeam(row: MembershipTeamRow): Team | null {
+  if (Array.isArray(row.teams)) {
+    return row.teams[0] ?? null;
+  }
+
+  return row.teams;
+}
+
 export async function listTeams(): Promise<Team[]> {
-  const { data, error } = await supabase
+  const { data: ownedTeams, error: ownedTeamsError } = await supabase
     .from('teams')
     .select('*')
     .order('name', { ascending: true });
 
-  if (error) throw error;
-  return data;
+  const { data: memberships, error: membershipsError } = await supabase
+    .from('memberships')
+    .select('teams(*)')
+    .order('created_at', { ascending: true });
+
+  if (ownedTeamsError && membershipsError) {
+    throw ownedTeamsError;
+  }
+
+  const teamsById = new Map<string, Team>();
+
+  for (const team of ownedTeamsError ? [] : (ownedTeams ?? [])) {
+    teamsById.set(team.id, team);
+  }
+
+  for (const team of (membershipsError ? [] : ((memberships as MembershipTeamRow[] | null) ?? []))
+    .map(extractMembershipTeam)
+    .filter((team): team is Team => !!team)) {
+    teamsById.set(team.id, team);
+  }
+
+  return Array.from(teamsById.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getTeam(id: string): Promise<Team> {
