@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { createTeam, listTeams } from '@/api/teams';
 import { Shell } from '@/components/Shell';
 import { Sidebar } from '@/components/Sidebar';
 import { Loading } from '@/components/Loading';
@@ -12,6 +13,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import type { Stage } from '@/lib/types';
 
 const CURRENT_TEAM_STORAGE_KEY = 'promptstash.currentTeamId';
+const DEFAULT_WORKSPACE_NAME = 'Personal Workspace';
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -64,6 +66,21 @@ export function AppLayout() {
   const setCurrentTeamId = (teamId: string) => {
     window.localStorage.setItem(CURRENT_TEAM_STORAGE_KEY, teamId);
     setCurrentTeamIdState(teamId);
+  };
+
+  const ensureWorkspace = async () => {
+    const teams = await listTeams();
+    const storedTeamId = window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY) ?? undefined;
+
+    if (teams.length === 0) {
+      const team = await createTeam(DEFAULT_WORKSPACE_NAME);
+      setCurrentTeamId(team.id);
+      return;
+    }
+
+    if (!storedTeamId || !teams.some((team) => team.id === storedTeamId)) {
+      setCurrentTeamId(teams[0].id);
+    }
   };
 
   useEffect(() => {
@@ -145,10 +162,11 @@ export function AppLayout() {
         return;
       }
 
+      await ensureWorkspace();
       setLoading(false);
     } catch (error) {
       console.error('Auth check failed:', error);
-      navigate('/signin');
+      setLoading(false);
     }
   };
 

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { AppLayout } from '../routes/app/AppLayout';
 import { supabase } from '../lib/supabase';
+import { createTeam, listTeams } from '@/api/teams';
 import type { MockUser } from './mocks/supabase';
 
 // Mock Supabase
@@ -14,6 +15,11 @@ vi.mock('../lib/supabase', () => ({
       signOut: vi.fn(),
     },
   },
+}));
+
+vi.mock('@/api/teams', () => ({
+  createTeam: vi.fn(),
+  listTeams: vi.fn(),
 }));
 
 // Mock child components
@@ -49,6 +55,15 @@ function renderAppLayout() {
 describe('Authentication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
+    vi.mocked(listTeams).mockResolvedValue([
+      {
+        id: 'team-1',
+        name: 'Existing Workspace',
+        owner_id: 'user-1',
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ]);
   });
 
   it('should redirect to signin when not authenticated', async () => {
@@ -80,5 +95,34 @@ describe('Authentication', () => {
     await waitFor(() => {
       expect(screen.getByText('Sidebar')).toBeInTheDocument();
     });
+    expect(createTeam).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('promptstash.currentTeamId')).toBe('team-1');
+  });
+
+  it('should create a personal workspace for a first-run user', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-1' } as MockUser,
+          access_token: 'token',
+        },
+      },
+      error: null,
+    });
+    vi.mocked(listTeams).mockResolvedValue([]);
+    vi.mocked(createTeam).mockResolvedValue({
+      id: 'new-team',
+      name: 'Personal Workspace',
+      owner_id: 'user-1',
+      created_at: '2024-01-01T00:00:00Z',
+    });
+
+    renderAppLayout();
+
+    await waitFor(() => {
+      expect(screen.getByText('Sidebar')).toBeInTheDocument();
+    });
+    expect(createTeam).toHaveBeenCalledWith('Personal Workspace');
+    expect(window.localStorage.getItem('promptstash.currentTeamId')).toBe('new-team');
   });
 });
