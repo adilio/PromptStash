@@ -194,7 +194,7 @@ export function PromptEditor() {
         for (const tag of addedTags) await addTagToPrompt(promptId, tag.id);
         const removedTags = prevTags.filter((p) => !tags.find((t) => t.id === p.id));
         for (const tag of removedTags) await removeTagFromPrompt(promptId, tag.id);
-      } catch (error) {
+      } catch {
         setSelectedTags(prevTags);
         toast({ title: 'Error', description: 'Failed to update tags', variant: 'destructive' });
       }
