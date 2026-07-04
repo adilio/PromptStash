@@ -3,6 +3,147 @@
 This file is both a plan and a live progress tracker. Update task status as you work.
 After completing each issue, commit and push to `main`.
 
+## Validated status (2026-07-04)
+
+The task checkboxes below all read `[ ]`, but git history shows the QRSPI-first
+buildout **already shipped** — stage typing, auto-disclosed filter chips, the
+template gallery (starter-first, QRSPI as an advanced option), bundles, token
+budgeting, and Learn docs are all in `main`. That shipped set is the **baseline**
+the work below refines; treat it as archived/done, not pending:
+
+- **QRSPI / stage / template / bundle / token-budget features — DONE** (baseline).
+- **Issue #16 (neutralize the QRSPI-first UX) — partially landed, still forward
+  work.** The plan doc was made pattern-neutral (`a14efdf`) and the gallery was
+  reordered, but the UI-neutralization acceptance strings ("Workflow label"
+  rename, the "one practitioner model" disclaimer, the renamed advanced toggle)
+  are not yet in `src/`.
+- **Issue #17 (custom workflow patterns + labels) — not built.** No
+  `workflow_patterns` migration, no `PatternPicker`, no `src/api/patterns.ts`.
+
+## Brand & design — 4dl
+
+PromptStash ships as a **4dl-branded app** at `promptstash.4dl.ca`. The core 4dl
+mark is a **stylized "4" with a down-arrow**, minimalist and **monochrome**
+(pure `#000000` / `#ffffff`) — high contrast and iconographic. Individual apps
+theme that mark for their own identity (e.g. `worldcup.4dl.ca` wraps it in a
+soccer ball); the soccer ball is **worldcup's theme, not the 4dl brand**.
+
+Reference for the mark's style and construction (note: the ball is the
+worldcup-specific treatment — draw from the "4" + down-arrow, not the ball):
+`https://github.com/adilio/assets/blob/main/4dl_soccer_icon_image_match.svg`
+
+Any new PromptStash brand asset (social card, favicon, OG image) should carry the
+core monochrome "4" + down-arrow mark in a PromptStash-appropriate treatment (no
+soccer motif), and must not clash with the existing in-app palette (the `--ps-*`
+CSS variables).
+
+## Social card & SEO — finish the started work
+
+A half-finished social-card / SEO feature is sitting uncommitted in the working
+tree (`index.html` + `public/social-card.svg`): Open Graph and Twitter meta tags
+were added, but they reference a `social-card.png` (1200×630) that was **never
+generated** — only the SVG exists, and Slack, iMessage, and X won't render an SVG
+OG image.
+
+- **Scope:** design a 1200×630 social card in the 4dl brand (above), rasterize it
+  to `public/social-card.png`, keep `social-card.svg` as the editable source, and
+  commit the `index.html` meta tags alongside both assets.
+- **Guardrails:** the OG image must be PNG/JPG, not SVG; `og:image:width`/`height`
+  must stay accurate (1200×630); `og:url` (`https://promptstash.4dl.ca`) must match
+  the live domain; verify in a link-preview validator before calling it done.
+- **Done when:** pasting the site URL into Slack/X/iMessage shows the branded card;
+  `index.html` + `social-card.svg` + `social-card.png` are committed together.
+
+## Executing this with Fable
+
+Guidance for the Fable agent that will implement the work below.
+
+- **Effort:** run at `high`/`xhigh`; give each item its full spec in one opening
+  turn — Fable does its best long-horizon work from a complete brief, not a
+  drip-feed.
+- **No refusal risk here.** This is a prompt-management app, not security tooling —
+  do **not** add the QRCheck-style `fallbacks` / `server-side-fallback` boilerplate;
+  it isn't needed.
+- **Fable under-reaches for tools/subagents by default** — when an item fans out
+  (e.g. the DB → API → UI slices of a feature), tell it explicitly to parallelize.
+- **Supabase / auth / migration safety** (P0 and #17 both touch DB and auth):
+  reproduce before changing anything; never drop the `stage` column or any existing
+  column; enable RLS on new tables and mirror the `prompts` access model (team
+  members read; editor/owner write); test every migration against a scratch project
+  before `main`. The **"Rules for the agent"** section below is authoritative for
+  coding conventions (inline `--ps-*` styles, TanStack Query, `Dialog`/`useToast`).
+- **Verify each item:** `npx tsc --noEmit` clean + `vitest` green, plus the item's
+  own manual smoke steps, before committing.
+
+## Fable work — priority order
+
+1. **P0 — Auth & session persistence** (investigate first; users are actively
+   affected).
+2. **P1 — Complete OpenRouter support** (GitHub #17).
+3. **Social card & SEO** (above) + **Issue #16** (finish the QRSPI neutralization).
+4. **Issue #17** (custom workflow patterns + labels).
+5. **Bigger bets — later** (end of file) — only after 1–4.
+
+## P0 — Auth & session persistence (investigate first)
+
+**Reported by users:** (1) their data isn't retained between sessions, and
+(2) Google social login sometimes just fails. Top priority — it's a live
+data-integrity / trust problem. This area has a history of fragility
+(`b8de1ad` workspace loading, `5e8eb57` avoid blocking login on workspace setup,
+`f1252e4` default workspace on first run, `382197b` harden workspace loading).
+
+**Investigate and root-cause before changing code.** Concrete leads in the codebase
+(starting points, not conclusions):
+
+- **PKCE callback (login flakiness).** `src/lib/supabase.ts` sets
+  `persistSession`/`autoRefreshToken: true` but no explicit `flowType` /
+  `detectSessionInUrl`, and the custom `/auth/callback` route (`AuthCallback`, wired
+  in `src/main.tsx`) shows no `exchangeCodeForSession` call. If the callback doesn't
+  reliably exchange the OAuth code for a session (or races the React Router render),
+  login intermittently fails. Verify the callback completes the PKCE exchange before
+  the app reads the session.
+- **Redirect URL mismatch.** `src/routes/auth/SignIn.tsx` builds `redirectTo` from
+  `window.location.origin` (`/auth/callback?next=...`). Confirm the production origin
+  (`https://promptstash.4dl.ca`) is listed **exactly** in both Supabase Auth →
+  Redirect URLs and Google OAuth → Authorized redirect URIs (watch www vs apex,
+  trailing slash, Netlify preview domains). Mismatch here is the most common cause of
+  intermittent OAuth failure.
+- **Workspace race (the "not saved" symptom).** `src/routes/app/AppLayout.tsx` calls
+  `void ensureWorkspace().catch(...)` — fire-and-forget, not awaited. The likely root
+  cause of "stuff isn't saved" is **not** lost data but an unstable workspace
+  association: data written under a default workspace that isn't reliably re-loaded,
+  or a fresh one created each visit. **First disambiguate in the DB:** is the user's
+  data actually present in Supabase after a session? That tells you whether the bug
+  is write-side (RLS/session) or read-side (workspace loading).
+- **RLS silent failures.** If `auth.uid()` is null during a flaky session, writes are
+  silently rejected by RLS and look "not saved." Check whether failed writes surface
+  any error to the user.
+
+- **Guardrails:** reproduce end-to-end with a real Google login (log in → create a
+  prompt → close browser → reopen → log in again) before and after the fix; verify
+  against the DB, not just the UI; don't paper over the race with retries — fix the
+  session/workspace association.
+- **Done when:** Google login succeeds reliably; the session persists across a full
+  browser-close/reopen; a user's prompts/workspace are identical across logins,
+  confirmed in the database; and a regression test covers the auth/session path.
+
+## P1 — Complete OpenRouter support (GitHub #17)
+
+The OpenRouter model-gateway MVP shipped (`81fcfa4`); GitHub issue #17 ("Expand
+OpenRouter support with model comparison and run history") completes it.
+
+- **Scope:** model comparison (run a prompt against multiple OpenRouter models
+  side-by-side) and run history (persist past runs — model, prompt version, output,
+  tokens/cost, timestamp — and let users revisit them).
+- **Data model:** new table(s) for run history with RLS mirroring `prompts` access;
+  preserve the existing OpenRouter key handling (`b70396b` surfaces real key errors).
+- **Guardrails:** never persist the raw OpenRouter key; comparison runs must be
+  cancellable and must not block the editor; token/cost figures are estimates — label
+  them as such (consistent with the app's existing budget-gauge framing).
+- **Done when:** a user can run one prompt across ≥2 models and see outputs +
+  token/cost side by side, and can reopen a past run from history; types clean,
+  tests green.
+
 ## Product direction
 
 PromptStash should be the place where people keep, shape, and reuse the context they give AI tools. That includes ordinary prompts, repo instruction files, agent rules, workflow harnesses, specs, checklists, and team conventions.
@@ -565,3 +706,27 @@ Scan connected repos for existing instruction files and show drift, duplication,
 ### Versioned method packs
 
 Treat built-in methods as versioned packs. A team can fork "QRSPI v1", "Spec Kit v1", or "Kiro steering v1", then edit their copy without future app updates changing their workflow.
+
+---
+
+## Bigger bets — later (vision)
+
+Longest-horizon direction, captured so it isn't lost. **Do not start until the
+priority queue (P0, P1) and Issues #16/#17 are cleared.** These extend the
+"context control plane" thesis in `FUTURE.md` and complement the method-pack /
+drift-scan ideas already sketched above.
+
+- **Repo-level sync (push/pull) for instruction files.** Author `AGENTS.md`,
+  `CLAUDE.md`, `GEMINI.md`, Copilot/Cursor rules once in PromptStash and push/pull
+  them to connected repos, with traceability (which version is deployed where).
+  Highest-leverage bet — it turns PromptStash from a store into a control plane.
+- **Linting / eval for agent rules.** Validate instruction files against
+  format/spec conventions and flag vague or conflicting rules (Claude's own memory
+  docs note vague instructions are less reliable) — a differentiator no personal
+  prompt library offers.
+- **AGENTS.md as the hub format.** First-class understanding of the AGENTS.md
+  standard (nested files, precedence) as the neutral anchor, with `CLAUDE.md` and
+  Copilot instructions as first-class side formats.
+
+Each is a multi-issue effort. When one is picked up, break it into its own issue
+block with the same Fable-execution shaping as the priority items above.
