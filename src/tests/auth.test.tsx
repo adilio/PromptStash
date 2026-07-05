@@ -13,6 +13,9 @@ vi.mock('../lib/supabase', () => ({
     auth: {
       getSession: vi.fn(),
       signOut: vi.fn(),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      })),
     },
   },
 }));
@@ -126,7 +129,8 @@ describe('Authentication', () => {
     expect(window.localStorage.getItem('promptstash.currentTeamId')).toBe('new-team');
   });
 
-  it('should render the app even if workspace loading stalls', async () => {
+  it('renders immediately from the remembered workspace even if validation stalls', async () => {
+    window.localStorage.setItem('promptstash.currentTeamId', 'team-1');
     vi.mocked(supabase.auth.getSession).mockResolvedValue({
       data: {
         session: {
@@ -147,5 +151,26 @@ describe('Authentication', () => {
     await waitFor(() => {
       expect(screen.getByText('Sidebar')).toBeInTheDocument();
     });
+  });
+
+  it('surfaces a retryable error instead of a broken app when first-run workspace loading fails', async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-1' } as MockUser,
+          access_token: 'token',
+        },
+      },
+      error: null,
+    });
+    vi.mocked(listTeams).mockRejectedValue(new Error('network down'));
+
+    renderAppLayout();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Couldn't load your workspace/)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(createTeam).not.toHaveBeenCalled();
   });
 });

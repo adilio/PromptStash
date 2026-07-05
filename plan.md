@@ -84,7 +84,39 @@ Guidance for the Fable agent that will implement the work below.
 4. **Issue #17** (custom workflow patterns + labels).
 5. **Bigger bets — later** (end of file) — only after 1–4.
 
-## P0 — Auth & session persistence (investigate first)
+## ✅ P0 — Auth & session persistence — ROOT-CAUSED & FIXED (2026-07-04)
+
+**What the investigation found (verified against the live Supabase project):**
+
+1. **The Supabase project was PAUSED (`INACTIVE`)** — free-tier auto-pause after
+   inactivity. While paused, every login and every read/write fails outright.
+   Restored via the Management API; a scheduled GitHub Action
+   (`.github/workflows/supabase-keepalive.yml`, secret `SUPABASE_ANON_KEY`) now
+   pings REST twice a week so it can't pause again.
+2. **`site_url` in Supabase auth config had two leading spaces**
+   (`'  https://promptstash.4dl.ca/'`) → malformed fallback redirects for every
+   flow that falls back to site_url. Fixed via Management API PATCH.
+3. **OAuth ran on the implicit flow** (supabase-js default) — the PKCE exchange
+   branch in AuthCallback was dead code, and login success depended on hash
+   parsing winning a 3s race. Client now sets `flowType: 'pkce'`;
+   AuthCallback tolerates the auto-exchange/manual-exchange overlap.
+4. **Workspace association was fire-and-forget** — DB check confirmed one real
+   user (andrew@) has NO workspace row: `ensureWorkspace()` failed silently and
+   everything he did was unsavable. Workspace resolution is now
+   `resolveWorkspaceId` (`src/lib/workspace.ts`): stored id validated, else
+   OLDEST team (stable across devices), create-only-on-successful-empty-list
+   (a transient error can no longer fork data into a duplicate workspace).
+   First-run blocks render until the workspace settles (10s timeout → retry
+   UI); remembered-workspace path still renders instantly. SIGNED_OUT events
+   now navigate to /signin instead of leaving a silently broken app.
+5. Data-side check: no duplicate workspaces exist; total prod data was 1 prompt
+   (adilio). The second "Gilbert" account is two different sign-in emails
+   (github vs google) — separate accounts by design, not a bug.
+
+6 new regression tests (workspace resolution + first-run failure UI). Still to
+confirm manually once deployed: a real Google login end-to-end.
+
+## P0 (original spec) — Auth & session persistence (investigate first)
 
 **Reported by users:** (1) their data isn't retained between sessions, and
 (2) Google social login sometimes just fails. Top priority — it's a live

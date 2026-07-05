@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { createTeam, listTeams } from '@/api/teams';
+import { resolveWorkspaceId, CURRENT_TEAM_STORAGE_KEY } from '@/lib/workspace';
 import { Shell } from '@/components/Shell';
 import { Sidebar } from '@/components/Sidebar';
 import { Loading } from '@/components/Loading';
@@ -11,9 +11,6 @@ import { ShortcutsHelp } from '@/components/ShortcutsHelp';
 import { TemplateGallery } from '@/components/TemplateGallery';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import type { Stage } from '@/lib/types';
-
-const CURRENT_TEAM_STORAGE_KEY = 'promptstash.currentTeamId';
-const DEFAULT_WORKSPACE_NAME = 'Personal Workspace';
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -51,6 +48,7 @@ function BrandMark({ size = 20 }: { size?: number }) {
 
 export function AppLayout() {
   const [loading, setLoading] = useState(true);
+  const [workspaceError, setWorkspaceError] = useState('');
   const [currentTeamId, setCurrentTeamIdState] = useState<string | undefined>(() => {
     return window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY) ?? undefined;
   });
@@ -68,18 +66,24 @@ export function AppLayout() {
     setCurrentTeamIdState(teamId);
   };
 
-  const ensureWorkspace = async () => {
-    const teams = await listTeams();
+  const ensureWorkspace = async (timeoutMs?: number) => {
     const storedTeamId = window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY) ?? undefined;
 
-    if (teams.length === 0) {
-      const team = await createTeam(DEFAULT_WORKSPACE_NAME);
-      setCurrentTeamId(team.id);
-      return;
-    }
+    const resolution = resolveWorkspaceId(storedTeamId);
+    const teamId = timeoutMs
+      ? await Promise.race([
+          resolution,
+          new Promise<never>((_resolve, reject) => {
+            window.setTimeout(
+              () => reject(new Error('Loading your workspace timed out. Check your connection and try again.')),
+              timeoutMs
+            );
+          }),
+        ])
+      : await resolution;
 
-    if (!storedTeamId || !teams.some((team) => team.id === storedTeamId)) {
-      setCurrentTeamId(teams[0].id);
+    if (teamId !== storedTeamId) {
+      setCurrentTeamId(teamId);
     }
   };
 
@@ -126,6 +130,19 @@ export function AppLayout() {
 
   useEffect(() => {
     checkAuth();
+
+    // Keep the app in sync with the auth session: a sign-out (or a failed
+    // token refresh) must not leave the user on a silently broken app where
+    // every write is rejected by RLS.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        navigate('/signin');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -162,18 +179,103 @@ export function AppLayout() {
         return;
       }
 
+      const storedTeamId = window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY);
+
+      if (storedTeamId) {
+        // Fast path: render immediately with the remembered workspace and
+        // re-validate it in the background (it may have been deleted or the
+        // user removed from it).
+        setLoading(false);
+        void ensureWorkspace().catch((error) => {
+          console.error('Workspace validation failed:', error);
+        });
+        return;
+      }
+
+      // No remembered workspace (first run or a new device): the app must
+      // not render writable UI until the workspace association is settled —
+      // this was the root of data appearing to vanish between sessions.
+      try {
+        await ensureWorkspace(10_000);
+      } catch (error) {
+        console.error('Workspace setup failed:', error);
+        setWorkspaceError(
+          error instanceof Error ? error.message : 'Could not load your workspace.'
+        );
+      }
       setLoading(false);
-      void ensureWorkspace().catch((workspaceError) => {
-        console.error('Workspace setup failed:', workspaceError);
-      });
     } catch (error) {
       console.error('Auth check failed:', error);
       setLoading(false);
     }
   };
 
+  const retryWorkspace = async () => {
+    setWorkspaceError('');
+    setLoading(true);
+    try {
+      await ensureWorkspace(10_000);
+    } catch (error) {
+      setWorkspaceError(
+        error instanceof Error ? error.message : 'Could not load your workspace.'
+      );
+    }
+    setLoading(false);
+  };
+
   if (loading) {
     return <Loading />;
+  }
+
+  if (workspaceError && !currentTeamId) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--ps-bg)',
+          color: 'var(--ps-fg)',
+          padding: 24,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 420,
+            width: '100%',
+            border: '1px solid var(--ps-hairline)',
+            background: 'var(--ps-bg-elev)',
+            borderRadius: 12,
+            padding: '28px 24px',
+            textAlign: 'center',
+          }}
+        >
+          <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>Couldn&apos;t load your workspace</h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--ps-fg-faint)' }}>
+            {workspaceError}
+          </p>
+          <button
+            type="button"
+            onClick={() => void retryWorkspace()}
+            style={{
+              appearance: 'none',
+              border: '1px solid var(--ps-hairline)',
+              background: 'var(--ps-accent)',
+              color: 'var(--ps-bg)',
+              borderRadius: 8,
+              padding: '10px 18px',
+              fontFamily: 'inherit',
+              fontSize: 13.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

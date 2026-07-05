@@ -64,7 +64,13 @@ export function AuthCallback() {
 
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) throw exchangeError;
+        if (exchangeError) {
+          // detectSessionInUrl may have already exchanged this code during
+          // client initialization — a failed second exchange is only fatal
+          // if no session actually got stored.
+          const session = await waitForStoredSession();
+          if (!session) throw exchangeError;
+        }
       } else {
         const session = await waitForStoredSession();
         if (!session) {
