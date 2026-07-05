@@ -7,6 +7,7 @@ import { PromptCardSkeleton } from '@/components/PromptCardSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ExportImportDialog } from '@/components/ExportImportDialog';
 import { ConceptInfo } from '@/components/ConceptInfo';
+import { workflowBadgeFor, distinctWorkflowLabels } from '@/lib/workflowDisplay';
 import { listPrompts, deletePrompt, updatePrompt } from '@/api/prompts';
 import { listFolders } from '@/api/folders';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -16,9 +17,8 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useDragPreview } from '@/hooks/useDragPreview';
 import { useShowAdvanced } from '@/lib/preferences';
 import { promptKeys } from '@/lib/queryClient';
-import { STAGE_OPTIONS } from '@/lib/types';
 import { estimateTokens } from '@/lib/tokens';
-import type { PromptWithTags, Folder, Tag as TagType, Stage } from '@/lib/types';
+import type { PromptWithTags, Folder, Tag as TagType } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 interface ContextType {
@@ -65,8 +65,7 @@ function PromptListRow({
   const navigate = useNavigate();
   const tags = prompt.tags ?? [];
   const preview = prompt.body_md.slice(0, 90).replace(/\n/g, ' ');
-  const stage = (prompt as { stage?: string | null }).stage;
-  const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
+  const workflowBadge = workflowBadgeFor(prompt as { workflow_label?: string | null; stage?: string | null });
   const tokenCount = prompt.body_md.length > 1000 ? estimateTokens(prompt.body_md) : null;
 
   return (
@@ -122,19 +121,19 @@ function PromptListRow({
       </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        {stageOption && (
+        {workflowBadge && (
           <span
             style={{
               fontSize: 10,
               padding: '1px 5px',
               borderRadius: 4,
-              background: stageOption.color,
+              background: workflowBadge.color,
               color: '#fff',
               fontWeight: 500,
               flexShrink: 0,
             }}
           >
-            {stageOption.short}
+            {workflowBadge.label}
           </span>
         )}
         <span
@@ -421,10 +420,10 @@ export function Dashboard() {
   const [availableTags, setAvailableTags] = useState<TagType[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [selectedStages, setSelectedStages] = useState<Stage[]>(() => {
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(() => {
     const stagesParam = searchParams.get('stages');
     if (stagesParam) {
-      return stagesParam.split(',') as Stage[];
+      return stagesParam.split(',');
     }
     return [];
   });
@@ -454,13 +453,14 @@ export function Dashboard() {
         .from('prompts')
         .select('*', { count: 'exact', head: true })
         .eq('team_id', currentTeamId)
-        .not('stage', 'is', null);
+        .or('stage.not.is.null,workflow_label.not.is.null');
       return (count ?? 0) > 0;
     },
     enabled: !!currentTeamId,
   });
   const hasAnyStagedPrompt = hasAnyStagedPromptQuery.data ?? false;
-  const showStageFilters = hasAnyStagedPrompt || showAdvanced;
+  const workflowLabelOptions = useMemo(() => distinctWorkflowLabels(prompts), [prompts]);
+  const showStageFilters = (hasAnyStagedPrompt || showAdvanced) && workflowLabelOptions.length > 0;
 
   const deletePromptMutation = useMutation({
     mutationFn: deletePrompt,
@@ -493,14 +493,14 @@ export function Dashboard() {
         return selectedTags.every((id) => promptTagIds.includes(id));
       });
     }
-    if (selectedStages.length > 0) {
+    if (selectedLabels.length > 0) {
       list = list.filter((p) => {
-        const promptStage = (p as { stage?: string | null }).stage;
-        return promptStage && selectedStages.includes(promptStage as Stage);
+        const badge = workflowBadgeFor(p as { workflow_label?: string | null; stage?: string | null });
+        return badge !== null && selectedLabels.includes(badge.label);
       });
     }
     return list;
-  }, [prompts, selectedFolder, selectedTags, selectedStages]);
+  }, [prompts, selectedFolder, selectedTags, selectedLabels]);
 
   const navigateToNewPrompt = () => {
     const activeFolderId = selectedFolder ?? currentFolderId;
@@ -513,16 +513,16 @@ export function Dashboard() {
     setCurrentFolderId?.(nextFolderId);
   };
 
-  const handleStageToggle = (stage: Stage) => {
-    let newStages: Stage[];
-    if (selectedStages.includes(stage)) {
-      newStages = selectedStages.filter(s => s !== stage);
+  const handleLabelToggle = (label: string) => {
+    let newLabels: string[];
+    if (selectedLabels.includes(label)) {
+      newLabels = selectedLabels.filter((l) => l !== label);
     } else {
-      newStages = [...selectedStages, stage];
+      newLabels = [...selectedLabels, label];
     }
-    setSelectedStages(newStages);
-    if (newStages.length > 0) {
-      searchParams.set('stages', newStages.join(','));
+    setSelectedLabels(newLabels);
+    if (newLabels.length > 0) {
+      searchParams.set('stages', newLabels.join(','));
     } else {
       searchParams.delete('stages');
     }
@@ -1043,21 +1043,21 @@ export function Dashboard() {
                 <ConceptInfo conceptId="stages" />
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {STAGE_OPTIONS.map((stageOption) => {
-                  const active = selectedStages.includes(stageOption.id);
+                {workflowLabelOptions.map((option) => {
+                  const active = selectedLabels.includes(option.label);
                   return (
                     <button
-                      key={stageOption.id}
-                      onClick={() => handleStageToggle(stageOption.id)}
+                      key={option.label}
+                      onClick={() => handleLabelToggle(option.label)}
                       style={{
                         fontSize: 12.5, padding: '3px 10px', borderRadius: 999, cursor: 'pointer',
                         border: '1px solid var(--ps-hairline)',
-                        background: active ? stageOption.color : 'var(--ps-bg-elev)',
+                        background: active ? option.color : 'var(--ps-bg-elev)',
                         color: active ? '#fff' : 'var(--ps-fg-muted)',
                         fontFamily: 'inherit',
                       }}
                     >
-                      {stageOption.short}
+                      {option.label}
                     </button>
                   );
                 })}
@@ -1081,16 +1081,16 @@ export function Dashboard() {
           }}
         >
           <ConceptInfo conceptId="stages" />
-          {STAGE_OPTIONS.map((stageOption) => {
-            const active = selectedStages.includes(stageOption.id);
+          {workflowLabelOptions.map((option) => {
+            const active = selectedLabels.includes(option.label);
             return (
               <button
-                key={stageOption.id}
-                onClick={() => handleStageToggle(stageOption.id)}
+                key={option.label}
+                onClick={() => handleLabelToggle(option.label)}
                 style={{
                   appearance: 'none',
                   border: '1px solid var(--ps-hairline)',
-                  background: active ? stageOption.color : 'var(--ps-bg-elev)',
+                  background: active ? option.color : 'var(--ps-bg-elev)',
                   color: active ? '#fff' : 'var(--ps-fg-muted)',
                   padding: '4px 10px',
                   borderRadius: 999,
@@ -1103,14 +1103,14 @@ export function Dashboard() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {stageOption.label}
+                {option.label}
               </button>
             );
           })}
-          {selectedStages.length > 0 && (
+          {selectedLabels.length > 0 && (
             <button
               onClick={() => {
-                setSelectedStages([]);
+                setSelectedLabels([]);
                 searchParams.delete('stages');
                 setSearchParams(searchParams);
               }}

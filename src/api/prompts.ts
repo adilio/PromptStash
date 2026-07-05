@@ -143,6 +143,9 @@ export async function createPrompt(input: {
   espanso_trigger?: string;
   agent_format?: string | null;
   stage?: string | null;
+  workflow_pattern_id?: string | null;
+  workflow_step_id?: string | null;
+  workflow_label?: string | null;
 }): Promise<Prompt> {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('Not authenticated');
@@ -167,6 +170,16 @@ export async function createPrompt(input: {
     insertData.stage = input.stage;
   }
 
+  if (input.workflow_pattern_id !== undefined) {
+    insertData.workflow_pattern_id = input.workflow_pattern_id;
+  }
+  if (input.workflow_step_id !== undefined) {
+    insertData.workflow_step_id = input.workflow_step_id;
+  }
+  if (input.workflow_label !== undefined) {
+    insertData.workflow_label = input.workflow_label;
+  }
+
   const { data, error } = await supabase
     .from('prompts')
     .insert(insertData)
@@ -189,6 +202,9 @@ export async function updatePrompt(
     espanso_trigger: string;
     agent_format: string | null;
     stage: string | null;
+    workflow_pattern_id: string | null;
+    workflow_step_id: string | null;
+    workflow_label: string | null;
   }>
 ): Promise<Prompt> {
   const { data, error } = await supabase

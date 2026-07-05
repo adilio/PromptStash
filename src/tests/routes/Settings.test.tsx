@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Settings } from '@/routes/app/Settings';
 import * as teamsApi from '@/api/teams';
@@ -38,9 +39,11 @@ describe('Settings', () => {
     vi.mocked(teamsApi.listTeams).mockResolvedValue(mockTeams);
 
     render(
-      <MemoryRouter>
-        <Settings />
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <Settings />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -52,9 +55,11 @@ describe('Settings', () => {
     vi.mocked(teamsApi.listTeams).mockResolvedValue(mockTeams);
 
     render(
-      <MemoryRouter>
-        <Settings />
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <Settings />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -67,9 +72,11 @@ describe('Settings', () => {
     vi.mocked(teamsApi.listTeams).mockResolvedValue([]);
 
     render(
-      <MemoryRouter>
-        <Settings />
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <Settings />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {
@@ -83,9 +90,11 @@ describe('Settings', () => {
     );
 
     render(
-      <MemoryRouter>
-        <Settings />
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <Settings />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     await waitFor(() => {

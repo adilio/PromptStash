@@ -139,6 +139,9 @@ describe('PromptEditor', () => {
           espanso_trigger: undefined,
           agent_format: null,
           stage: null,
+          workflow_pattern_id: null,
+          workflow_step_id: null,
+          workflow_label: null,
         },
         expect.anything()
       );

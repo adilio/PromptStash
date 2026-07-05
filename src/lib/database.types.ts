@@ -186,6 +186,75 @@ export type Database = {
           },
         ]
       }
+      workflow_patterns: {
+        Row: {
+          id: string
+          team_id: string | null
+          name: string
+          description: string | null
+          source_label: string | null
+          source_url: string | null
+          is_system: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          team_id?: string | null
+          name: string
+          description?: string | null
+          source_label?: string | null
+          source_url?: string | null
+          is_system?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string | null
+          name?: string
+          description?: string | null
+          source_label?: string | null
+          source_url?: string | null
+          is_system?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workflow_pattern_steps: {
+        Row: {
+          id: string
+          pattern_id: string
+          key: string
+          label: string
+          short_label: string | null
+          color: string | null
+          position: number
+        }
+        Insert: {
+          id?: string
+          pattern_id: string
+          key: string
+          label: string
+          short_label?: string | null
+          color?: string | null
+          position: number
+        }
+        Update: {
+          id?: string
+          pattern_id?: string
+          key?: string
+          label?: string
+          short_label?: string | null
+          color?: string | null
+          position?: number
+        }
+        Relationships: []
+      }
       prompt_runs: {
         Row: {
           id: string
@@ -329,6 +398,9 @@ export type Database = {
           title: string
           updated_at: string
           visibility: string
+          workflow_pattern_id: string | null
+          workflow_step_id: string | null
+          workflow_label: string | null
         }
         Insert: {
           agent_format?: string | null
@@ -344,6 +416,9 @@ export type Database = {
           title: string
           updated_at?: string
           visibility?: string
+          workflow_pattern_id?: string | null
+          workflow_step_id?: string | null
+          workflow_label?: string | null
         }
         Update: {
           agent_format?: string | null
@@ -359,6 +434,9 @@ export type Database = {
           title?: string
           updated_at?: string
           visibility?: string
+          workflow_pattern_id?: string | null
+          workflow_step_id?: string | null
+          workflow_label?: string | null
         }
         Relationships: [
           {

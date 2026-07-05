@@ -10,6 +10,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsHelp } from '@/components/ShortcutsHelp';
 import { TemplateGallery } from '@/components/TemplateGallery';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { STAGE_OPTIONS } from '@/lib/types';
 import type { Stage } from '@/lib/types';
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -113,14 +114,16 @@ export function AppLayout() {
   };
 
   const handleStageFilter = (stage: Stage) => {
+    // The dashboard filters by workflow LABELS (stage labels included)
+    const label = STAGE_OPTIONS.find((option) => option.id === stage)?.label ?? stage;
     const stages = searchParams.get('stages');
-    const currentStages = stages ? stages.split(',') as Stage[] : [];
-    const newStages = currentStages.includes(stage)
-      ? currentStages.filter(s => s !== stage)
-      : [...currentStages, stage];
+    const currentLabels = stages ? stages.split(',') : [];
+    const newLabels = currentLabels.includes(label)
+      ? currentLabels.filter((l) => l !== label)
+      : [...currentLabels, label];
 
-    if (newStages.length > 0) {
-      searchParams.set('stages', newStages.join(','));
+    if (newLabels.length > 0) {
+      searchParams.set('stages', newLabels.join(','));
     } else {
       searchParams.delete('stages');
     }

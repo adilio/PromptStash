@@ -32,3 +32,8 @@ export const runKeys = {
   lists: () => [...runKeys.all, 'list'] as const,
   list: (promptId?: string) => [...runKeys.lists(), promptId ?? null] as const,
 };
+
+export const patternKeys = {
+  all: ['workflow-patterns'] as const,
+  list: (teamId?: string) => [...patternKeys.all, teamId ?? null] as const,
+};

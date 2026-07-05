@@ -61,7 +61,7 @@ export function CommandPalette({
         .from('prompts')
         .select('*', { count: 'exact', head: true })
         .eq('team_id', currentTeamId)
-        .not('stage', 'is', null);
+        .or('stage.not.is.null,workflow_label.not.is.null');
       return (count ?? 0) > 0;
     },
     enabled: !!currentTeamId && open,

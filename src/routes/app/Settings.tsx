@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Copy, Plus, User, Sun, Key, Folder, Code, Bell, Database } from 'lucide-react';
+import { Copy, Plus, User, Sun, Key, Folder, Code, Bell, Database, Trash2 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
+import { listPatterns, createPattern, deletePattern } from '@/api/patterns';
+import { patternKeys } from '@/lib/queryClient';
 import {
   deleteOpenRouterApiKey,
   getOpenRouterStatus,
@@ -1075,6 +1078,8 @@ export function Settings() {
                 </div>
               )}
             </SettingsCard>
+
+            <WorkflowPatternsCard teamId={currentTeamId} />
           </>
         )}
 
@@ -1468,5 +1473,148 @@ export function Settings() {
         )}
       </div>
     </div>
+  );
+}
+
+
+function WorkflowPatternsCard({ teamId }: { teamId?: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [patternName, setPatternName] = useState('');
+  const [patternSteps, setPatternSteps] = useState('');
+
+  const patternsQuery = useQuery({
+    queryKey: patternKeys.list(teamId),
+    queryFn: () => listPatterns(teamId),
+    enabled: !!teamId,
+  });
+
+  const teamPatterns = (patternsQuery.data ?? []).filter((pattern) => !pattern.is_system);
+
+  const createMutation = useMutation({
+    mutationFn: createPattern,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: patternKeys.all });
+      setPatternName('');
+      setPatternSteps('');
+      toast({ title: 'Pattern created' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Could not create pattern',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deletePattern,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: patternKeys.all });
+      toast({ title: 'Pattern deleted' });
+    },
+  });
+
+  const handleCreate = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!teamId) return;
+    const name = patternName.trim();
+    const steps = patternSteps
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((label) => ({
+        key: label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || label.toLowerCase(),
+        label,
+      }));
+    if (!name || steps.length === 0) {
+      toast({
+        title: 'Name and steps required',
+        description: 'Give the pattern a name and at least one step (comma-separated).',
+        variant: 'destructive',
+      });
+      return;
+    }
+    createMutation.mutate({ team_id: teamId, name, steps });
+  };
+
+  return (
+    <SettingsCard>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ps-fg)', marginBottom: 4 }}>Workflow patterns</div>
+      <div style={{ fontSize: 13, color: 'var(--ps-fg-muted)', marginBottom: 14 }}>
+        Define your own workflow labels — built-ins like QRSPI stay available, but nothing requires them.
+      </div>
+
+      <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+        <input
+          value={patternName}
+          onChange={(e) => setPatternName(e.target.value)}
+          placeholder="Pattern name (e.g. Discovery flow)…"
+          maxLength={60}
+          style={inputStyle}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={patternSteps}
+            onChange={(e) => setPatternSteps(e.target.value)}
+            placeholder="Steps, comma-separated (e.g. Discovery, Spike, Build)…"
+            style={{ ...inputStyle, flex: 1, width: 'auto' }}
+          />
+          <button type="submit" disabled={createMutation.isPending || !teamId} style={btnPrimaryStyle}>
+            <Plus style={{ width: 14, height: 14 }} />
+            Create
+          </button>
+        </div>
+      </form>
+
+      {teamPatterns.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--ps-fg-faint)' }}>
+          No team patterns yet. Prompts can still use built-in patterns or one-off custom labels.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {teamPatterns.map((pattern) => (
+            <div
+              key={pattern.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 14px',
+                border: '1px solid var(--ps-hairline)',
+                borderRadius: 8,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ps-fg)' }}>{pattern.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--ps-fg-faint)' }}>
+                  {pattern.steps.map((s) => s.label).join(' → ')}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate(pattern.id)}
+                aria-label={`Delete pattern ${pattern.name}`}
+                style={{
+                  appearance: 'none',
+                  border: '1px solid var(--ps-hairline)',
+                  background: 'transparent',
+                  color: 'var(--ps-fg-muted)',
+                  borderRadius: 7,
+                  padding: '6px 8px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Trash2 style={{ width: 14, height: 14 }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </SettingsCard>
   );
 }

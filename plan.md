@@ -363,7 +363,24 @@ Use these as grounding references when updating copy, Learn docs, templates, and
 
 ---
 
-## Issue #17 - Add custom workflow patterns and labels
+## ✅ Issue #17 - Add custom workflow patterns and labels — DONE (2026-07-04)
+
+> Shipped: `workflow_patterns` + `workflow_pattern_steps` tables with RLS
+> (system patterns readable by all authenticated users; team patterns mirror
+> prompt access), nullable `workflow_pattern_id`/`workflow_step_id`/
+> `workflow_label` on prompts (stage kept), four seeded system patterns
+> (QRSPI, RPI, Spec-driven, Freeform checklist), and a verified backfill of
+> staged prompts into QRSPI labels. `src/api/patterns.ts` (pattern + step
+> CRUD/reorder), `patternKeys`, `PatternPicker` in the PromptEditor Advanced
+> disclosure (No label / built-ins / team patterns / custom one-off label;
+> QRSPI selections keep the legacy stage column in sync), badges via
+> `workflowBadgeFor` (QRSPI colors preserved, neutral tone for custom),
+> Dashboard + BundleEditor filters now derive chips from the labels actually
+> present (auto-hide when none), and Settings → Workspace gains a team
+> pattern manager (create with comma-separated steps, delete). Migration
+> applied + backfill verified live; 153 tests, tsc/lint clean.
+
+## Issue #17 (original spec) - Add custom workflow patterns and labels
 
 **Goal:** Replace the hard-coded QRSPI stage model with a flexible pattern model while preserving existing `stage` data.
 

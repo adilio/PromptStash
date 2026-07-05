@@ -10,10 +10,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ConceptInfo } from '@/components/ConceptInfo';
 import { AGENT_FORMATS, bundleToFile, downloadFile } from '@/lib/agentExport';
-import { STAGE_OPTIONS } from '@/lib/types';
+import { workflowBadgeFor, distinctWorkflowLabels } from '@/lib/workflowDisplay';
 import { estimateTokens, getZone, zoneColor, MODEL_CONTEXTS, type ModelKey } from '@/lib/tokens';
 import { supabase } from '@/lib/supabase';
-import type { Stage, AgentFormat } from '@/lib/types';
+import type { AgentFormat } from '@/lib/types';
 
 interface ContextType {
   currentTeamId?: string;
@@ -35,7 +35,7 @@ export function BundleEditor() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [addPromptOpen, setAddPromptOpen] = useState(false);
-  const [stageFilter, setStageFilter] = useState<Stage | 'all'>('all');
+  const [labelFilter, setLabelFilter] = useState<string | 'all'>('all');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [selectedModel, setSelectedModel] = useState<ModelKey>('claude-sonnet');
 
@@ -295,9 +295,10 @@ export function BundleEditor() {
   const allPrompts = promptsQuery.data ?? [];
   const bundlePromptIds = new Set(bundle?.items.map(item => item.prompt_id) ?? []);
   const availablePrompts = allPrompts.filter(p => !bundlePromptIds.has(p.id));
-  const filteredPrompts = stageFilter === 'all'
+  const availableLabels = distinctWorkflowLabels(availablePrompts);
+  const filteredPrompts = labelFilter === 'all'
     ? availablePrompts
-    : availablePrompts.filter(p => p.stage === stageFilter);
+    : availablePrompts.filter(p => workflowBadgeFor(p)?.label === labelFilter);
 
   const { filename, content } = bundle ? bundleToFile(bundle, bundle.items) : { filename: '', content: '' };
 
@@ -538,7 +539,7 @@ export function BundleEditor() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {bundle.items.map((item) => {
-                        const stage = item.prompt.stage ? STAGE_OPTIONS.find(s => s.id === item.prompt.stage) : null;
+                        const stage = workflowBadgeFor(item.prompt);
                         const isExpanded = expandedItems.has(item.prompt_id);
 
                         return (
@@ -583,7 +584,7 @@ export function BundleEditor() {
                                   background: stage.color + '20',
                                   color: stage.color,
                                 }}>
-                                  {stage.short}
+                                  {stage.label}
                                 </span>
                               )}
                               <button
@@ -837,14 +838,14 @@ export function BundleEditor() {
 
             <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--ps-hairline-soft)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button
-                onClick={() => setStageFilter('all')}
+                onClick={() => setLabelFilter('all')}
                 style={{
                   height: 26,
                   padding: '0 10px',
                   borderRadius: 13,
                   border: '1px solid var(--ps-hairline)',
-                  background: stageFilter === 'all' ? 'var(--ps-accent)' : 'var(--ps-bg-elev)',
-                  color: stageFilter === 'all' ? 'var(--ps-accent-fg)' : 'var(--ps-fg)',
+                  background: labelFilter === 'all' ? 'var(--ps-accent)' : 'var(--ps-bg-elev)',
+                  color: labelFilter === 'all' ? 'var(--ps-accent-fg)' : 'var(--ps-fg)',
                   fontSize: 12,
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -852,23 +853,23 @@ export function BundleEditor() {
               >
                 All
               </button>
-              {STAGE_OPTIONS.map(stage => (
+              {availableLabels.map(option => (
                 <button
-                  key={stage.id}
-                  onClick={() => setStageFilter(stage.id)}
+                  key={option.label}
+                  onClick={() => setLabelFilter(option.label)}
                   style={{
                     height: 26,
                     padding: '0 10px',
                     borderRadius: 13,
                     border: '1px solid var(--ps-hairline)',
-                    background: stageFilter === stage.id ? stage.color : 'var(--ps-bg-elev)',
-                    color: stageFilter === stage.id ? 'white' : 'var(--ps-fg)',
+                    background: labelFilter === option.label ? option.color : 'var(--ps-bg-elev)',
+                    color: labelFilter === option.label ? 'white' : 'var(--ps-fg)',
                     fontSize: 12,
                     fontWeight: 500,
                     cursor: 'pointer',
                   }}
                 >
-                  {stage.short}
+                  {option.label}
                 </button>
               ))}
             </div>
@@ -883,7 +884,7 @@ export function BundleEditor() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {filteredPrompts.map(prompt => {
-                    const stage = prompt.stage ? STAGE_OPTIONS.find(s => s.id === prompt.stage) : null;
+                    const stage = workflowBadgeFor(prompt);
                     return (
                       <button
                         key={prompt.id}
@@ -914,7 +915,7 @@ export function BundleEditor() {
                             background: stage.color + '20',
                             color: stage.color,
                           }}>
-                            {stage.short}
+                            {stage.label}
                           </span>
                         )}
                       </button>

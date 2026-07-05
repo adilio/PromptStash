@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { useToast } from './ui/use-toast';
-import { STAGE_OPTIONS } from '@/lib/types';
+import { workflowBadgeFor } from '@/lib/workflowDisplay';
 import { estimateTokens } from '@/lib/tokens';
 import type { PromptWithTags } from '@/lib/types';
 
@@ -48,8 +48,7 @@ export function PromptCard({
   };
 
   const tags = prompt.tags ?? [];
-  const stage = (prompt as { stage?: string | null }).stage;
-  const stageOption = stage ? STAGE_OPTIONS.find(s => s.id === stage) : null;
+  const workflowBadge = workflowBadgeFor(prompt as { workflow_label?: string | null; stage?: string | null });
   const tokenCount = prompt.body_md.length > 1000 ? estimateTokens(prompt.body_md) : null;
 
   return (
@@ -208,19 +207,19 @@ export function PromptCard({
         }}
       >
         <div style={{ display: 'flex', gap: 4, flex: 1, flexWrap: 'nowrap', overflow: 'hidden', alignItems: 'center' }}>
-          {stageOption && (
+          {workflowBadge && (
             <span
               style={{
                 fontSize: 10,
                 padding: '2px 6px',
                 borderRadius: 4,
-                background: stageOption.color,
+                background: workflowBadge.color,
                 color: '#fff',
                 fontWeight: 500,
                 whiteSpace: 'nowrap',
               }}
             >
-              {stageOption.label}
+              {workflowBadge.label}
             </span>
           )}
           {tags.length > 0 && (

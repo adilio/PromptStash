@@ -18,6 +18,8 @@ import { slugify } from '@/lib/espanso';
 import { AGENT_FORMATS } from '@/lib/agentExport';
 import { estimateTokens, zoneColor } from '@/lib/tokens';
 import type { Tag, Stage } from '@/lib/types';
+import { PatternPicker, type WorkflowSelection } from '@/components/PatternPicker';
+import { QRSPI_PATTERN_ID } from '@/api/patterns';
 import { STAGE_OPTIONS } from '@/lib/types';
 import type { AgentFormat } from '@/lib/agentExport';
 
@@ -43,7 +45,7 @@ export function PromptEditor() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [espansoTrigger, setEspansoTrigger] = useState('');
   const [agentFormat, setAgentFormat] = useState<AgentFormat | ''>('');
-  const [stage, setStage] = useState<Stage | ''>('');
+  const [workflow, setWorkflow] = useState<WorkflowSelection>({ patternId: null, stepId: null, label: null });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -130,7 +132,25 @@ export function PromptEditor() {
       const agentFormat = (promptQuery.data as { agent_format?: string | null }).agent_format;
       setAgentFormat((agentFormat || '') as AgentFormat | '');
       const stage = (promptQuery.data as { stage?: string | null }).stage;
-      setStage((stage || '') as Stage | '');
+      const promptRow = promptQuery.data as {
+        workflow_pattern_id?: string | null;
+        workflow_step_id?: string | null;
+        workflow_label?: string | null;
+      };
+      if (promptRow.workflow_pattern_id || promptRow.workflow_label) {
+        setWorkflow({
+          patternId: promptRow.workflow_pattern_id ?? null,
+          stepId: promptRow.workflow_step_id ?? null,
+          label: promptRow.workflow_label ?? null,
+        });
+      } else if (stage) {
+        // Legacy stage-only prompt: show its QRSPI-equivalent selection
+        setWorkflow({
+          patternId: QRSPI_PATTERN_ID,
+          stepId: null,
+          label: STAGE_OPTIONS.find((s) => s.id === stage)?.label ?? null,
+        });
+      }
       initialLoadRef.current = true;
     }
   }, [promptQuery.data]);
@@ -156,7 +176,7 @@ export function PromptEditor() {
       try {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, stage: stage || null },
+          patch: { title: debouncedTitle, body_md: debouncedBody, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, ...workflowPatch() },
         });
         setLastSaved(new Date());
       } catch (error) {
@@ -166,7 +186,7 @@ export function PromptEditor() {
       }
     };
     if (!isNew && promptId) autoSave();
-  }, [debouncedTitle, debouncedBody, agentFormat, stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedTitle, debouncedBody, agentFormat, workflow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTags = async () => {
     if (!currentTeamId) return;
@@ -201,6 +221,21 @@ export function PromptEditor() {
     }
   };
 
+  // Keep the legacy stage column in sync: a QRSPI step maps to its stage key,
+  // anything else clears it.
+  const legacyStageFor = (selection: WorkflowSelection): Stage | null => {
+    if (selection.patternId !== QRSPI_PATTERN_ID) return null;
+    const match = STAGE_OPTIONS.find((s) => s.label === selection.label);
+    return match?.id ?? null;
+  };
+
+  const workflowPatch = () => ({
+    workflow_pattern_id: workflow.patternId,
+    workflow_step_id: workflow.stepId,
+    workflow_label: workflow.label?.trim() ? workflow.label.trim() : null,
+    stage: legacyStageFor(workflow),
+  });
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast({ title: 'Error', description: 'Title is required', variant: 'destructive' });
@@ -225,14 +260,14 @@ export function PromptEditor() {
           body_md: body,
           espanso_trigger: espansoTrigger || undefined,
           agent_format: agentFormat || null,
-          stage: stage || null,
+          ...workflowPatch(),
         });
         toast({ title: 'Prompt created' });
         navigate(`/app/p/${created.id}`);
       } else {
         await updatePromptMutation.mutateAsync({
           id: promptId!,
-          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, stage: stage || null }
+          patch: { title, body_md: body, espanso_trigger: espansoTrigger || undefined, agent_format: agentFormat || null, ...workflowPatch() }
         });
         toast({ title: 'Prompt saved' });
         navigate(`/app/p/${promptId}`);
@@ -645,43 +680,9 @@ export function PromptEditor() {
                 Pick the agent file this prompt should be exported as.
               </p>
 
-              <label
-                htmlFor="stage"
-                style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6, marginTop: 14 }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  Workflow label
-                  <ConceptInfo conceptId="stages" />
-                </span>
-              </label>
-              <select
-                id="stage"
-                value={stage}
-                onChange={(e) => setStage(e.target.value as Stage | '')}
-                style={{
-                  width: '100%',
-                  border: '1px solid var(--ps-hairline)',
-                  background: 'var(--ps-bg-elev)',
-                  borderRadius: 8,
-                  padding: '0 12px',
-                  height: 32,
-                  color: 'var(--ps-fg)',
-                  fontFamily: 'inherit',
-                  fontSize: 13,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <option value="">No workflow label</option>
-                {STAGE_OPTIONS.map((stageOption) => (
-                  <option key={stageOption.id} value={stageOption.id}>
-                    {stageOption.label}
-                  </option>
-                ))}
-              </select>
-              <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
-                Optionally label where this prompt fits in your workflow.
-              </p>
+              <div style={{ marginTop: 14 }}>
+                <PatternPicker teamId={currentTeamId} value={workflow} onChange={setWorkflow} />
+              </div>
             </div>
           )}
         </details>
