@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&amp;family=Inter:wght@400;500&amp;display=swap');
+    </style>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#131926"/>
+    </linearGradient>
+    <linearGradient id="icon-stroke" x1="560" y1="140" x2="640" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8b7fc8"/>
+      <stop offset="100%" stop-color="#4a61a3"/>
+    </linearGradient>
+    <linearGradient id="topbar" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7b6fb8"/>
+      <stop offset="100%" stop-color="#4a61a3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient glows -->
+  <circle cx="1160" cy="590" r="340" fill="#5268A1" fill-opacity="0.05"/>
+  <circle cx="40" cy="40" r="240" fill="#7b6fb8" fill-opacity="0.05"/>
+
+  <!-- Top accent bar -->
+  <rect x="0" y="0" width="1200" height="3" fill="url(#topbar)"/>
+
+  <!-- Icon: 24x24 viewbox scaled 5x → 80x90 effective content area, centered at (600, 185) -->
+  <!-- translate(540, 125) scale(5): rect(4,3,16,18) → x:560-640, y:140-230 -->
+  <g transform="translate(540, 125) scale(5)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="3" width="16" height="18" rx="2" stroke="url(#icon-stroke)" stroke-width="1.4"/>
+    <path d="M4 9h16M4 15h16" stroke="url(#icon-stroke)" stroke-width="1.4"/>
+    <path d="M10 6h4M10 12h4M10 18h4" stroke="url(#icon-stroke)" stroke-width="1.4"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="312"
+    font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace"
+    font-size="80" font-weight="700"
+    fill="white" text-anchor="middle" letter-spacing="-2">PromptStash</text>
+
+  <!-- Tagline -->
+  <text x="600" y="372"
+    font-family="'Inter', 'Helvetica Neue', Arial, sans-serif"
+    font-size="27" fill="#8892a4" text-anchor="middle">Save, organize, and share your AI prompts</text>
+
+  <!-- Feature pills — total width: 140+12+140+12+100+12+120 = 536px, start at 600-268=332 -->
+  <rect x="332" y="420" width="140" height="38" rx="19" fill="#16213a" stroke="#253352" stroke-width="1"/>
+  <text x="402" y="445" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#6e7faa" text-anchor="middle">Markdown</text>
+
+  <rect x="484" y="420" width="140" height="38" rx="19" fill="#16213a" stroke="#253352" stroke-width="1"/>
+  <text x="554" y="445" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#6e7faa" text-anchor="middle">Versioned</text>
+
+  <rect x="636" y="420" width="100" height="38" rx="19" fill="#16213a" stroke="#253352" stroke-width="1"/>
+  <text x="686" y="445" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#6e7faa" text-anchor="middle">Teams</text>
+
+  <rect x="748" y="420" width="120" height="38" rx="19" fill="#16213a" stroke="#253352" stroke-width="1"/>
+  <text x="808" y="445" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#6e7faa" text-anchor="middle">REST API</text>
+
+  <!-- URL lockup with the 4dl mark (monochrome "4" + down-arrow, from adilio/assets) -->
+  <g>
+    <circle cx="494" cy="559" r="17" fill="#ffffff"/>
+    <!-- Glyph bbox in source space: x 486..741, y 428..799 — scaled to ~22px tall -->
+    <g transform="translate(457.6, 522.9) scale(0.0593)" fill="#000000" fill-rule="evenodd">
+      <path d="
+        M 639 428 L 679 428 L 688 435 L 690 440 L 690 622 L 730 623 L 735 625 L 741 633 L 741 661 L 736 668 L 692 670 L 690 672 L 690 704 L 692 706 L 720 706 L 726 712 L 726 720 L 669 793 L 661 799 L 651 799 L 644 794 L 588 719 L 589 711 L 595 706 L 626 706 L 629 704 L 629 672 L 627 670 L 499 670 L 492 667 L 486 657 L 486 628 L 493 614 L 628 436 Z
+        M 629 520 L 622 527 L 551 620 L 551 623 L 628 623 Z
+      "/>
+    </g>
+    <text x="524" y="566"
+      font-family="'Inter', 'Helvetica Neue', Arial, sans-serif"
+      font-size="21" font-weight="500"
+      fill="#5268A1">promptstash.4dl.ca</text>
+  </g>
+</svg>

@@ -37,7 +37,15 @@ core monochrome "4" + down-arrow mark in a PromptStash-appropriate treatment (no
 soccer motif), and must not clash with the existing in-app palette (the `--ps-*`
 CSS variables).
 
-## Social card & SEO — finish the started work
+## ✅ Social card & SEO — DONE (2026-07-04)
+
+> Shipped: `public/social-card.png` (1200×630) rasterized from the updated
+> `social-card.svg`, which now carries the monochrome 4dl "4 + down-arrow"
+> mark (no soccer motif) in the URL lockup. Committed together with the
+> `index.html` OG/Twitter meta tags that were sitting uncommitted. Verified
+> post-deploy: og:image URL serves the PNG with correct dimensions.
+
+## Social card & SEO (original spec) — finish the started work
 
 A half-finished social-card / SEO feature is sitting uncommitted in the working
 tree (`index.html` + `public/social-card.svg`): Open Graph and Twitter meta tags
