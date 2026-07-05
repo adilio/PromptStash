@@ -185,6 +185,16 @@ data-integrity / trust problem. This area has a history of fragility
 > tautological (`m.team_id = m.team_id`) — any editor anywhere could write
 > every team's prompts (migration `20260705013000_fix_prompts_write_rls.sql`,
 > applied + verified live). 6 runner tests; tsc/vitest/lint clean.
+>
+> **Deployment finding:** the project had NO edge functions deployed at all —
+> the entire OpenRouter runner (including the earlier MVP) failed with
+> "Failed to fetch" in production. Deployed `api` via the CLI and fixed its
+> path routing (the runtime serves `/api/...`, not `/functions/v1/api/...`,
+> so the OpenRouter route fell through to the API-key handler). Verified in
+> prod: 2-model comparison renders side-by-side cards with the correct
+> per-user guidance, and Run history lists all recorded runs. A real
+> completion needs an OpenRouter key on the account — Adil's account has
+> none; only Gilbert's does. Add a key in Settings to see live outputs.
 
 ## P1 (original spec) — Complete OpenRouter support (GitHub #17)
 

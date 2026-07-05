@@ -231,7 +231,9 @@ serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const path = url.pathname.replace('/functions/v1/api', '');
+  // The function sees different path prefixes depending on how it's invoked
+  // (gateway: /functions/v1/api/..., runtime-direct: /api/...) — strip both.
+  const path = url.pathname.replace(/^\/functions\/v1\/api/, '').replace(/^\/api/, '');
 
   if (path.startsWith('/v1/openrouter/')) {
     return handleOpenRouterRequest(req, path);
