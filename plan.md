@@ -379,6 +379,19 @@ Use these as grounding references when updating copy, Learn docs, templates, and
 > present (auto-hide when none), and Settings → Workspace gains a team
 > pattern manager (create with comma-separated steps, delete). Migration
 > applied + backfill verified live; 153 tests, tsc/lint clean.
+>
+> **All four acceptance tests verified in production (2026-07-05):**
+> (1) the stage-tagged prompt showed its QRSPI/Research selection in the
+> picker after backfill; (2) created team pattern "Discovery flow"
+> (Discovery→Spike→Build) in Settings, assigned Spike to a prompt, persisted
+> to DB with stage correctly null; (3) a one-off custom label ("Fable
+> triage") persisted with no pattern and appeared as a neutral badge + the
+> only dashboard chip; (4) clearing all labels made the workflow filter
+> strip disappear entirely.
+>
+> Remaining plan issues #18–#24 and the "bigger bets" are explicitly
+> later-tier per the "Fable work — priority order" section — the priority
+> queue (P0, P1, social card + #16, #17) is complete.
 
 ## Issue #17 (original spec) - Add custom workflow patterns and labels
 
