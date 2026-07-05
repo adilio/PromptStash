@@ -650,7 +650,7 @@ export function PromptEditor() {
                 style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ps-fg-muted)', marginBottom: 6, marginTop: 14 }}
               >
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  Stage
+                  Workflow label
                   <ConceptInfo conceptId="stages" />
                 </span>
               </label>
@@ -672,7 +672,7 @@ export function PromptEditor() {
                   boxSizing: 'border-box',
                 }}
               >
-                <option value="">No stage</option>
+                <option value="">No workflow label</option>
                 {STAGE_OPTIONS.map((stageOption) => (
                   <option key={stageOption.id} value={stageOption.id}>
                     {stageOption.label}
@@ -680,7 +680,7 @@ export function PromptEditor() {
                 ))}
               </select>
               <p style={{ fontSize: 12, color: 'var(--ps-fg-faint)', marginTop: 6 }}>
-                Tag this prompt as part of a Research → Plan → Implement workflow.
+                Optionally label where this prompt fits in your workflow.
               </p>
             </div>
           )}

@@ -775,8 +775,8 @@ export function Settings() {
                 />
               </SettingsRow>
               <SettingsRow
-                label="Show all advanced features"
-                hint="Forces every advanced surface (stages, bundles, token gauges) visible regardless of whether you've used them yet."
+                label="Show agent-workflow tools"
+                hint="Reveals optional structure — workflow labels, bundles, export targets, and context-budget tools — even before you've used them."
               >
                 <div
                   style={{

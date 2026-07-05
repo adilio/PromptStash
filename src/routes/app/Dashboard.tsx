@@ -1039,7 +1039,7 @@ export function Dashboard() {
           {showStageFilters && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ps-fg-faint)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
-                Stage
+                Workflow
                 <ConceptInfo conceptId="stages" />
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>

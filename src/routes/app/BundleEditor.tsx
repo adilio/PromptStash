@@ -757,7 +757,7 @@ export function BundleEditor() {
                   color: 'var(--ps-fg-muted)',
                   lineHeight: 1.4,
                 }}>
-                  This bundle is approaching the Dumb Zone — consider splitting modules or moving detail into sub-agent instructions.
+                  This bundle is approaching its context budget — consider splitting modules or moving detail into sub-agent instructions.
                 </div>
               )}
             </div>

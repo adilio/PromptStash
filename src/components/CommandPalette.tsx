@@ -137,7 +137,7 @@ export function CommandPalette({
               ))}
             </CommandGroup>
             {showStageFilters && onStageFilter && (
-              <CommandGroup heading="Filter by stage">
+              <CommandGroup heading="Filter by workflow">
                 {STAGE_OPTIONS.map((stageOption) => (
                   <CommandItem
                     key={stageOption.id}

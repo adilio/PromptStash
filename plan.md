@@ -302,7 +302,28 @@ Use these as grounding references when updating copy, Learn docs, templates, and
 
 ---
 
-## Issue #16 - Neutralize the shipped QRSPI-first UX
+## ✅ Issue #16 - Neutralize the shipped QRSPI-first UX — DONE (2026-07-04)
+
+> Shipped: "Stage" → "Workflow label" in the PromptEditor Advanced section
+> (helper text now "Optionally label where this prompt fits in your
+> workflow."), Dashboard filter strip labeled "Workflow" (auto-disclosure was
+> already in place), CommandPalette group "Filter by workflow", Settings
+> toggle renamed "Show agent-workflow tools" with a neutral hint, BundleEditor
+> warning now says "approaching its context budget" (gauge title was already
+> "Context budget"; Dumb Zone wording lives only in ConceptInfo/Learn), and
+> the QRSPI / Stages / Dumb Zone concept pages carry the "one useful
+> practitioner model, not a requirement" line (Dumb Zone additionally framed
+> as a heuristic, not a guarantee). Template gallery already defaults to
+> starter templates with QRSPI behind the advanced filter. No QRSPI/Dumb Zone
+> exposure found in sidebar or empty states.
+>
+> **Schema-drift finding (fixed live):** four shipped migrations were never
+> applied to production — `api_keys` (whole REST-API feature), and the
+> `espanso_trigger` / `agent_format` / `stage` prompt columns. Saving a
+> prompt with any of those fields set failed in prod. All four applied via
+> the Management API and verified.
+
+## Issue #16 (original spec) - Neutralize the shipped QRSPI-first UX
 
 **Goal:** Keep the existing features, but reduce the sense that PromptStash endorses one workflow as the one true path.
 

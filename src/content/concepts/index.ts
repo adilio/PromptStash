@@ -72,7 +72,9 @@ PromptStash supports eight stages inspired by [Dex Horthy](https://www.humanlaye
 - **Implement**: Completing and verifying the work
 - **Review/PR**: Pull request and code review
 
-By tagging prompts with stages, you create a structured library of instructions that can be composed into complete workflows. This is especially powerful when combined with bundles.`,
+By tagging prompts with stages, you create a structured library of instructions that can be composed into complete workflows. This is especially powerful when combined with bundles.
+
+This is one useful practitioner model, not a requirement for using PromptStash — plain prompts and tags work just as well if it doesn't fit how you think.`,
     why: `Stage typing turns a collection of disconnected prompts into a coherent system. When you know which stage a prompt belongs to, you can see gaps in your workflow. Do you have research prompts but no design prompts? Are you missing review stage instructions?
 
 For teams, stages provide a shared language for discussing AI-assisted workflows. Everyone understands what "implement stage" means, making it easier to share and reuse prompts across projects.`,
@@ -127,7 +129,9 @@ When an AI model operates in the Dumb Zone, you might see:
 
 The phenomenon occurs because language models process context through a fixed-size attention mechanism. As more tokens are added, each token gets less "attention weight," diluting the model's ability to reason about the full context.
 
-Different models have different context windows (Claude Sonnet: 200k tokens, GPT-5: 400k tokens), but the 40% threshold is a useful rule of thumb across models.`,
+Different models have different context windows (Claude Sonnet: 200k tokens, GPT-5: 400k tokens), but the 40% threshold is a heuristic from that practitioner lineage, not a universal guarantee — treat it as a rough estimate that varies by model and task.
+
+This is one useful practitioner model, not a requirement for using PromptStash — plain prompts and tags work just as well if it doesn't fit how you think.`,
     why: `Understanding the Dumb Zone is critical for effective prompt engineering. If you're feeding an agent 150k tokens of instructions when the model's sweet spot is under 80k, you're actively hurting performance.
 
 Smart practitioners keep their instructions lean and focused. Rather than dumping entire codebases into context, they use retrieval systems to find the most relevant snippets and keep the total token count in the model's optimal range.`,
@@ -157,7 +161,9 @@ The eight stages in PromptStash's QRSPI implementation are:
 7. **Implement**: Finalize. Verify tests pass, update docs, self-review against requirements.
 8. **Review/PR**: Prepare for integration. Write PR description, respond to feedback, address issues.
 
-QRSPI emphasizes that each stage should have its own prompts, optimized for that specific phase of work. A "research" prompt should be structured differently than a "work" prompt.`,
+QRSPI emphasizes that each stage should have its own prompts, optimized for that specific phase of work. A "research" prompt should be structured differently than a "work" prompt.
+
+This is one useful practitioner model, not a requirement for using PromptStash — plain prompts and tags work just as well if it doesn't fit how you think.`,
     why: `Structured methodologies like QRSPI dramatically improve AI-assisted development outcomes. Without structure, AI agents tend to jump to implementation without understanding requirements, or they get bogged down in research without moving to execution.
 
 By explicitly staging the work, you create clear handoff points between human and AI. You can review the research output before moving to design, and validate the plan before implementation begins. This catch errors early and prevents wasted effort.`,
