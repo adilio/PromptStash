@@ -168,7 +168,7 @@ export function PromptView() {
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-4xl mx-auto">
           <MarkdownViewer content={prompt.body_md} />
-          <PromptRunner prompt={prompt.body_md} />
+          <PromptRunner prompt={prompt.body_md} teamId={prompt.team_id ?? undefined} promptId={prompt.id} />
         </div>
       </div>
 

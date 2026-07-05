@@ -10,6 +10,7 @@ export type Invite = Database['public']['Tables']['invites']['Row'];
 export type Folder = Database['public']['Tables']['folders']['Row'];
 export type Prompt = Database['public']['Tables']['prompts']['Row'];
 export type PromptVersion = Database['public']['Tables']['prompt_versions']['Row'];
+export type PromptRun = Database['public']['Tables']['prompt_runs']['Row'];
 export type Tag = Database['public']['Tables']['tags']['Row'];
 export type PromptTag = Database['public']['Tables']['prompt_tags']['Row'];
 export type Share = Database['public']['Tables']['shares']['Row'];

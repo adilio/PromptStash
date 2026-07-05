@@ -87,7 +87,10 @@ export async function deleteOpenRouterApiKey(): Promise<void> {
   if (error) throwOpenRouterIntegrationError(error);
 }
 
-export async function runPromptWithOpenRouter(input: RunPromptInput): Promise<RunPromptResult> {
+export async function runPromptWithOpenRouter(
+  input: RunPromptInput,
+  signal?: AbortSignal
+): Promise<RunPromptResult> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -98,6 +101,7 @@ export async function runPromptWithOpenRouter(input: RunPromptInput): Promise<Ru
 
   const response = await fetch(`${getApiBaseUrl()}/v1/openrouter/run`, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',

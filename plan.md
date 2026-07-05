@@ -171,7 +171,22 @@ data-integrity / trust problem. This area has a history of fragility
   browser-close/reopen; a user's prompts/workspace are identical across logins,
   confirmed in the database; and a regression test covers the auth/session path.
 
-## P1 — Complete OpenRouter support (GitHub #17)
+## ✅ P1 — Complete OpenRouter support — DONE (2026-07-04)
+
+> Shipped: model comparison + run history. The runner now takes multi-select
+> model chips (+ custom slug) and fans out one request per model concurrently,
+> rendering results side by side (output, duration, tokens/cost labeled
+> "est."). Runs are cancellable via AbortController without blocking the
+> editor. Every run (success/error/cancelled) is persisted to the new
+> `prompt_runs` table (migration `20260705014000_prompt_runs.sql`, RLS
+> mirrors prompts: team read / owner-editor write; raw OpenRouter key never
+> stored) and a collapsible "Run history" lists past runs with expandable
+> outputs. Also fixed en route: the `prompts_write` RLS policy was
+> tautological (`m.team_id = m.team_id`) — any editor anywhere could write
+> every team's prompts (migration `20260705013000_fix_prompts_write_rls.sql`,
+> applied + verified live). 6 runner tests; tsc/vitest/lint clean.
+
+## P1 (original spec) — Complete OpenRouter support (GitHub #17)
 
 The OpenRouter model-gateway MVP shipped (`81fcfa4`); GitHub issue #17 ("Expand
 OpenRouter support with model comparison and run history") completes it.

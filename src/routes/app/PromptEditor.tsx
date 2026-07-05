@@ -818,7 +818,7 @@ export function PromptEditor() {
           </div>
         )}
 
-        <PromptRunner prompt={body} />
+        <PromptRunner prompt={body} teamId={currentTeamId} promptId={promptId} />
       </div>
 
       {/* Mobile action bar */}

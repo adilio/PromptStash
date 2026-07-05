@@ -186,6 +186,69 @@ export type Database = {
           },
         ]
       }
+      prompt_runs: {
+        Row: {
+          id: string
+          team_id: string
+          prompt_id: string | null
+          prompt_version: number | null
+          owner_id: string
+          model: string
+          input_md: string
+          output_md: string | null
+          status: string
+          error: string | null
+          prompt_tokens: number | null
+          completion_tokens: number | null
+          total_tokens: number | null
+          cost_estimate: number | null
+          duration_ms: number | null
+          temperature: number | null
+          max_completion_tokens: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          prompt_id?: string | null
+          prompt_version?: number | null
+          owner_id: string
+          model: string
+          input_md: string
+          output_md?: string | null
+          status?: string
+          error?: string | null
+          prompt_tokens?: number | null
+          completion_tokens?: number | null
+          total_tokens?: number | null
+          cost_estimate?: number | null
+          duration_ms?: number | null
+          temperature?: number | null
+          max_completion_tokens?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          prompt_id?: string | null
+          prompt_version?: number | null
+          owner_id?: string
+          model?: string
+          input_md?: string
+          output_md?: string | null
+          status?: string
+          error?: string | null
+          prompt_tokens?: number | null
+          completion_tokens?: number | null
+          total_tokens?: number | null
+          cost_estimate?: number | null
+          duration_ms?: number | null
+          temperature?: number | null
+          max_completion_tokens?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       prompt_tags: {
         Row: {
           prompt_id: string

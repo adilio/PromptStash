@@ -26,3 +26,9 @@ export const bundleKeys = {
   details: () => [...bundleKeys.all, 'detail'] as const,
   detail: (bundleId?: string) => [...bundleKeys.details(), bundleId ?? null] as const,
 };
+
+export const runKeys = {
+  all: ['prompt-runs'] as const,
+  lists: () => [...runKeys.all, 'list'] as const,
+  list: (promptId?: string) => [...runKeys.lists(), promptId ?? null] as const,
+};
