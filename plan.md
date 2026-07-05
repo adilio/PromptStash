@@ -113,8 +113,20 @@ Guidance for the Fable agent that will implement the work below.
    (adilio). The second "Gilbert" account is two different sign-in emails
    (github vs google) — separate accounts by design, not a bug.
 
-6 new regression tests (workspace resolution + first-run failure UI). Still to
-confirm manually once deployed: a real Google login end-to-end.
+6 new regression tests (workspace resolution + first-run failure UI).
+
+**Also found & fixed while verifying:** infinite RLS recursion between
+`teams` and `memberships` (`is_team_member` was invoker-rights, so any direct
+select on those tables hit Postgres 54001 / HTTP 500 — only the
+`list_user_teams` RPC dodged it). Migration
+`20260705011000_fix_rls_recursion.sql` makes the helper SECURITY DEFINER;
+applied live and verified (anon: 200 empty; authenticated context: exactly the
+user's teams).
+
+**Manually verified end-to-end in production (2026-07-04):** real Google login
+via the PKCE callback → landed in the correct "Adilio" workspace with existing
+data intact → created a prompt → hard reload → session, workspace, and both
+prompts identical → row confirmed in the DB under the right team.
 
 ## P0 (original spec) — Auth & session persistence (investigate first)
 
