@@ -1,0 +1,9 @@
+project_id = "ecpmipfpknoxeohbafxs"
+
+# The REST/OpenRouter API function does its own auth:
+#   - REST v1 routes: Bearer ps_<key> -> SHA-256 hash lookup
+#   - OpenRouter run route: Bearer <supabase access token>
+# The platform gateway's JWT verification must be OFF, otherwise it rejects
+# the ps_ API keys as "Invalid JWT" before the function ever runs.
+[functions.api]
+verify_jwt = false
