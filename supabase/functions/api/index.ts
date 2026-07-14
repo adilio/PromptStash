@@ -180,22 +180,37 @@ async function handleOpenRouterRequest(req: Request, path: string): Promise<Resp
     return jsonResponse({ error: 'Add an OpenRouter API key in Settings before running prompts.' }, 400);
   }
 
-  const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${integration.api_key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': Deno.env.get('OPENROUTER_HTTP_REFERER') ?? req.headers.get('Origin') ?? 'https://promptstash.app',
-      'X-Title': Deno.env.get('OPENROUTER_APP_TITLE') ?? 'PromptStash',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature,
-      max_completion_tokens: maxCompletionTokens,
-      stream: false,
-    }),
-  });
+  // Bound the paid upstream call: abort when the browser cancels the run
+  // (req.signal fires on client disconnect) and cap wall time regardless,
+  // so cancelled or hung requests stop consuming the user's OpenRouter quota.
+  const upstreamSignal = AbortSignal.any([req.signal, AbortSignal.timeout(120_000)]);
+
+  let openRouterResponse: Response;
+  try {
+    openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: upstreamSignal,
+      headers: {
+        Authorization: `Bearer ${integration.api_key}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': Deno.env.get('OPENROUTER_HTTP_REFERER') ?? req.headers.get('Origin') ?? 'https://promptstash.app',
+        'X-Title': Deno.env.get('OPENROUTER_APP_TITLE') ?? 'PromptStash',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+        max_completion_tokens: maxCompletionTokens,
+        stream: false,
+      }),
+    });
+  } catch (error) {
+    if (upstreamSignal.aborted) {
+      // Client cancelled or the 120s cap hit — either way, stop paid work.
+      return jsonResponse({ error: 'OpenRouter request timed out.' }, 408);
+    }
+    throw error;
+  }
 
   const payload = await openRouterResponse.json().catch(() => null);
 
