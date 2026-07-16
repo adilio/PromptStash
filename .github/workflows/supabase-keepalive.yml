@@ -1,22 +1,45 @@
 name: Supabase keep-alive
 
-# Free-tier Supabase projects pause after ~7 days without API activity, which
-# takes down auth and data for the live app (this happened in production —
-# the project was found INACTIVE). A twice-weekly ping keeps it awake.
+# Free-tier Supabase projects pause after ~7 days without activity, which takes
+# down auth and data for the live app (this happened in production — the project
+# was found INACTIVE, and a twice-weekly ping still let it get flagged for
+# pausing).
+#
+# Why this runs DAILY and not twice a week: GitHub's scheduled runner delays —
+# and sometimes silently drops — cron jobs under load, especially on the hour.
+# A Mon/Thu schedule with one dropped run leaves a >7-day gap and the project
+# pauses anyway. Daily gives ~7x redundancy: several runs can slip and one still
+# lands inside the window. The job is a few seconds, so the cost is negligible.
+# The :23 offset keeps it off the top of the hour, the most congested slot.
 
 on:
   schedule:
-    - cron: '17 6 * * 1,4'
+    - cron: '23 6 * * *'
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST API
+      # A real SELECT against a current core table forces PostgREST to execute a
+      # database query (not just answer from cache), which is what registers as
+      # activity. `Prefer: count=exact` + HEAD makes the DB do real work while
+      # transferring no rows. -f fails the step on any non-2xx so a broken ping
+      # surfaces loudly instead of looking green.
+      - name: Ping PostgREST (database)
         run: |
-          curl -sf --max-time 30 \
-            "https://ecpmipfpknoxeohbafxs.supabase.co/rest/v1/teams?select=id&limit=1" \
+          curl -fsS --max-time 30 -I \
+            "https://ecpmipfpknoxeohbafxs.supabase.co/rest/v1/prompt_runs?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Prefer: count=exact" \
+            -o /dev/null
+
+      # Also touch Auth (GoTrue) so the auth service counts as active, not just
+      # the database — the live app depends on both.
+      - name: Ping Auth (GoTrue)
+        run: |
+          curl -fsS --max-time 30 \
+            "https://ecpmipfpknoxeohbafxs.supabase.co/auth/v1/health" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -o /dev/null
