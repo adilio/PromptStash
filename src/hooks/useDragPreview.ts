@@ -30,11 +30,16 @@ export function useDragPreview() {
   const showPreview = (options: DragPreviewOptions) => {
     if (!previewElement) return;
 
-    previewElement.innerHTML = `
-      <div class="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-        <span class="font-medium">${options.text}</span>
-      </div>
-    `;
+    // Build with DOM APIs and textContent so a user-authored prompt title can
+    // never be interpreted as HTML (previously an innerHTML injection sink).
+    const badge = document.createElement('div');
+    badge.className =
+      'bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2';
+    const label = document.createElement('span');
+    label.className = 'font-medium';
+    label.textContent = options.text;
+    badge.appendChild(label);
+    previewElement.replaceChildren(badge);
     previewElement.style.opacity = '1';
   };
 
