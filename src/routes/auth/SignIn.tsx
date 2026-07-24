@@ -222,6 +222,9 @@ export function SignIn() {
           #signin-form h1 {
             font-size: 30px !important;
           }
+          #signin-footer {
+            max-width: 100% !important;
+          }
         }
         @media (min-width: 480px) and (max-width: 767px) {
           #signin-form-container {
@@ -358,7 +361,7 @@ export function SignIn() {
           </div>
         </div>
 
-        <div style={{ fontSize: 12, color: 'var(--ps-fg-faint)' }}>© 2026 PromptStash</div>
+        <div />
       </aside>
 
       {/* Sign-in form */}
@@ -366,6 +369,7 @@ export function SignIn() {
         id="signin-form-container"
         style={{
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '56px 48px',
@@ -605,6 +609,27 @@ export function SignIn() {
             )}
           </div>
         </form>
+        <footer
+          id="signin-footer"
+          style={{
+            width: '100%',
+            maxWidth: 360,
+            marginTop: 40,
+            paddingTop: 16,
+            borderTop: '1px solid var(--ps-hairline-soft)',
+            color: 'var(--ps-fg-faint)',
+            fontSize: 12,
+            textAlign: 'center',
+            lineHeight: 1.7,
+          }}
+        >
+          <div><strong style={{ color: 'var(--ps-fg-muted)' }}>PromptStash</strong> · a 4dl app by Adil Leghari</div>
+          <div>
+            <a href="https://4dl.ca" style={{ color: 'var(--ps-accent)', textDecoration: 'none' }}>More 4dl apps</a>
+            {' · '}
+            <a href="https://github.com/adilio/PromptStash" target="_blank" rel="noreferrer" style={{ color: 'var(--ps-accent)', textDecoration: 'none' }}>Source</a>
+          </div>
+        </footer>
       </div>
     </div>
   );
