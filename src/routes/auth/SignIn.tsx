@@ -623,9 +623,9 @@ export function SignIn() {
             lineHeight: 1.7,
           }}
         >
-          <div><strong style={{ color: 'var(--ps-fg-muted)' }}>PromptStash</strong> · a 4dl app by Adil Leghari</div>
+          <div>A 4dl project by Adil Leghari</div>
           <div>
-            <a href="https://4dl.ca" style={{ color: 'var(--ps-accent)', textDecoration: 'none' }}>More 4dl apps</a>
+            <a href="https://4dl.ca" style={{ color: 'var(--ps-accent)', textDecoration: 'none' }}>Explore 4dl</a>
             {' · '}
             <a href="https://github.com/adilio/PromptStash" target="_blank" rel="noreferrer" style={{ color: 'var(--ps-accent)', textDecoration: 'none' }}>Source</a>
           </div>
