@@ -697,6 +697,27 @@ and why. This section is the record for the next session.
   agreement's "run `npm test` before every push" would hang. Added `test:run`
   (`vitest run`), `test:rules`, `emulators`, and a `verify` script chaining
   lint + build + both test suites. Use `npm run verify`.
+- **2026-08-09** — **The plan undercounts the auth work.** It says "the only
+  non-`src/api` files needing real work are the six auth call sites"; there are
+  in fact ~32 `supabase.auth.*` references across 20 files, and **9 of them are
+  outside `src/api/`**: `SignIn` (4), `AuthCallback` (3), `ResetPassword` (3),
+  `Settings` (4), `AppLayout` (2), `InviteAccept`, `Sidebar`, `TemplateGallery`,
+  `BundleEditor`. There is no existing `useAuth` hook — session state is handled
+  inline in `AppLayout`. Budget for this in Phase 4; `AuthCallback` should
+  shrink, since Firebase needs no `exchangeCodeForSession` PKCE dance.
+- **2026-08-09** — `src/firebase/client.ts` uses **static imports and throws**
+  on missing env, unlike qwizzle's lazy null-client. qwizzle defers the SDK
+  because that app is fully playable signed out, so most visitors never pay for
+  it. Every PromptStash route behind `/app` needs a backend on first paint, so
+  deferring would only add a round trip, and a missing config is a broken
+  deployment that should look like one immediately. Matches `src/lib/supabase.ts`.
+- **2026-08-09** — Emulator wiring is `VITE_FIREBASE_USE_EMULATOR=true`, which
+  points `auth` and `db` at ports 9099/8080 from `firebase.json`.
+- **2026-08-09** — `netlify.toml` carries the `/__/auth/*` proxy to
+  `promptstash.firebaseapp.com`. **That host is a guess** — it assumes the
+  project id is `promptstash`, which may be taken. Confirm at Phase 1 and fix
+  both the proxy target and `PRODUCTION_HOST` in `client.ts` if it differs. The
+  rule is inert until `VITE_FIREBASE_*` is set in production.
 - **2026-08-09** — `.firebaserc` deliberately **not** committed yet. It names a
   project that does not exist until `firebase login` + project creation in
   Phase 1, and the id `promptstash` may already be taken globally. The emulator

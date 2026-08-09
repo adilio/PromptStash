@@ -2,6 +2,24 @@
   command = "npm run build"
   publish = "dist"
 
+# Firebase Authentication's OAuth helpers must be served on the same branded
+# domain configured in src/firebase/client.ts, so Google's consent screen says
+# "Continue to promptstash.4dl.ca" instead of naming the Firebase project. This
+# is a transparent proxy (200 rewrite), not a browser redirect. Must come before
+# the SPA catch-all, or index.html would swallow it.
+#
+# The target host is <project-id>.firebaseapp.com. If the Firebase project ends
+# up with an id other than `promptstash` — the bare name may already be taken,
+# since project ids are globally unique — this line and the authDomain check in
+# src/firebase/client.ts must both be updated. Nothing routes here until the
+# VITE_FIREBASE_* variables are set in production, so it is inert until then.
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://promptstash.firebaseapp.com/__/auth/:splat"
+  status = 200
+  force = true
+
+# SPA: serve index.html for client-routed paths like /p/<public-slug>.
 [[redirects]]
   from = "/*"
   to = "/index.html"
