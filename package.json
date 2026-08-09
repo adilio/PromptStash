@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "test:run": "vitest run",
+    "emulators": "firebase emulators:start --only auth,firestore --project promptstash-rules-test"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.2.8",
@@ -35,6 +37,7 @@
     "clsx": "^2.1.0",
     "cmdk": "^1.1.1",
     "dompurify": "^3.4.12",
+    "firebase": "^12.17.1",
     "lucide-react": "^0.316.0",
     "nanoid": "^5.0.4",
     "react": "^18.2.0",
@@ -47,6 +50,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@testing-library/jest-dom": "^6.2.0",
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.2",

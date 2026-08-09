@@ -14,5 +14,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/tests/setup.ts',
+    // tests/rules/* needs the Firestore emulator and a node environment.
+    // `npm run test:rules` runs those; this run stays offline.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 });
