@@ -1,0 +1,657 @@
+# PromptStash → Firebase: complete migration plan
+
+_Written 2026-08-09. Decision is made. This document is the work._
+
+---
+
+## Cold start — read this first
+
+**This plan is written to be executed by a session with no prior context.**
+Everything needed is in this file. Nothing needs to be asked of Adil except the
+two dashboard steps explicitly marked **NEEDS ADIL**.
+
+### What this is
+
+PromptStash is a React + Vite prompt-library app on Supabase, deployed to
+Netlify. It is being moved to Firebase because the Supabase free tier pauses
+projects after 7 days of inactivity and the keep-alive built to prevent that
+**ran green daily for over a week while provably not working** — a Supabase
+pause warning arrived 2026-08-07 regardless. The full reasoning, including why
+Firebase was chosen over Neon, is in
+[`BACKEND-MIGRATION.md`](./BACKEND-MIGRATION.md). Do not re-litigate it.
+
+### Facts you will need
+
+| Thing | Value |
+|---|---|
+| Repo path | `/Users/adil/Code/PromptStash` (note: `/Users/adil/Code` is **not** a git repo) |
+| GitHub | `adilio/PromptStash` |
+| Live URL | `promptstash.4dl.ca` |
+| Netlify site id | `ac51512c-0330-4378-8746-77f738b77321` |
+| Supabase project ref | `ecpmipfpknoxeohbafxs` (org `Adilio`) |
+| Supabase anon key | Only in GitHub repo secret `SUPABASE_ANON_KEY`. `PromptStash/.env` is **empty** |
+| Keep-alive cron | `adilio/4dl.ca` → `.github/workflows/supabase-keepalive.yml` |
+| Stack | React 18, Vite, TypeScript, TanStack Query v5, Radix UI, Tailwind, react-router 7, vitest |
+
+**Critical usage fact, stated by Adil 2026-08-09: nobody uses this app.** No
+other accounts, no external API consumers, no uptime obligation. This is why the
+plan can snapshot-and-move rather than run a zero-downtime migration, and why
+there is no rollback window or API compatibility shim. If that turns out to be
+false, stop and revisit Phases 6–8.
+
+### Reference implementations already on this machine
+
+Both are working Firebase apps on the free Spark plan, deployed to Netlify.
+**Read them before writing new code** — they solve problems this plan assumes solved.
+
+| Path | What to take from it |
+|---|---|
+| `qwizzle/src/firebase/client.ts` (160 LOC) | Client init, `VITE_FIREBASE_*` env names, and the branded-OAuth-domain trick |
+| `qwizzle/src/firebase/useAuth.ts` (82 LOC) | Auth state hook |
+| `qwizzle/netlify/functions/palette.ts` | Netlify Function pattern, CORS, token verification |
+| `qwizzle/firestore.rules` | Rules layout |
+| `Rhabbit/firestore.rules` | The better rules reference — helper-function structure, `get()`/`exists()` usage |
+| `Rhabbit/firebase.json` | Minimal config |
+
+Neither repo commits `.firebaserc` or `firestore.indexes.json`. You will add both.
+
+### Tooling not yet installed
+
+```sh
+npm i -g firebase-tools     # `firebase` is NOT on this machine
+# `supabase` CLI is also absent — Phase 0 uses REST, no CLI needed
+# `netlify` IS installed and authenticated as adilio@gmail.com
+```
+
+---
+
+## Working agreement — non-negotiable
+
+- **No AI attribution in any git or GitHub artifact.** No `Co-Authored-By:`, no
+  `Claude-Session:`, no "Generated with" line, no branch name containing
+  "claude". Branch this work `firebase-migration`. Commits author as the repo's
+  configured user.
+
+  This is permanent and strict: `Co-Authored-By:` writes into a GitHub per-repo
+  contributor cache that **never recomputes**, and the only remedy is deleting
+  and recreating the repository. It cost `adilio/pwsh.ca` a full delete/recreate
+  in July 2026.
+- **Never use `--no-verify`**, never disable `core.hooksPath`. The global
+  `commit-msg`/`pre-push` hooks in `~/.git-hooks` enforce the above.
+- **Commit per module**, detailed messages, push as you go.
+- Where a question arises mid-execution, take the safest defensible default,
+  **append it to the [Assumption log](#assumption-log)**, and keep going.
+- Run `npm run lint && npm run build && npm test` before every push. Lint is
+  `--max-warnings 0`; it will fail on unused Supabase imports as you remove them.
+
+---
+
+## What PromptStash is, architecturally
+
+So you don't have to rediscover it.
+
+| Metric | Value |
+|---|---|
+| App source (excl. tests) | 15,396 LOC |
+| Data layer `src/api/` | 1,327 LOC / 12 modules |
+| Supabase call sites (non-test) | 50 across 23 files |
+| Supabase refs in tests | 92 across 2,935 LOC |
+| Postgres tables | 16 |
+| RLS policies | 25+ |
+| Security-definer RPCs | 6 |
+| Edge function | `supabase/functions/api/index.ts`, 490 LOC |
+
+**Routes:** `app/{Dashboard,PromptEditor,PromptView,BundleList,BundleEditor,Settings,Learn,LearnConcept,AppLayout}`,
+`auth/{SignIn,AuthCallback,ResetPassword}`, `public/{PublicPrompt,InviteAccept}`.
+
+**Auth surface in use:** `signUp`, `signInWithPassword`, `signInWithOAuth`
+(Google), `resetPasswordForEmail`, `updateUser`, `signOut`, `getUser`,
+`getSession`, `onAuthStateChange`. PKCE flow. All have direct Firebase Auth
+equivalents.
+
+**The edge function does two unrelated jobs:** a public API-key-authenticated
+`/v1/*` REST API, and an OpenRouter proxy at `/v1/openrouter/run`.
+
+---
+
+## The three decisions that shape everything
+
+### 1. `src/api/*` is the seam
+
+All twelve modules export domain functions returning domain types:
+
+```ts
+export async function listPrompts(
+  teamId: string, folderId?: string, searchQuery?: string
+): Promise<PromptWithTags[]>
+```
+
+No caller sees Supabase. **Keep every exported signature identical** and the
+port becomes module-by-module and independently testable, while ~15,000 LOC of
+components never change. The only non-`src/api` files needing real work are the
+six auth call sites plus two stray queries (both handled in Phase 4).
+
+### 2. Keep `snake_case` field names in Firestore
+
+Domain types (`team_id`, `body_md`, `public_slug`, `updated_at`) are generated
+from the Postgres schema and flow straight into components. Firestore documents
+keep those exact names, so ported functions return **byte-identical shapes**.
+
+Un-idiomatic for Firestore, deliberately. The alternative renames every field
+across every component, test and type for zero functional gain and real
+regression risk. Adil has no deadline, but "no deadline" is not a reason to take
+on a large mechanical diff with no benefit. **Document this in
+`src/firebase/README.md`** so nobody later "fixes" it.
+
+### 3. Server code goes to Netlify Functions, not Cloud Functions
+
+Cloud Functions [require the Blaze plan][blaze]. Netlify Functions are free and
+already the established pattern here (`qwizzle/netlify/functions/palette.ts`).
+
+[blaze]: https://firebase.google.com/docs/projects/billing/firebase-pricing-plans
+
+**Important divergence from qwizzle:** that function deliberately avoids a
+service-account key by verifying tokens through Identity Toolkit
+`accounts:lookup`, using only the public web API key. Reuse that for *token
+verification*. But PromptStash's functions must also **read and write Firestore
+while bypassing rules** — `api_keys` lookup by hash, `integrations` read,
+`accept_invite` transaction. That genuinely requires `firebase-admin` with a
+service account. So: one service-account JSON in Netlify env, and it is the only
+new secret this migration introduces. Never commit it.
+
+---
+
+## Firestore data model
+
+16 tables → 11 collections. Three collapse into parents, one is deleted.
+
+```
+users/{uid}
+    display_name, created_at
+
+teams/{teamId}
+    name, owner_id, created_at
+    member_ids: [uid]                    ← denormalized from memberships
+    roles: { uid: 'owner'|'editor'|'viewer' }
+
+folders/{folderId}
+    team_id, parent_id, name, created_by, created_at
+
+prompts/{promptId}
+    team_id, folder_id, owner_id, title, body_md, agent_format, stage,
+    espanso_trigger, visibility, public_slug, workflow_pattern_id,
+    workflow_step_id, workflow_label, created_at, updated_at
+    tag_ids: [tagId]                     ← replaces prompt_tags
+  └ versions/{versionId}                 (subcollection)
+        version, body_md, edited_by, edited_at
+
+tags/{teamId}__{name}                    ← doc ID enforces unique(team_id,name)
+    team_id, name, created_by, created_at
+
+bundles/{bundleId}
+    team_id, name, description, target_format, created_by, created_at, updated_at
+    items: [{prompt_id, position, included, heading_override}]   ← replaces bundle_items
+
+workflow_patterns/{patternId}
+    team_id|null, name, description, source_label, source_url, is_system, created_by
+    steps: [{key, label, short_label, color, position}]          ← replaces workflow_pattern_steps
+
+prompt_runs/{runId}
+    team_id, prompt_id, prompt_version, owner_id, model, input_md, output_md,
+    status, error, prompt_tokens, completion_tokens, total_tokens,
+    cost_estimate, duration_ms, temperature, max_completion_tokens, created_at
+
+invites/{token}                          ← doc ID = token, enforcing uniqueness
+    team_id, email, role, expires_at, used_at, created_by, created_at
+
+api_keys/{keyHash}                       ← doc ID = SHA-256 hash. SERVER ONLY.
+    user_id, name, key_prefix, created_at, last_used_at
+
+integrations/{uid}                       ← SERVER ONLY.
+    openrouter: { api_key, key_prefix, updated_at }
+```
+
+### What collapses, and why
+
+| Table | Becomes | Rationale |
+|---|---|---|
+| `memberships` | `member_ids[]` + `roles{}` on the team doc | **Load-bearing.** One `get()` on the team doc answers every authz question in the rules. |
+| `prompt_tags` | `tag_ids[]` on the prompt | Idiomatic Firestore; enables `array-contains`; removes a join. |
+| `bundle_items` | `items[]` on the bundle | Ordered, small, always read with its parent. |
+| `workflow_pattern_steps` | `steps[]` on the pattern | 5–10 steps, always read together. |
+| `prompt_versions` | subcollection | Natural parent–child; unbounded, so not embedded. |
+| **`shares`** | **deleted** | `src/api/shares.ts` is imported by **nothing** (verified). Schema calls it "not fully implemented in MVP". Drop the module and the table. |
+
+Denormalizing memberships is the cheap direction: a role change rewrites one
+small, frequently-read, rarely-written document.
+
+---
+
+## Security rules
+
+Write to `firestore.rules`. This is the complete file — the RLS model translates
+directly because every policy bottoms out in `is_team_member(team_id)` or a role
+check, and both are now fields on one document.
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function team(tid)  { return get(/databases/$(database)/documents/teams/$(tid)).data; }
+    function isMember(tid) { return signedIn() && request.auth.uid in team(tid).member_ids; }
+    function canEdit(tid)  { return signedIn() && team(tid).roles[request.auth.uid] in ['owner','editor']; }
+    function isOwner(tid)  { return signedIn() && team(tid).owner_id == request.auth.uid; }
+    function promptTeam(pid) {
+      return get(/databases/$(database)/documents/prompts/$(pid)).data.team_id;
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /teams/{tid} {
+      allow get, list: if signedIn()
+        && (request.auth.uid in resource.data.member_ids
+            || resource.data.owner_id == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.owner_id == request.auth.uid
+        && request.auth.uid in request.resource.data.member_ids;
+      allow update, delete: if isOwner(tid);
+    }
+
+    // Mirrors prompts_read: visibility='public' OR is_team_member(team_id).
+    // Unauthenticated slug reads work because getPromptBySlug constrains BOTH
+    // visibility=='public' AND public_slug, so every returned document
+    // satisfies the first branch.
+    match /prompts/{pid} {
+      allow get, list: if resource.data.visibility == 'public'
+                          || isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if canEdit(resource.data.team_id)
+                       && canEdit(request.resource.data.team_id);
+      allow delete: if canEdit(resource.data.team_id);
+
+      match /versions/{vid} {
+        allow get, list: if isMember(promptTeam(pid));
+        allow create:    if canEdit(promptTeam(pid));
+        allow update, delete: if false;   // versions are immutable history
+      }
+    }
+
+    match /folders/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if canEdit(resource.data.team_id) && canEdit(request.resource.data.team_id);
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /tags/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if canEdit(resource.data.team_id) && canEdit(request.resource.data.team_id);
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /bundles/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if canEdit(resource.data.team_id) && canEdit(request.resource.data.team_id);
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /prompt_runs/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update, delete: if canEdit(resource.data.team_id);
+    }
+
+    match /workflow_patterns/{id} {
+      allow get, list: if (resource.data.is_system == true && signedIn())
+                          || (resource.data.team_id != null && isMember(resource.data.team_id));
+      allow create: if request.resource.data.team_id != null
+                       && request.resource.data.is_system == false
+                       && canEdit(request.resource.data.team_id);
+      allow update, delete: if resource.data.team_id != null
+                               && resource.data.is_system == false
+                               && canEdit(resource.data.team_id);
+    }
+
+    // Accepting an invite requires knowing the unguessable token, which is the
+    // document id. `get` only — never `list`, or tokens become enumerable.
+    match /invites/{token} {
+      allow get:    if signedIn();
+      allow list:   if isOwner(resource.data.team_id);
+      allow create: if isOwner(request.resource.data.team_id);
+      allow update, delete: if isOwner(resource.data.team_id);
+      // The accept path (email match + membership write) runs server-side.
+    }
+
+    // Server-only. Reachable exclusively via admin SDK in Netlify Functions.
+    // Mirrors `revoke all on model_integrations from anon, authenticated`.
+    match /api_keys/{h}     { allow read, write: if false; }
+    match /integrations/{u} { allow read, write: if false; }
+  }
+}
+```
+
+### ⚠ The assumption that must be verified before any porting
+
+Rules allow **10 document-access calls per single-document request and 20 per
+query**. Every `isMember()` is a `get()`. Firestore is documented to cache
+repeated `get()`s to the *same path* within one evaluation, which should make a
+200-prompt list cost 1 read rather than 200 — **but verify it in the emulator
+rather than assume it.**
+
+If it does not hold, list views break and the fix is denormalizing `member_ids`
+onto every document (write amplification on membership change). **That decision
+must land before Phase 4 writes code depending on it.** It is Phase 2's exit
+criterion and the single highest-risk item in this plan.
+
+---
+
+## Phases
+
+Nobody uses the app, so this is a snapshot-and-move, not a zero-downtime
+migration. Phases are still ordered so each is independently revertible and the
+irreversible act comes last.
+
+### Phase 0 — Snapshot everything · ~1h · **NEEDS ADIL**
+
+The Supabase project is under an active pause warning and its keep-alive is
+green-but-broken. **Rather than nurse the keep-alive, take a complete snapshot
+now and stop caring whether it pauses.** A paused project can be restored from
+the dashboard; a snapshot on disk makes even that unnecessary.
+
+**Adil does, in one dashboard sitting:**
+1. Supabase → Project Settings → API → copy the **`service_role`** key.
+2. Save it to `PromptStash/.env` (gitignored) as `SUPABASE_SERVICE_ROLE_KEY=…`.
+   Also add `VITE_SUPABASE_URL=https://ecpmipfpknoxeohbafxs.supabase.co`.
+
+   ⚠ **Append, do not overwrite.** Overwriting a `.env` during the qwizzle
+   migration destroyed an unrecoverable Anthropic key. Use `>>`, never `>`.
+3. Run this in the SQL editor and paste the result into the
+   [Assumption log](#assumption-log):
+
+```sql
+select 'users' t, count(*) from auth.users
+union all select 'teams',    count(*) from public.teams
+union all select 'members',  count(*) from public.memberships
+union all select 'folders',  count(*) from public.folders
+union all select 'prompts',  count(*) from public.prompts
+union all select 'versions', count(*) from public.prompt_versions
+union all select 'tags',     count(*) from public.tags
+union all select 'bundles',  count(*) from public.bundles
+union all select 'runs',     count(*) from public.prompt_runs
+union all select 'invites',  count(*) from public.invites
+union all select 'api_keys', count(*) from public.api_keys
+union all select 'patterns', count(*) from public.workflow_patterns
+order by 1;
+```
+
+**Then the session does:** write `scripts/export-supabase.ts` that pulls every
+table over PostgREST with the service-role key into `.snapshot/*.json`
+(gitignored), plus `auth.users` via the Admin API for the bcrypt hashes.
+
+**Exit:** `.snapshot/` holds every table as JSON, counts match step 3, and the
+migration no longer depends on Supabase staying awake. Commit the script, not
+the snapshot.
+
+> The write-based keep-alive fix documented in `4dl.ca/docs/KEEPALIVE.md`
+> remains available if you would rather keep the project healthy too. With a
+> snapshot in hand it is optional — skip it unless the migration stalls for
+> weeks.
+
+### Phase 1 — Firebase project · ~3h
+
+```sh
+npm i -g firebase-tools && firebase login
+```
+
+1. Create Firebase project **`promptstash`**, Spark plan.
+2. Auth → enable **Email/Password** and **Google**. Add `promptstash.4dl.ca`,
+   `localhost` and the Netlify preview domain to Authorized Domains.
+3. Firestore → create in **native mode**, same region as Rhabbit for consistency.
+4. Add to the repo: `firebase.json`, `.firebaserc`, `firestore.rules`,
+   `firestore.indexes.json`. Copy `Rhabbit/firebase.json` as the starting point.
+5. Wire the emulator suite (`firestore` + `auth`) into `npm run` scripts.
+6. `npm i firebase` and `npm i -D @firebase/rules-unit-testing`.
+
+**Branded OAuth domain** — copy qwizzle's trick so Google shows "Continue to
+promptstash.4dl.ca" rather than the Firebase hostname. It needs both halves:
+- `netlify.toml`: proxy `/__/auth/*` → `https://promptstash.firebaseapp.com/__/auth/:splat` (status 200)
+- `client.ts`: use `window.location.hostname` as `authDomain` **only** on
+  `promptstash.4dl.ca`; previews and local dev keep the configured domain,
+  because they have no proxy.
+
+**Exit:** emulator starts; `firebase deploy --only firestore:rules` succeeds.
+
+### Phase 2 — Rules + emulator tests · ~8h · **GATE**
+
+Write the rules above, then a `@firebase/rules-unit-testing` suite covering:
+
+- non-member cannot read another team's prompts (get **and** list)
+- viewer cannot write; editor can; owner can manage members
+- unauthenticated **can** read a public prompt by slug
+- unauthenticated **cannot** list a team's prompts
+- `invites` cannot be listed by a non-owner (token enumeration)
+- `prompts/{id}/versions` are immutable once written
+- `api_keys` and `integrations` are unreachable from any client, signed in or not
+- a `create` cannot smuggle a `team_id` the caller can't edit
+- **the `get()` budget on a realistic list query (≥50 prompts)** ← the gate
+
+**Exit:** all green. If the `get()` caching assumption fails, denormalize
+`member_ids` onto every document and update the model above **before Phase 4**.
+
+### Phase 3 — `src/firebase/*` client layer · ~3h
+
+Mirror `qwizzle/src/firebase/`:
+
+```
+src/firebase/
+  client.ts     app init, auth, db; VITE_FIREBASE_* config
+  useAuth.ts    auth state hook
+  README.md     ← document the snake_case decision here
+```
+
+Lives **alongside** `src/lib/supabase.ts`. Nothing is deleted yet; both clients
+coexist through Phase 6. Add `VITE_FIREBASE_*` to `.env.example` and to Netlify
+in **deploy-preview context only**, so production is untouched.
+
+Note: current `src/lib/supabase.ts` **throws** if env vars are missing. Decide
+whether Firebase should throw too (recommended here — unlike qwizzle, this app
+is useless without a backend) and note it in the log.
+
+### Phase 4 — Port `src/api/*` · ~14h
+
+Twelve modules, smallest first so the pattern is proven on low-risk code. **Each
+keeps its exported signatures. Each is one commit with its tests converted.**
+
+| # | Module | LOC | Notes |
+|---|---|---|---|
+| 1 | ~~`shares.ts`~~ | 52 | **Delete.** Imported by nothing. Also drop its tests. |
+| 2 | `invites.ts` | 40 | `accept_invite` RPC → Netlify Function (Phase 5); client just calls it |
+| 3 | `runs.ts` | 51 | Straight port |
+| 4 | `folders.ts` | 72 | Straight port. **Add recursive delete** — Postgres cascaded, Firestore won't |
+| 5 | `versions.ts` | 76 | Version increment → `runTransaction` (was `unique(prompt_id, version)`) |
+| 6 | `tags.ts` | 82 | Doc ID `{teamId}__{name}` replaces the unique constraint |
+| 7 | `apikeys.ts` | 83 | Create/revoke move server-side (hashing must not be client-side) |
+| 8 | `openrouter.ts` | 130 | All 3 RPCs → Netlify Function |
+| 9 | `patterns.ts` | 148 | `steps[]` embedded; system patterns readable by all signed-in users |
+| 10 | `bundles.ts` | 165 | `items[]` embedded; removes the `prompts!inner` join |
+| 11 | `teams.ts` | 171 | `list_user_teams` → `where('member_ids','array-contains',uid)`. **Add recursive delete** |
+| 12 | `prompts.ts` | 257 | Biggest — see below |
+
+**`prompts.ts` specifics:**
+- `listPrompts` — drop the `plfts` branch entirely; fetch team prompts and
+  filter `title`/`body_md` in memory. Firestore has no full-text search; at this
+  data volume in-memory is instant. This is the one accepted feature regression.
+- tags — resolve from `tag_ids[]` against a cached team-tags map. Removes the
+  two-query join in both `listPrompts` and `getPrompt`.
+- `getPromptBySlug` — `where('public_slug','==',slug).where('visibility','==','public')`.
+  Both constraints are required for the unauthenticated rule to pass. Don't drop either.
+- `makePromptPublic` — `nanoid(10)`. Postgres enforced `public_slug unique`;
+  Firestore can't. Do it in a transaction that re-checks for collision.
+- `updatePrompt` — set `updated_at: serverTimestamp()` explicitly. This replaces
+  the `moddatetime` trigger. Same in `bundles.ts`. **Easy to forget; assert in tests.**
+- `deletePrompt` — delete the `versions` subcollection first.
+
+**Also in this phase**, close the last two non-auth leaks. `Dashboard.tsx:456`
+and `CommandPalette.tsx:64` both run `count:'exact', head:true` with
+`.or('stage.not.is.null,workflow_label.not.is.null')` directly against Supabase.
+Move both behind a new `hasStagedPrompts(teamId)` in `src/api/prompts.ts`.
+Firestore can't express that `or` on absence — fetch the team's prompts (already
+cached by TanStack Query) and check in memory, or maintain a boolean. Prefer the
+in-memory check; note the choice in the log.
+
+### Phase 5 — Netlify Functions · ~6h
+
+Port `supabase/functions/api/index.ts` (490 LOC) to `netlify/functions/`.
+
+**Auth strategy** (see decision 3): Firebase ID tokens verify via Identity
+Toolkit `accounts:lookup` (no secret, copy qwizzle). Firestore access uses
+`firebase-admin` with a service account in Netlify env as
+`FIREBASE_SERVICE_ACCOUNT` (JSON, single line). Never commit it.
+
+| Endpoint | Notes |
+|---|---|
+| `POST /v1/openrouter/run` | Verify ID token → read `integrations/{uid}` → proxy. **Keep `AbortSignal.any([req.signal, AbortSignal.timeout(120_000)])`** — it exists to stop paid OpenRouter work when the client cancels. Do not drop it. |
+| `GET /v1/prompts` | API-key auth: SHA-256 the bearer → `api_keys/{hash}` → update `last_used_at`. Search was `plfts`; filter in memory. |
+| `GET/POST/PATCH/DELETE /v1/prompts/:id` | Same auth |
+| `GET /v1/workspaces` | `where('member_ids','array-contains',uid)` |
+| `POST /v1/invites/accept` | Was the `accept_invite` security-definer RPC. **Must stay server-side** — it validates the invite email against the caller's *verified* email, then writes membership. Firestore transaction. |
+| `POST/GET/DELETE /v1/integrations/openrouter` | Replaces the 3 OpenRouter RPCs, since `integrations/*` denies all client access |
+
+Keep paths and response envelopes identical to the current edge function. There
+are no external consumers, so this is free insurance rather than a requirement.
+
+### Phase 6 — Data · ~3h
+
+1. **Users first.** `firebase auth:import` with `localId` set to each Supabase
+   UUID. Supabase stores bcrypt; the importer takes bcrypt with
+   `--hash-algo=BCRYPT`. This preserves every `owner_id`/`created_by`/`edited_by`
+   reference with **zero ID rewriting** — worth doing even for a single user.
+2. `scripts/import-firestore.ts` transforms `.snapshot/*.json` per the model
+   (fold memberships into `member_ids`/`roles`, `prompt_tags` into `tag_ids`,
+   `bundle_items` into `items[]`, `workflow_pattern_steps` into `steps[]`) and
+   writes via admin SDK, **preserving all UUIDs as document IDs**.
+3. Re-seed `is_system` workflow patterns from
+   `supabase/migrations/20260705020000_workflow_patterns.sql`.
+4. Verify per-collection counts against Phase 0.
+
+If the counts come back trivially small, re-creating by hand is a legitimate
+alternative — but the script is more reliable and barely slower.
+
+### Phase 7 — Cutover · ~3h
+
+1. Set `VITE_FIREBASE_*` and `FIREBASE_SERVICE_ACCOUNT` in Netlify **production**.
+2. Deploy. Leave the Supabase env vars in place but unused — reverting the
+   bundle is then a complete rollback.
+3. Verify in production (full checklist below).
+4. Watch 48h.
+
+**Google sign-in cannot be driven by browser automation** — the popup needs a
+real click. This was the one step of qwizzle's migration that couldn't be
+verified unattended. Expect the same; it needs a human minute.
+
+### Phase 8 — Decommission · ~2h · only after Phase 7 is clean
+
+In this order:
+
+1. Remove PromptStash from `4dl.ca/.github/workflows/supabase-keepalive.yml`;
+   delete `PROMPTSTASH_SERVICE_ROLE_KEY` if it was ever set.
+2. `git rm -r supabase/`; delete `src/lib/supabase.ts` and
+   `src/lib/database.types.ts`; `npm rm @supabase/supabase-js`.
+3. Remove Supabase env vars from Netlify.
+4. **Delete Supabase project `ecpmipfpknoxeohbafxs`** ← only irreversible act.
+5. Update `README.md` and `.env.example`.
+
+**While you are in that dashboard:** qwizzle's project `qxdipvsqnjzqbzkuzcua` is
+still alive with its own keep-alive cron, its migration finished weeks ago, and
+step 3 of the prior plan was never completed. Delete it too and remove
+`qwizzle/.github/workflows/supabase-keepalive.yml`. That retires the last
+Supabase project behind the 4dl.ca apps. (ThreatDex still has one, kept alive by
+its own nightly writes — leave it.)
+
+---
+
+## Verification checklist
+
+Run in production after Phase 7. Every line must pass before Phase 8.
+
+- [ ] Sign up with email/password; receive and complete verification
+- [ ] Sign in with email/password
+- [ ] Sign in with Google (**manual click required**)
+- [ ] Password reset end-to-end
+- [ ] Sign out clears session; protected routes redirect
+- [ ] Create / rename / delete a team; team list loads
+- [ ] Create nested folders; delete a folder and confirm **no orphaned prompts**
+- [ ] Create, edit, delete a prompt
+- [ ] Prompt search returns expected results (in-memory filter)
+- [ ] Add/remove tags; tag filter works
+- [ ] Version history records an entry per edit; restore works
+- [ ] Make a prompt public → open `/p/{slug}` **signed out** → renders
+- [ ] Make it private again → the slug 404s
+- [ ] Create a bundle, reorder items, export
+- [ ] Save an OpenRouter key in Settings; run a prompt; cancel mid-run and
+      confirm the upstream call aborts
+- [ ] Run history records the run
+- [ ] Create an invite; accept it from a second account; role is correct
+- [ ] Create an API key; call `/v1/prompts` and `/v1/workspaces` with it
+- [ ] Revoke the key; the call now 401s
+- [ ] `api_keys` and `integrations` unreadable from the browser console
+- [ ] `updated_at` changes on edit (the `moddatetime` replacement)
+- [ ] Delete a team and confirm no orphaned prompts/folders/tags/bundles/runs
+
+---
+
+## Effort
+
+| Phase | Est. |
+|---|---|
+| 0 · Snapshot | 1h |
+| 1 · Firebase project | 3h |
+| 2 · Rules + emulator tests (**gate**) | 8h |
+| 3 · `src/firebase/*` | 3h |
+| 4 · Port `src/api/*` | 14h |
+| 5 · Netlify Functions | 6h |
+| 6 · Data | 3h |
+| 7 · Cutover | 3h |
+| 8 · Decommission | 2h |
+| Tests (92 refs, threaded through 4–5) | 7h |
+| **Total** | **≈50h** |
+
+Focused hours, not calendar. There is no deadline; the ordering matters more
+than the estimate.
+
+---
+
+## Risks
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| Rules `get()` budget — repeated `get()`s may not be cached | **High** | Phase 2 gate. Fallback: denormalize `member_ids` onto every doc. Settle before Phase 4. |
+| **No cascade deletes** — orphans on team/folder/prompt delete | **High** | Postgres did this for free via `on delete cascade`; it is the easiest thing in this plan to forget. Explicit recursive deletes in `teams.ts`, `folders.ts`, `prompts.ts`; assert in tests; two checklist lines. |
+| Supabase pauses mid-migration | Low | Phase 0 snapshot removes the dependency entirely. |
+| Losing full-text search | Low (accepted) | In-memory filter. Revisit only if the corpus grows. |
+| `updated_at` no longer automatic | Low | `serverTimestamp()` at every write site; assert in tests. |
+| `public_slug` collision | Very low | Transactional re-check in `makePromptPublic`. |
+| Service-account key leaking | Medium | Netlify env only, never committed. It is the only new secret. |
+
+---
+
+## Assumption log
+
+Append here during execution. Include the date, the question, the default taken,
+and why. This section is the record for the next session.
+
+- **2026-08-09** — "Nobody uses this app" (Adil, verbatim). Taken to mean: no
+  other accounts, no external `/v1/*` consumers, no uptime obligation. Justifies
+  snapshot-and-move over zero-downtime, and no API compatibility window. Revisit
+  Phases 6–8 if false.
+- **2026-08-09** — `snake_case` retained in Firestore documents. Rationale in
+  decision 2. Re-document in `src/firebase/README.md`.
+- **2026-08-09** — `shares` deleted rather than ported. `src/api/shares.ts` has
+  no importers anywhere in `src/`; the schema itself calls it unimplemented.
+- **2026-08-09** — Row counts from Phase 0: _(paste here)_
