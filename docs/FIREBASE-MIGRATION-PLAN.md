@@ -721,6 +721,19 @@ and why. This section is the record for the next session.
   `BundleEditor`. There is no existing `useAuth` hook — session state is handled
   inline in `AppLayout`. Budget for this in Phase 4; `AuthCallback` should
   shrink, since Firebase needs no `exchangeCodeForSession` PKCE dance.
+- **2026-08-09** — **Phase 4 cannot be sequenced module-by-module in a working
+  app, and its ordering should change.** The plan ports `src/api/*` smallest
+  first and says both clients coexist until Phase 6. Each *module* is
+  independently testable, but the *app* is not independently runnable: nine of
+  the twelve modules call `supabase.auth.getUser()` for the acting user, and a
+  ported module needs `auth.currentUser` from Firebase instead. Auth does not
+  flip over gradually — the moment `AppLayout` authenticates against Firebase,
+  every unported module loses its user, and until it does, every ported one has
+  none. So the real order is: **auth first (the 9 non-`src/api` files), then the
+  data modules**, with the app non-functional in between. That is acceptable
+  here only because nobody uses it — this is precisely the kind of thing the
+  "nobody uses this app" assumption is buying, so re-read that assumption before
+  starting. Do the auth port in one commit, not nine.
 - **2026-08-09** — `src/firebase/client.ts` uses **static imports and throws**
   on missing env, unlike qwizzle's lazy null-client. qwizzle defers the SDK
   because that app is fully playable signed out, so most visitors never pay for
