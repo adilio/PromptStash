@@ -697,6 +697,22 @@ and why. This section is the record for the next session.
   agreement's "run `npm test` before every push" would hang. Added `test:run`
   (`vitest run`), `test:rules`, `emulators`, and a `verify` script chaining
   lint + build + both test suites. Use `npm run verify`.
+- **2026-08-09** — **The Admin API does not return password hashes**, contrary
+  to Phase 0's "plus `auth.users` via the Admin API for the bcrypt hashes".
+  GoTrue redacts `encrypted_password` from every admin response; the column is
+  reachable only over SQL. This matters for Phase 6, where
+  `firebase auth:import --hash-algo=BCRYPT` wants them. Two ways forward:
+  run the SQL the export script prints and save it as
+  `.snapshot/auth_passwords.json`, or import users without passwords and have
+  them reset once after cutover. **UUIDs are preserved either way** — that is
+  what every `owner_id`/`created_by`/`edited_by` actually depends on — and
+  Google sign-in is unaffected. With one user, the reset is likely simpler.
+  The script checks the payload rather than assuming, so it will stop warning by
+  itself if a future GoTrue starts returning them.
+- **2026-08-09** — Scripts are plain `.ts` run by `node scripts/foo.ts`. Node 25
+  strips types natively, so no `tsx`/`ts-node` dependency is needed. `tsconfig`
+  has `include: ["src"]`, so `scripts/` and `tests/` are linted but not
+  typechecked by `npm run build`.
 - **2026-08-09** — **The plan undercounts the auth work.** It says "the only
   non-`src/api` files needing real work are the six auth call sites"; there are
   in fact ~32 `supabase.auth.*` references across 20 files, and **9 of them are
