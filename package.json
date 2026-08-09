@@ -12,7 +12,9 @@
     "test:ui": "vitest --ui",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "test:run": "vitest run",
-    "emulators": "firebase emulators:start --only auth,firestore --project promptstash-rules-test"
+    "emulators": "firebase emulators:start --only auth,firestore --project promptstash-rules-test",
+    "test:rules": "firebase emulators:exec --only firestore --project promptstash-rules-test \"vitest run --config vitest.rules.config.ts\"",
+    "verify": "npm run lint && npm run build && npm run test:run && npm run test:rules"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.2.8",

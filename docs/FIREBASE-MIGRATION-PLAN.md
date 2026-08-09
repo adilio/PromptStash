@@ -655,3 +655,50 @@ and why. This section is the record for the next session.
 - **2026-08-09** — `shares` deleted rather than ported. `src/api/shares.ts` has
   no importers anywhere in `src/`; the schema itself calls it unimplemented.
 - **2026-08-09** — Row counts from Phase 0: _(paste here)_
+- **2026-08-09** — **The Phase 2 gate passes. `member_ids` does NOT need
+  denormalizing onto every document; the model above stands and Phase 4 can be
+  written against it.** A member listing 60 team prompts succeeds, so Firestore
+  does collapse repeated `get()`s to the same path within one rule evaluation.
+  The suite carries a deliberate control — a query needing one `get()` against
+  30 *distinct* team documents, which must fail — so that a green gate cannot
+  simply mean the emulator ignores the access-call budget. It fails as required,
+  which is what makes the pass meaningful. Caveat: this is the emulator. Re-run
+  `npm run test:rules` against the real project once it exists (Phase 1) before
+  treating it as settled in production.
+- **2026-08-09** — Secrets live in `.env.local`, not `.env`. The plan said
+  `PromptStash/.env` was empty; there is in fact no `.env` at all, and
+  `.env.local` (gitignored) already holds `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY`. Phase 0's `SUPABASE_SERVICE_ROLE_KEY` appends there.
+  Separately, the `SUPABASE_ACCESS_TOKEN` in that file is expired — the
+  management API returns 401 — so it cannot substitute for the service-role key.
+- **2026-08-09** — `invites` rules kept at **owner-only read**, against the
+  plan's proposed `allow get: if signedIn()`. No client path needs to read an
+  invite: `InviteAccept.tsx` calls `acceptInvite()` and nothing else, and that
+  runs server-side on the admin SDK, which bypasses rules. The narrower rule is
+  the one with no caller, and it matches `invites_read_owners` exactly.
+- **2026-08-09** — `prompts/{id}/versions` read is narrowed to team members.
+  Postgres `versions_read` also allowed reading versions of a *public* prompt;
+  nothing uses that. `VersionHistoryDialog` is app-side only and `PublicPrompt`
+  never requests versions. Revisit if public prompts ever show their history.
+- **2026-08-09** — Rules read a nullable `team_id` as
+  `resource.data.get('team_id', null)`, not as a property. A bare
+  `resource.data.team_id` raises "Property team_id is undefined" when the field
+  is absent, and absent is indistinguishable from explicit-null once the Phase 6
+  import runs — it has no reason to write nulls out. Caught by the rules suite.
+- **2026-08-09** — Added `staysEditable()`: an update must satisfy `canEdit` on
+  the stored `team_id` **and** leave `team_id` unchanged. The plan checked
+  `canEdit` on both old and new team, which permits moving a document between
+  two teams the caller can edit — a cross-team move no API function performs.
+  Also pinned: an owner cannot reassign `owner_id` by update.
+- **2026-08-09** — Added a terminal `match /{document=**} { allow read, write:
+  if false; }`. Firestore already denies unmatched paths; making it explicit
+  means a collection added later is closed until someone writes a rule for it.
+- **2026-08-09** — `npm test` is `vitest` in **watch mode**, so the working
+  agreement's "run `npm test` before every push" would hang. Added `test:run`
+  (`vitest run`), `test:rules`, `emulators`, and a `verify` script chaining
+  lint + build + both test suites. Use `npm run verify`.
+- **2026-08-09** — `.firebaserc` deliberately **not** committed yet. It names a
+  project that does not exist until `firebase login` + project creation in
+  Phase 1, and the id `promptstash` may already be taken globally. The emulator
+  scripts pass `--project promptstash-rules-test` explicitly, so nothing needs
+  it before then. Add it once the real project id is known.

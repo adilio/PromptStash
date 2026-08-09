@@ -1,0 +1,174 @@
+rules_version = '2';
+
+// Translated from the Postgres RLS policies in supabase/supabase-schema.sql and
+// the prompt_runs / workflow_patterns migrations. Every policy there bottoms out
+// in is_team_member(team_id) or a role check against public.memberships; here
+// both are fields on the team document, so one get() answers either question.
+//
+// Field names are snake_case on purpose — see src/firebase/README.md. Documents
+// are read straight into types generated from the old Postgres schema, so the
+// names have to match.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    function team(tid) {
+      return get(/databases/$(database)/documents/teams/$(tid)).data;
+    }
+
+    // Every one of these costs a document-access call unless Firestore caches
+    // repeated get()s to the same path within one evaluation. On a list query
+    // that cache is what keeps a 200-prompt read at 1 access call instead of
+    // 200, against a budget of 20. tests/rules/firestore.test.ts pins it.
+    function isMember(tid) {
+      return signedIn() && request.auth.uid in team(tid).member_ids;
+    }
+
+    function canEdit(tid) {
+      return signedIn() && team(tid).roles[request.auth.uid] in ['owner', 'editor'];
+    }
+
+    function isOwner(tid) {
+      return signedIn() && team(tid).owner_id == request.auth.uid;
+    }
+
+    function promptTeam(pid) {
+      return get(/databases/$(database)/documents/prompts/$(pid)).data.team_id;
+    }
+
+    // A write may not move a document to a team the caller cannot edit, and may
+    // not move it out of the one it is in. Checking both sides of the update is
+    // what stops a team_id from being smuggled past canEdit().
+    function staysEditable() {
+      return canEdit(resource.data.team_id)
+        && request.resource.data.team_id == resource.data.team_id;
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // teams_read: owner_id = auth.uid() or is_team_member(id).
+    // Reading member_ids off the document being authorized is free — no get().
+    match /teams/{tid} {
+      allow get, list: if signedIn()
+        && (request.auth.uid in resource.data.member_ids
+            || resource.data.owner_id == request.auth.uid);
+
+      // The creator must be the owner and must appear in their own member list,
+      // or they would lock themselves out of the team they just made.
+      allow create: if signedIn()
+        && request.resource.data.owner_id == request.auth.uid
+        && request.auth.uid in request.resource.data.member_ids;
+
+      // teams_write: owner only. Ownership cannot be handed off by an update,
+      // since isOwner() re-reads the stored document, not the incoming one.
+      allow update: if isOwner(tid)
+        && request.resource.data.owner_id == resource.data.owner_id;
+      allow delete: if isOwner(tid);
+    }
+
+    // prompts_read: visibility = 'public' or is_team_member(team_id).
+    // Unauthenticated slug reads work because getPromptBySlug constrains BOTH
+    // visibility == 'public' AND public_slug, so every document it can return
+    // satisfies the first branch and never reaches the get() in isMember().
+    match /prompts/{pid} {
+      allow get, list: if resource.data.visibility == 'public'
+                          || isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if staysEditable();
+      allow delete: if canEdit(resource.data.team_id);
+
+      // versions_read in Postgres also allowed reading versions of a public
+      // prompt. Nothing does: VersionHistoryDialog is app-side only and
+      // PublicPrompt never asks for them. Narrowed to members deliberately.
+      match /versions/{vid} {
+        allow get, list: if isMember(promptTeam(pid));
+        allow create:    if canEdit(promptTeam(pid));
+        allow update, delete: if false;   // versions are immutable history
+      }
+    }
+
+    match /folders/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if staysEditable();
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /tags/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if staysEditable();
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /bundles/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if staysEditable();
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    match /prompt_runs/{id} {
+      allow get, list: if isMember(resource.data.team_id);
+      allow create: if canEdit(request.resource.data.team_id);
+      allow update: if staysEditable();
+      allow delete: if canEdit(resource.data.team_id);
+    }
+
+    // workflow_patterns_read: (is_system and team_id is null and signed in)
+    // or (team_id is not null and is_team_member(team_id)). System patterns are
+    // seeded server-side and are read-only to every client.
+    //
+    // A system pattern has no team. Read team_id through get() with a null
+    // default rather than as a property: a plain `resource.data.team_id` raises
+    // "Property team_id is undefined" when the field is absent, and an absent
+    // field is indistinguishable from an explicit null both here and after the
+    // Phase 6 import, which has no reason to write nulls out.
+    match /workflow_patterns/{id} {
+      allow get, list: if (resource.data.is_system == true
+                           && resource.data.get('team_id', null) == null
+                           && signedIn())
+                          || (resource.data.get('team_id', null) != null
+                              && isMember(resource.data.team_id));
+      allow create: if request.resource.data.get('team_id', null) != null
+                       && request.resource.data.is_system == false
+                       && canEdit(request.resource.data.team_id);
+      allow update: if resource.data.get('team_id', null) != null
+                       && resource.data.is_system == false
+                       && request.resource.data.is_system == false
+                       && staysEditable();
+      allow delete: if resource.data.get('team_id', null) != null
+                       && resource.data.is_system == false
+                       && canEdit(resource.data.team_id);
+    }
+
+    // invites_read_owners / insert / update: team owner only.
+    //
+    // The plan proposed `allow get: if signedIn()` so a recipient could read an
+    // invite by its token. No client path needs it: InviteAccept.tsx calls
+    // acceptInvite() and nothing else, and that runs server-side on the admin
+    // SDK, which bypasses rules entirely. Kept at owner-only to match Postgres
+    // — the narrower rule is the one with no caller.
+    match /invites/{token} {
+      allow get, list: if isOwner(resource.data.team_id);
+      allow create: if isOwner(request.resource.data.team_id);
+      allow update, delete: if isOwner(resource.data.team_id);
+    }
+
+    // Server-only, reachable exclusively through the admin SDK in Netlify
+    // Functions. api_keys holds hashes that must never be enumerable, and
+    // integrations holds plaintext OpenRouter keys. Mirrors
+    // `revoke all on model_integrations from anon, authenticated`.
+    match /api_keys/{h}     { allow read, write: if false; }
+    match /integrations/{u} { allow read, write: if false; }
+
+    // Anything not matched above is denied. Named collections only — no
+    // recursive wildcard, so a new collection is closed until it is added here.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
