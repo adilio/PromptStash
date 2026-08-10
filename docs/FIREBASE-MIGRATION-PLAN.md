@@ -742,13 +742,39 @@ and why. This section is the record for the next session.
   deployment that should look like one immediately. Matches `src/lib/supabase.ts`.
 - **2026-08-09** — Emulator wiring is `VITE_FIREBASE_USE_EMULATOR=true`, which
   points `auth` and `db` at ports 9099/8080 from `firebase.json`.
-- **2026-08-09** — `netlify.toml` carries the `/__/auth/*` proxy to
-  `promptstash.firebaseapp.com`. **That host is a guess** — it assumes the
-  project id is `promptstash`, which may be taken. Confirm at Phase 1 and fix
-  both the proxy target and `PRODUCTION_HOST` in `client.ts` if it differs. The
-  rule is inert until `VITE_FIREBASE_*` is set in production.
-- **2026-08-09** — `.firebaserc` deliberately **not** committed yet. It names a
-  project that does not exist until `firebase login` + project creation in
-  Phase 1, and the id `promptstash` may already be taken globally. The emulator
-  scripts pass `--project promptstash-rules-test` explicitly, so nothing needs
-  it before then. Add it once the real project id is known.
+- **2026-08-09** — **The Firebase project id is `promptstash-4dl`, not
+  `promptstash`.** The bare name is taken by someone else — project ids are
+  globally unique — so the `-4dl` suffix follows the existing `forkast-4dl`
+  convention. Rhabbit hit the same thing and ended up `rhabbit-e8f9d`.
+  Everything derived from the id was updated: `.firebaserc`, the
+  `/__/auth/*` proxy target in `netlify.toml`, and `VITE_FIREBASE_*` in
+  `.env.local`. `PRODUCTION_HOST` in `client.ts` stays `promptstash.4dl.ca` —
+  that is the site's own domain and never depended on the project id.
+
+### Phase 1 as built
+
+| Thing | Value |
+|---|---|
+| Firebase project | `promptstash-4dl` (number `769531546660`) |
+| Web app id | `1:769531546660:web:92f59024f6f0bdb12a9cb1` |
+| Firestore | native mode, `nam5`, standard edition — same as Rhabbit |
+| Auth domain | `promptstash-4dl.firebaseapp.com` |
+| Netlify site name | `promptstsh` — note the missing `a`; previews are `*--promptstsh.netlify.app` |
+| Console | https://console.firebase.google.com/project/promptstash-4dl |
+
+- **2026-08-09** — The Firestore API did not need enabling by hand.
+  `firebase firestore:databases:create` fails with a 403 telling you to visit
+  the Cloud console, but `firebase deploy --only firestore` enables the API,
+  creates the `(default)` database, and deploys rules and indexes in one go. Use
+  the deploy; it avoids needing an authenticated `gcloud` entirely.
+- **2026-08-09** — `.firebaserc` is now committed, pointing at
+  `promptstash-4dl`. The emulator scripts still pass
+  `--project promptstash-rules-test` explicitly, so the rules suite stays
+  isolated from the real project and cannot touch live data.
+- **2026-08-09** — **Auth providers remain the one console-only step.** There
+  is no Firebase CLI command to enable Email/Password or Google sign-in, and
+  Google additionally needs an OAuth consent-screen support email. Authorized
+  domains must list `promptstash.4dl.ca` and `promptstsh.netlify.app`
+  (`localhost` is there by default). Firebase does not support wildcards there,
+  so per-PR deploy previews on `deploy-preview-N--promptstsh.netlify.app` will
+  not be able to complete sign-in. Not worth solving — nobody uses the app.

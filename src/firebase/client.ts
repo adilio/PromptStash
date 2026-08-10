@@ -17,8 +17,10 @@ const PRODUCTION_HOST = 'promptstash.4dl.ca';
  * Use the branded production host for OAuth so Google shows "Continue to
  * promptstash.4dl.ca" rather than the Firebase project hostname. This only
  * works because netlify.toml transparently proxies the reserved /__/auth helper
- * routes to the Firebase host; local development and deploy previews have no
- * such proxy, so they keep using the configured Firebase domain.
+ * routes to promptstash-4dl.firebaseapp.com; local development and deploy
+ * previews have no such proxy, so they keep using the configured Firebase
+ * domain. This host is the site's own domain — it is not derived from the
+ * Firebase project id, which is promptstash-4dl.
  */
 const authDomain =
   typeof window !== 'undefined' && window.location.hostname === PRODUCTION_HOST
