@@ -410,8 +410,12 @@ npm i -g firebase-tools && firebase login
 ```
 
 1. Create Firebase project **`promptstash`**, Spark plan.
-2. Auth → enable **Email/Password** and **Google**. Add `promptstash.4dl.ca`,
-   `localhost` and the Netlify preview domain to Authorized Domains.
+2. Auth → enable **Email/Password**, **Google** and **GitHub**. GitHub is not
+   optional and is not in the original plan: it is the *most* used provider
+   (3 of 5 accounts, including both users holding real content). It needs a
+   GitHub OAuth app whose callback is the Firebase handler URL. Add
+   `promptstash.4dl.ca` and `promptstsh.netlify.app` to Authorized Domains
+   (`localhost` is there by default).
 3. Firestore → create in **native mode**, same region as Rhabbit for consistency.
 4. Add to the repo: `firebase.json`, `.firebaserc`, `firestore.rules`,
    `firestore.indexes.json`. Copy `Rhabbit/firebase.json` as the starting point.
@@ -529,9 +533,29 @@ are no external consumers, so this is free insurance rather than a requirement.
 ### Phase 6 — Data · ~3h
 
 1. **Users first.** `firebase auth:import` with `localId` set to each Supabase
-   UUID. Supabase stores bcrypt; the importer takes bcrypt with
-   `--hash-algo=BCRYPT`. This preserves every `owner_id`/`created_by`/`edited_by`
-   reference with **zero ID rewriting** — worth doing even for a single user.
+   UUID. This preserves every `owner_id`/`created_by`/`edited_by` reference with
+   **zero ID rewriting**.
+
+   ⚠ **Five real accounts, and three of them sign in with GitHub.** The import
+   record for each must carry `providerUserInfo` — the federated identities from
+   `.snapshot/auth_users.json` (`identities[].provider` and `identities[].id`,
+   which is the GitHub/Google numeric subject) — or those users have no way in
+   at all: there is no password to reset because they never set one.
+
+   ```jsonc
+   {
+     "localId": "<supabase uuid>",
+     "email": "…",
+     "emailVerified": true,
+     "providerUserInfo": [
+       { "providerId": "github.com", "rawId": "<identity.id>", "email": "…" }
+     ]
+   }
+   ```
+
+   Password hashes are a separate, optional concern — the Admin API does not
+   return them (see the log). Only two accounts use email/password at all, and
+   both can reset. Federated identities are the part that must not be dropped.
 2. `scripts/import-firestore.ts` transforms `.snapshot/*.json` per the model
    (fold memberships into `member_ids`/`roles`, `prompt_tags` into `tag_ids`,
    `bundle_items` into `items[]`, `workflow_pattern_steps` into `steps[]`) and
@@ -583,6 +607,7 @@ Run in production after Phase 7. Every line must pass before Phase 8.
 - [ ] Sign up with email/password; receive and complete verification
 - [ ] Sign in with email/password
 - [ ] Sign in with Google (**manual click required**)
+- [ ] Sign in with GitHub (**manual click required**)
 - [ ] Password reset end-to-end
 - [ ] Sign out clears session; protected routes redirect
 - [ ] Create / rename / delete a team; team list loads
@@ -603,6 +628,24 @@ Run in production after Phase 7. Every line must pass before Phase 8.
 - [ ] `api_keys` and `integrations` unreadable from the browser console
 - [ ] `updated_at` changes on edit (the `moddatetime` replacement)
 - [ ] Delete a team and confirm no orphaned prompts/folders/tags/bundles/runs
+
+### Every account, before Phase 8
+
+Phase 8 deletes the Supabase project, and Adil chose to keep that as planned —
+so there is no fallback afterwards. These five lines are what stands between a
+stranded user and permanent data loss, and they must all pass **first**. Verify
+against the imported UIDs, not fresh signups.
+
+- [ ] `ad***@gmail.com` — email, Google **and** GitHub all resolve to the one
+      account (this user has all three identities linked; they must not split
+      into duplicates on first sign-in)
+- [ ] `jo***@pm.me` — GitHub. Their **9 prompts and 1 bundle** are present
+- [ ] `me***@gilbertsanchez.com` — GitHub. Their 1 prompt is present, and their
+      stored OpenRouter key still works or has been deliberately dropped
+- [ ] `he***@gmail.com` — Google
+- [ ] `an***@andrewpla.tech` — email/password, via a reset
+- [ ] Each lands in **their own** workspace and cannot see another's prompts
+      (the rules suite covers this, but confirm once against real data)
 
 ---
 
@@ -694,6 +737,17 @@ and why. This section is the record for the next session.
   hashes, which is all the plan discusses. Import a GitHub user without their
   federated identity and they cannot sign in at all: there is no password to
   reset, because they never had one.
+
+- **2026-08-09 — decisions on both, from Adil:**
+  1. **Migrate all five accounts and their data, and delete the Supabase project
+     at Phase 8 as originally planned.** No indefinite fallback.
+  2. **Enable GitHub in Firebase Auth** and carry the federated identities, so
+     no user has to do anything to get back in.
+
+  Because there is no fallback once Phase 8 runs, **Phase 7 now has to prove
+  every account works before Phase 8 starts** — see the added checklist section.
+  This does not delay Phase 8; it just moves the discovery of a stranded user to
+  while their data still exists.
 - **2026-08-09** — **The Phase 2 gate passes. `member_ids` does NOT need
   denormalizing onto every document; the model above stands and Phase 4 can be
   written against it.** A member listing 60 team prompts succeeds, so Firestore
