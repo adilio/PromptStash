@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { acceptInvite } from '@/api/invites';
-import { supabase } from '@/lib/supabase';
+import { currentUser } from '@/firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loading } from '@/components/Loading';
@@ -20,11 +20,12 @@ export function InviteAccept() {
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // currentUser() waits for the SDK to restore a persisted session, so
+      // arriving on an invite link in a fresh tab does not bounce a signed-in
+      // user to /signin before Firebase has caught up.
+      const user = await currentUser();
 
-      if (!session) {
+      if (!user) {
         navigate(`/signin?redirect=/invite/${token}`, { replace: true });
         return;
       }

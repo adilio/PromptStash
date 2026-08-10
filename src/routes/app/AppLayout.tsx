@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/firebase/useAuth';
 import { resolveWorkspaceId, CURRENT_TEAM_STORAGE_KEY } from '@/lib/workspace';
 import { Shell } from '@/components/Shell';
 import { Sidebar } from '@/components/Sidebar';
@@ -61,6 +61,7 @@ export function AppLayout() {
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user, ready } = useAuth();
 
   const setCurrentTeamId = (teamId: string) => {
     window.localStorage.setItem(CURRENT_TEAM_STORAGE_KEY, teamId);
@@ -131,22 +132,23 @@ export function AppLayout() {
     navigate('/app');
   };
 
+  // One subscription now covers what Supabase needed two paths for: useAuth's
+  // onAuthStateChanged fires with the restored session (replacing getSession)
+  // and again on every later sign-in or sign-out (replacing the SIGNED_OUT
+  // listener). A sign-out must not leave the user on a silently broken app
+  // where every write is rejected by the security rules.
   useEffect(() => {
-    checkAuth();
+    if (!ready) return;
 
-    // Keep the app in sync with the auth session: a sign-out (or a failed
-    // token refresh) must not leave the user on a silently broken app where
-    // every write is rejected by RLS.
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        navigate('/signin');
-      }
-    });
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
 
-    return () => subscription.unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void loadWorkspace();
+    // Keyed on the uid rather than the User object so a token refresh handing
+    // back a new object identity does not re-run workspace setup.
+  }, [ready, user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -171,17 +173,8 @@ export function AppLayout() {
     };
   }, [currentFolderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const checkAuth = async () => {
+  const loadWorkspace = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        navigate('/signin');
-        return;
-      }
-
       const storedTeamId = window.localStorage.getItem(CURRENT_TEAM_STORAGE_KEY);
 
       if (storedTeamId) {
@@ -208,7 +201,7 @@ export function AppLayout() {
       }
       setLoading(false);
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('Workspace load failed:', error);
       setLoading(false);
     }
   };

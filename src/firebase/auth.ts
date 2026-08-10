@@ -1,4 +1,5 @@
 import {
+  confirmPasswordReset as firebaseConfirmPasswordReset,
   createUserWithEmailAndPassword,
   GithubAuthProvider,
   onAuthStateChanged,
@@ -9,6 +10,7 @@ import {
   signOut as firebaseSignOut,
   updatePassword as firebaseUpdatePassword,
   updateProfile,
+  verifyPasswordResetCode,
   type User,
   type UserCredential,
 } from 'firebase/auth';
@@ -132,6 +134,11 @@ export function describeAuthError(error: unknown): string | null {
       return 'Password must be at least six characters.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Wait a few minutes and try again.';
+    case 'auth/expired-action-code':
+    case 'auth/invalid-action-code':
+      // A reset link that was already used, or has aged out. Reset codes are
+      // single-use, so "I clicked it twice" lands here too.
+      return 'That reset link has expired or was already used. Request a new one.';
     case 'auth/account-exists-with-different-credential':
       // Real risk here: three of five accounts have more than one provider
       // linked. Firebase blocks the second provider until the identities are
@@ -146,6 +153,27 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email, {
     url: `${window.location.origin}/signin`,
   });
+}
+
+/**
+ * Checks a reset link's `oobCode` and returns the address it belongs to.
+ *
+ * Supabase's reset link created a short-lived recovery *session*, so
+ * ResetPassword asked `getSession()` whether the link was still good. Firebase
+ * issues a one-time code in the URL instead and grants no session at all, so
+ * "is this link still valid" becomes this call, and the reset itself is
+ * `completePasswordReset` below — neither requires anyone to be signed in.
+ */
+export async function verifyPasswordResetToken(oobCode: string): Promise<string> {
+  return verifyPasswordResetCode(auth, oobCode);
+}
+
+/** Consumes the `oobCode` from a reset link and sets the new password. */
+export async function completePasswordReset(
+  oobCode: string,
+  newPassword: string
+): Promise<void> {
+  await firebaseConfirmPasswordReset(auth, oobCode, newPassword);
 }
 
 export async function updatePassword(password: string): Promise<void> {

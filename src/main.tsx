@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SignIn } from './routes/auth/SignIn';
-import { AuthCallback } from './routes/auth/AuthCallback';
 import { ResetPassword } from './routes/auth/ResetPassword';
 import { AppLayout } from './routes/app/AppLayout';
 import { Dashboard } from './routes/app/Dashboard';
@@ -33,7 +32,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/signin" element={<SignIn />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            {/*
+              /auth/callback is gone: Firebase OAuth is a popup, so there is no
+              PKCE code to bring back to a route. The only remaining out-of-band
+              link is the password reset, which arrives at /reset-password with
+              an oobCode.
+            */}
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/p/:slug" element={<PublicPrompt />} />
             <Route path="/invite/:token" element={<InviteAccept />} />

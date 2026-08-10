@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import {
+  describeAuthError,
+  resetPassword,
+  signInWithOAuth,
+  signInWithPassword,
+  signUpWithPassword,
+} from '@/firebase/auth';
 import { useToast } from '@/components/ui/use-toast';
 
 function BrandMark({ size = 22 }: { size?: number }) {
@@ -83,6 +89,17 @@ export function SignIn() {
     };
   }, []);
 
+  /**
+   * Surfaces an auth failure, unless it is only someone closing the OAuth
+   * popup — describeAuthError returns null for that, and a red toast for a
+   * deliberate cancellation reads as a bug that isn't there.
+   */
+  const showAuthError = (error: unknown) => {
+    const description = describeAuthError(error);
+    if (!description) return;
+    toast({ title: 'Error', description, variant: 'destructive' });
+  };
+
   const handlePasswordResetRequest = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
 
@@ -97,21 +114,14 @@ export function SignIn() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await resetPassword(email.trim());
 
       toast({
         title: 'Check your email',
         description: 'We sent you a password reset link.',
       });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Could not send reset link',
-        variant: 'destructive',
-      });
+      showAuthError(error);
     } finally {
       setLoading(false);
     }
@@ -120,19 +130,14 @@ export function SignIn() {
   const handleOAuth = async (provider: 'google' | 'github') => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
-        },
-      });
-      if (error) throw error;
+      // A popup, not a redirect: the credential comes back here, so this
+      // navigates itself rather than bouncing through /auth/callback the way
+      // the Supabase PKCE flow had to.
+      await signInWithOAuth(provider);
+      navigate(redirectPath);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Authentication failed',
-        variant: 'destructive',
-      });
+      showAuthError(error);
+    } finally {
       setLoading(false);
     }
   };
@@ -142,26 +147,22 @@ export function SignIn() {
     setLoading(true);
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
-          },
+        // Firebase signs a new account in immediately and treats the
+        // verification mail as advisory, where Supabase refused sign-in until
+        // the link was clicked. So this lands in the app and mentions the mail,
+        // instead of stopping to wait for it.
+        await signUpWithPassword(email, password);
+        toast({
+          title: 'Account created',
+          description: 'We sent a verification link to your email.',
         });
-        if (error) throw error;
-        toast({ title: 'Check your email to confirm your account' });
+        navigate(redirectPath);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await signInWithPassword(email, password);
         navigate(redirectPath);
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Authentication failed',
-        variant: 'destructive',
-      });
+      showAuthError(error);
     } finally {
       setLoading(false);
     }

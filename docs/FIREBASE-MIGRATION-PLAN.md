@@ -568,15 +568,17 @@ is useless without a backend) and note it in the log.
 > `requireUser`, `getIdToken`, sign-in/up, OAuth by popup, reset, updates,
 > `describeAuthError`).
 >
-> **Next, and it must come first:** port the 9 non-`src/api` auth files in ONE
-> commit — `SignIn`, `AuthCallback` (delete it; popup needs no callback route),
+> **Also done:** the 9 non-`src/api` auth files, in one commit — `SignIn`,
 > `ResetPassword`, `Settings`, `AppLayout`, `InviteAccept`, `Sidebar`,
-> `TemplateGallery`, `BundleEditor`. Auth cannot flip over gradually; see the
-> assumption log. **The app is broken from that commit until the last module
-> lands** — that is expected, and is why this stays on the branch.
+> `TemplateGallery`, `BundleEditor`, and `AuthCallback` **deleted** along with
+> its route. Auth cannot flip over gradually; see the assumption log.
+> **The app is broken from that commit until the last module lands** — that is
+> expected, and is why this stays on the branch.
 >
-> **Then:** the 12 modules below, using `requireUser()` where they currently
-> call `supabase.auth.getUser()`.
+> **Next:** the 12 modules below, using `requireUser()` where they currently
+> call `supabase.auth.getUser()`. The only non-auth Supabase calls left outside
+> `src/api/` are `Dashboard.tsx:452` and `CommandPalette.tsx:60`, which go with
+> `prompts.ts`.
 
 Twelve modules, smallest first so the pattern is proven on low-risk code. **Each
 keeps its exported signatures. Each is one commit with its tests converted.**
@@ -988,6 +990,56 @@ and why. This section is the record for the next session.
   `/__/auth/*` proxy target in `netlify.toml`, and `VITE_FIREBASE_*` in
   `.env.local`. `PRODUCTION_HOST` in `client.ts` stays `promptstash.4dl.ca` —
   that is the site's own domain and never depended on the project id.
+
+- **2026-08-09** — **The reset-password page is now an `oobCode` action
+  handler, and that needs one console step nobody has done yet.** Supabase's
+  reset link created a short-lived recovery *session*, so `ResetPassword.tsx`
+  asked `getSession()` whether the link was still good. Firebase grants no
+  session; it puts a single-use code in the URL. So the page now reads
+  `?oobCode=`, calls `verifyPasswordResetToken` to decide between the form and
+  the "link expired" card, and calls `completePasswordReset` on submit — two
+  functions added to `src/firebase/auth.ts` for it. It then sends the user to
+  `/signin`, not `/app`, because consuming the code signs nobody in.
+
+  **The console step:** Firebase's default action URL points at
+  `promptstash-4dl.firebaseapp.com/__/auth/action`, its own hosted page, so
+  until Authentication → Templates → Password reset → *customise action URL* is
+  pointed at `https://promptstash.4dl.ca/reset-password`, this route is simply
+  never reached and Firebase's generic page does the job instead. Nothing
+  breaks either way; the branded page just does not appear. Add it to Phase 7.
+- **2026-08-09** — `AuthCallback.tsx` **deleted**, not ported, along with the
+  `/auth/callback` route. With OAuth by popup there is no `?code=` to exchange
+  and no redirect to catch, so the route had no remaining job. This was already
+  the recorded intent; noting the execution.
+- **2026-08-09** — `AppLayout` no longer has a `checkAuth`. `useAuth()`'s single
+  `onAuthStateChanged` subscription replaces both halves of the Supabase
+  version — the initial `getSession()` **and** the separate `SIGNED_OUT`
+  listener — since it fires on restore and on every later change. The effect is
+  keyed on `user?.uid` rather than the `User` object so a token refresh handing
+  back a new object identity cannot re-run workspace setup. The `ready` flag is
+  load-bearing: without it, the first render of every hard refresh looks signed
+  out and bounces to `/signin`. Added a test that pins exactly that.
+- **2026-08-09** — **Settings shows fewer provider badges than it used to, and
+  that is a fix.** The Supabase version added an `email` badge whenever
+  `user.email` was set, which is true of every GitHub and Google account too —
+  so all five users saw "Email" whether or not they had a password. Firebase's
+  `providerData` lists only real linked providers, so a GitHub-only user now
+  correctly shows GitHub alone. Firebase's ids (`password`, `google.com`,
+  `github.com`) are translated back to the app's vocabulary (`email`, `google`,
+  `github`) in `PROVIDER_IDS` so the badge labels and the snapshot keep speaking
+  one language.
+- **2026-08-09** — Display name collapses from three fields to one. Supabase
+  wrote `display_name`, `full_name` and `name` into `user_metadata` together
+  because each provider populated a different one; Firebase normalises all of
+  them into `displayName`, so `updateDisplayName()` writes the single field and
+  the read falls back to the email local part exactly as before. Deliberately
+  **not** also writing `users/{uid}.display_name` — that document exists in the
+  model but has no reader in `src/api/*`, and inventing a write for it here
+  would be scope creep into Phase 6.
+- **2026-08-09** — `auth.test.tsx` mocks `src/firebase/useAuth` rather than the
+  Firebase SDK. Mocking the hook keeps `src/firebase/client.ts` out of the test
+  run entirely, which matters because it **throws by design** when
+  `VITE_FIREBASE_*` is unset, and the test env sets only the Supabase vars.
 
 ### Phase 1 as built
 

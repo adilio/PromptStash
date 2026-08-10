@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Copy, Plus, User, Sun, Key, Folder, Code, Bell, Database, Trash2 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { currentUser, updateDisplayName } from '@/firebase/auth';
+// Aliased: `User` is already taken in this file by the lucide-react icon.
+import type { User as AuthUser } from 'firebase/auth';
 import { createInvite, type InviteRole } from '@/api/invites';
 import { createTeam, listTeams } from '@/api/teams';
 import { createApiKey, listApiKeys, deleteApiKey } from '@/api/apikeys';
@@ -141,6 +143,18 @@ const providerLabel: Record<string, string> = {
   github: 'GitHub',
 };
 
+/**
+ * Firebase names providers `password` / `google.com` / `github.com`. The badges
+ * above are keyed by the Supabase names, which are also what the rest of the
+ * app and the migration snapshot speak, so the translation happens here and
+ * that one vocabulary survives the move.
+ */
+const PROVIDER_IDS: Record<string, string> = {
+  password: 'email',
+  'google.com': 'google',
+  'github.com': 'github',
+};
+
 function ProviderBadge({ provider }: { provider: string }) {
   return (
     <span
@@ -275,24 +289,17 @@ export function Settings() {
     }
   };
 
-  const getDisplayName = (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']>) => {
-    const metadata = user.user_metadata;
-    return (
-      metadata.display_name ||
-      metadata.full_name ||
-      metadata.name ||
-      user.email?.split('@')[0] ||
-      ''
-    );
+  const getDisplayName = (user: AuthUser) => {
+    // Supabase kept three interchangeable names in user_metadata
+    // (display_name/full_name/name) because each provider wrote a different
+    // one. Firebase normalises all of them into displayName, so the fallback
+    // chain collapses to it and the email local part.
+    return user.displayName || user.email?.split('@')[0] || '';
   };
 
   const loadProfile = async () => {
     try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (error) throw error;
+      const user = await currentUser();
       if (!user) return;
 
       setProfileName(getDisplayName(user));
@@ -307,22 +314,12 @@ export function Settings() {
     }
   };
 
-  const getAuthProviders = (user: NonNullable<Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']>) => {
+  const getAuthProviders = (user: AuthUser) => {
     const providers = new Set<string>();
 
-    user.identities?.forEach((identity) => {
-      if (identity.provider) {
-        providers.add(identity.provider);
-      }
+    user.providerData.forEach((profile) => {
+      providers.add(PROVIDER_IDS[profile.providerId] ?? profile.providerId);
     });
-
-    if (user.app_metadata.provider) {
-      providers.add(user.app_metadata.provider);
-    }
-
-    if (user.email) {
-      providers.add('email');
-    }
 
     return Array.from(providers).sort((a, b) => {
       if (a === 'email') return -1;
@@ -334,15 +331,7 @@ export function Settings() {
   const handleSaveProfile = async () => {
     setProfileLoading(true);
     try {
-      const displayName = profileName.trim();
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          display_name: displayName,
-          full_name: displayName,
-          name: displayName,
-        },
-      });
-      if (error) throw error;
+      await updateDisplayName(profileName.trim());
 
       toast({ title: 'Profile updated' });
     } catch (error) {

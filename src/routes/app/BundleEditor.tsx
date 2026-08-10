@@ -12,7 +12,7 @@ import { ConceptInfo } from '@/components/ConceptInfo';
 import { AGENT_FORMATS, bundleToFile, downloadFile } from '@/lib/agentExport';
 import { workflowBadgeFor, distinctWorkflowLabels } from '@/lib/workflowDisplay';
 import { estimateTokens, getZone, zoneColor, MODEL_CONTEXTS, type ModelKey } from '@/lib/tokens';
-import { supabase } from '@/lib/supabase';
+import { currentUser } from '@/firebase/auth';
 import type { AgentFormat } from '@/lib/types';
 
 interface ContextType {
@@ -159,7 +159,7 @@ export function BundleEditor() {
 
     if (isNew) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = await currentUser();
         if (!user) {
           toast({
             title: 'Error',
@@ -173,7 +173,7 @@ export function BundleEditor() {
           name: name.trim(),
           description: description.trim() || undefined,
           target_format: targetFormat,
-          created_by: user.id,
+          created_by: user.uid,
         });
       } catch (error) {
         toast({

@@ -15,7 +15,7 @@ import {
   Layers,
   BookOpen,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { signOut } from '@/firebase/auth';
 import { listTeams } from '@/api/teams';
 import { listFolders } from '@/api/folders';
 import { listBundles } from '@/api/bundles';
@@ -214,7 +214,7 @@ export function Sidebar({
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate('/signin');
   };
 

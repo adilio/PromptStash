@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  completePasswordReset,
+  describeAuthError,
+  verifyPasswordResetToken,
+} from '@/firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,39 +15,48 @@ import { useToast } from '@/components/ui/use-toast';
 export function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [hasRecoverySession, setHasRecoverySession] = useState(false);
+  const [checkingCode, setCheckingCode] = useState(true);
+  const [resetEmail, setResetEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
+  // Firebase puts the one-time code in the URL as `oobCode`. Supabase instead
+  // opened a short-lived recovery *session*, which is why this page used to ask
+  // getSession() whether the link was still good; now the link itself is the
+  // credential and nobody is signed in while resetting.
+  const oobCode = searchParams.get('oobCode');
+
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) {
-        setHasRecoverySession(true);
-      }
-      setCheckingSession(false);
-    });
+    if (!oobCode) {
+      setCheckingCode(false);
+      return;
+    }
 
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setHasRecoverySession(!!session);
-      setCheckingSession(false);
-    };
+    let active = true;
 
-    void checkSession();
+    verifyPasswordResetToken(oobCode)
+      .then((email) => {
+        if (active) setResetEmail(email);
+      })
+      .catch(() => {
+        // Expired, already used, or tampered with — all indistinguishable to
+        // the user, and all mean "ask for a new link".
+      })
+      .finally(() => {
+        if (active) setCheckingCode(false);
+      });
 
     return () => {
-      subscription.unsubscribe();
+      active = false;
     };
-  }, []);
+  }, [oobCode]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!oobCode) return;
 
     if (password.length < 6) {
       toast({
@@ -65,18 +78,19 @@ export function ResetPassword() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      await completePasswordReset(oobCode, password);
 
       toast({
         title: 'Password updated',
-        description: 'You can now continue to PromptStash.',
+        description: 'Sign in with your new password.',
       });
-      navigate('/app', { replace: true });
+      // Straight to /signin rather than /app: consuming the code does not sign
+      // anyone in, so /app would only bounce back here via the route guard.
+      navigate('/signin', { replace: true });
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Could not update password',
+        description: describeAuthError(error) ?? 'Could not update password',
         variant: 'destructive',
       });
     } finally {
@@ -84,11 +98,11 @@ export function ResetPassword() {
     }
   };
 
-  if (checkingSession) {
+  if (checkingCode) {
     return <Loading />;
   }
 
-  if (!hasRecoverySession) {
+  if (!resetEmail) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-md">
@@ -113,7 +127,7 @@ export function ResetPassword() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Reset password</CardTitle>
-          <CardDescription>Choose a new password for your PromptStash account.</CardDescription>
+          <CardDescription>Choose a new password for {resetEmail}.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

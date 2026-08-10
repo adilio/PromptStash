@@ -8,7 +8,7 @@ import { createPrompt } from '@/api/prompts';
 import { createBundle } from '@/api/bundles';
 import { addBundleItem } from '@/api/bundles';
 import { promptKeys, bundleKeys } from '@/lib/queryClient';
-import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/firebase/auth';
 
 interface TemplateGalleryProps {
   open: boolean;
@@ -48,8 +48,7 @@ export function TemplateGallery({ open, onClose, currentTeamId }: TemplateGaller
 
     setInstantiating(template.id);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const user = await requireUser();
 
       if (template.kind === 'prompt') {
         const created = await createPromptMutation.mutateAsync({
@@ -78,7 +77,7 @@ export function TemplateGallery({ open, onClose, currentTeamId }: TemplateGaller
           name: template.bundle.name,
           description: template.bundle.description,
           target_format: template.bundle.target_format,
-          created_by: user.id,
+          created_by: user.uid,
         });
 
         for (let i = 0; i < promptIds.length; i++) {
