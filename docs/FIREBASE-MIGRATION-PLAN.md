@@ -1,14 +1,51 @@
 # PromptStash → Firebase: complete migration plan
 
 _Written 2026-08-09. Decision is made. This document is the work._
+_Last executed 2026-08-09: **Phases 0–3 are done. Phase 4 is in progress.**_
 
 ---
 
-## Cold start — read this first
+## Status — read this before anything else
 
-**This plan is written to be executed by a session with no prior context.**
-Everything needed is in this file. Nothing needs to be asked of Adil except the
-two dashboard steps explicitly marked **NEEDS ADIL**.
+Work happens on branch **`firebase-migration`** (12 commits, all pushed). `main`
+is untouched and still deploys the working Supabase app.
+
+| Phase | State |
+|---|---|
+| 0 · Snapshot | ✅ done — `.snapshot/` holds all 16 tables + `auth.users` |
+| 1 · Firebase project | ✅ done — project live, rules deployed, all providers on |
+| 2 · Rules + gate | ✅ done — **the gate passed**, 33 tests green |
+| 3 · `src/firebase/*` | ✅ done — client, auth adapter, useAuth |
+| 4 · Port `src/api/*` | 🔧 **in progress** — auth adapter written, UI + 12 modules remain |
+| 5 · Netlify Functions | ⬜ not started |
+| 6 · Data import | ⬜ not started |
+| 7 · Cutover | ⬜ not started |
+| 8 · Decommission | ⬜ not started |
+
+**The app currently still runs entirely on Supabase.** Everything added so far
+is additive: `src/firebase/*` exists but nothing imports it. Reverting the
+branch is a complete rollback.
+
+### Two corrections that outrank everything else in this file
+
+1. **"Nobody uses this app" is FALSE.** There are **five accounts, four of them
+   other people**, with real content. The original plan leaned on this to
+   justify snapshot-and-move, no rollback window and no API shim. See the
+   assumption log. Adil's decision: migrate everyone, still delete Supabase at
+   Phase 8 — which means Phase 7's per-account checklist is the last point at
+   which a stranded user is recoverable.
+2. **GitHub sign-in is in use** (3 of 5 accounts, including both users holding
+   content) and the original plan never mentioned it. It is now enabled.
+   Phase 6 must carry `providerUserInfo`, not just password hashes.
+
+### Resuming in a fresh session
+
+```
+Read docs/FIREBASE-MIGRATION-PLAN.md in /Users/adil/Code/PromptStash and
+continue executing it from Phase 4. Work on the firebase-migration branch,
+commit atomically with /cp as you go, and append any judgement calls to the
+assumption log. Run `npm run verify` before each push.
+```
 
 ### What this is
 
@@ -29,15 +66,27 @@ Firebase was chosen over Neon, is in
 | Live URL | `promptstash.4dl.ca` |
 | Netlify site id | `ac51512c-0330-4378-8746-77f738b77321` |
 | Supabase project ref | `ecpmipfpknoxeohbafxs` (org `Adilio`) |
-| Supabase anon key | Only in GitHub repo secret `SUPABASE_ANON_KEY`. `PromptStash/.env` is **empty** |
+| Netlify site **name** | `promptstsh` — note the missing `a`. Previews are `*--promptstsh.netlify.app` |
 | Keep-alive cron | `adilio/4dl.ca` → `.github/workflows/supabase-keepalive.yml` |
 | Stack | React 18, Vite, TypeScript, TanStack Query v5, Radix UI, Tailwind, react-router 7, vitest |
+| **Firebase project** | `promptstash-4dl` (number `769531546660`) — *not* `promptstash`, which is taken |
+| Firebase web app id | `1:769531546660:web:92f59024f6f0bdb12a9cb1` |
+| Firestore | native mode, `nam5`, standard edition |
+| Providers enabled | Email/Password, Google, **GitHub** |
+| Secrets | **`.env.local`**, not `.env` — there is no `.env`. Gitignored. Holds both Supabase and `VITE_FIREBASE_*` |
 
-**Critical usage fact, stated by Adil 2026-08-09: nobody uses this app.** No
-other accounts, no external API consumers, no uptime obligation. This is why the
-plan can snapshot-and-move rather than run a zero-downtime migration, and why
-there is no rollback window or API compatibility shim. If that turns out to be
-false, stop and revisit Phases 6–8.
+**The original "nobody uses this app" claim is false — see Status above.** The
+snapshot found five accounts:
+
+| Account | Provider | Content |
+|---|---|---|
+| `ad***@gmail.com` (Adil) | email + google + github | 2 prompts, 6 runs, 1 API key |
+| `jo***@pm.me` | github | **9 prompts, 1 bundle** |
+| `me***@gilbertsanchez.com` | github | 1 prompt, **their own OpenRouter key** |
+| `he***@gmail.com` | google | account only |
+| `an***@andrewpla.tech` | email | account only |
+
+No prompt is public, so no shared `/p/{slug}` link is at risk.
 
 ### Reference implementations already on this machine
 
@@ -53,14 +102,26 @@ Both are working Firebase apps on the free Spark plan, deployed to Netlify.
 | `Rhabbit/firestore.rules` | The better rules reference — helper-function structure, `get()`/`exists()` usage |
 | `Rhabbit/firebase.json` | Minimal config |
 
-Neither repo commits `.firebaserc` or `firestore.indexes.json`. You will add both.
+Neither repo commits `.firebaserc` or `firestore.indexes.json`. Both are now
+committed here.
 
-### Tooling not yet installed
+### Tooling — all installed and authenticated
 
 ```sh
-npm i -g firebase-tools     # `firebase` is NOT on this machine
-# `supabase` CLI is also absent — Phase 0 uses REST, no CLI needed
-# `netlify` IS installed and authenticated as adilio@gmail.com
+firebase --version          # 15.26.0, logged in as adilio@gmail.com
+netlify                     # installed, authenticated as adilio@gmail.com
+# gcloud is installed but NOT authenticated — and is not needed, see the log
+# `supabase` CLI is absent — Phase 0 used REST, no CLI needed
+# node 25 strips TypeScript natively: `node scripts/foo.ts` just works
+```
+
+### Commands
+
+```sh
+npm run verify        # lint + build + unit tests + rules tests. Use before every push.
+npm run test:rules    # 33 rules tests against a throwaway emulator project
+npm run emulators     # auth :9099 + firestore :8080
+node scripts/export-supabase.ts   # re-take the Phase 0 snapshot
 ```
 
 ---
@@ -81,8 +142,10 @@ npm i -g firebase-tools     # `firebase` is NOT on this machine
 - **Commit per module**, detailed messages, push as you go.
 - Where a question arises mid-execution, take the safest defensible default,
   **append it to the [Assumption log](#assumption-log)**, and keep going.
-- Run `npm run lint && npm run build && npm test` before every push. Lint is
-  `--max-warnings 0`; it will fail on unused Supabase imports as you remove them.
+- Run **`npm run verify`** before every push — lint + build + unit tests + rules
+  tests. (Do not use `npm test`: it is `vitest` in watch mode and will hang.)
+  Lint is `--max-warnings 0`; it will fail on unused Supabase imports as you
+  remove them.
 
 ---
 
@@ -105,9 +168,13 @@ So you don't have to rediscover it.
 `auth/{SignIn,AuthCallback,ResetPassword}`, `public/{PublicPrompt,InviteAccept}`.
 
 **Auth surface in use:** `signUp`, `signInWithPassword`, `signInWithOAuth`
-(Google), `resetPasswordForEmail`, `updateUser`, `signOut`, `getUser`,
-`getSession`, `onAuthStateChange`. PKCE flow. All have direct Firebase Auth
-equivalents.
+(**Google _and_ GitHub** — `SignIn.tsx` already renders both buttons),
+`resetPasswordForEmail`, `updateUser`, `signOut`, `getUser`, `getSession`,
+`onAuthStateChange`. PKCE flow. All have direct Firebase Auth equivalents, and
+all are wrapped in `src/firebase/auth.ts`.
+
+**~32 `supabase.auth.*` references across 20 files**, 9 of them outside
+`src/api/`. The "six auth call sites" figure below is wrong; see the log.
 
 **The edge function does two unrelated jobs:** a public API-key-authenticated
 `/v1/*` REST API, and an OpenRouter proxy at `/v1/openrouter/run`.
@@ -357,7 +424,14 @@ Nobody uses the app, so this is a snapshot-and-move, not a zero-downtime
 migration. Phases are still ordered so each is independently revertible and the
 irreversible act comes last.
 
-### Phase 0 — Snapshot everything · ~1h · **NEEDS ADIL**
+### Phase 0 — Snapshot everything · ✅ DONE
+
+> Ran 2026-08-09 via `scripts/export-supabase.ts`. `.snapshot/` holds all 16
+> tables plus `auth.users`; counts are in the assumption log. The migration no
+> longer depends on Supabase staying awake. **This is where the five-user
+> finding came from.** Re-run the script any time to refresh.
+>
+> _Original text below, kept for the record._
 
 The Supabase project is under an active pause warning and its keep-alive is
 green-but-broken. **Rather than nurse the keep-alive, take a complete snapshot
@@ -403,7 +477,13 @@ the snapshot.
 > snapshot in hand it is optional — skip it unless the migration stalls for
 > weeks.
 
-### Phase 1 — Firebase project · ~3h
+### Phase 1 — Firebase project · ✅ DONE
+
+> Project `promptstash-4dl`, Firestore native `nam5`, rules + indexes deployed,
+> Email/Password + Google + GitHub enabled, authorized domains set. Details in
+> "Phase 1 as built" in the assumption log.
+>
+> _Original text below, kept for the record._
 
 ```sh
 npm i -g firebase-tools && firebase login
@@ -431,7 +511,16 @@ promptstash.4dl.ca" rather than the Firebase hostname. It needs both halves:
 
 **Exit:** emulator starts; `firebase deploy --only firestore:rules` succeeds.
 
-### Phase 2 — Rules + emulator tests · ~8h · **GATE**
+### Phase 2 — Rules + emulator tests · ✅ DONE — **GATE PASSED**
+
+> `firestore.rules` + `tests/rules/firestore.test.ts`, 33 tests green, deployed
+> to the live project. **The `get()` budget assumption holds** — repeated
+> `get()`s to one team doc collapse, so `member_ids` does NOT need denormalizing
+> and the data model below stands. The suite carries a control proving the
+> emulator actually enforces the budget, so the pass is meaningful. Still worth
+> re-confirming against real Firestore once Phase 6 loads data.
+>
+> _Original text below, kept for the record._
 
 Write the rules above, then a `@firebase/rules-unit-testing` suite covering:
 
@@ -448,7 +537,13 @@ Write the rules above, then a `@firebase/rules-unit-testing` suite covering:
 **Exit:** all green. If the `get()` caching assumption fails, denormalize
 `member_ids` onto every document and update the model above **before Phase 4**.
 
-### Phase 3 — `src/firebase/*` client layer · ~3h
+### Phase 3 — `src/firebase/*` client layer · ✅ DONE
+
+> `client.ts`, `auth.ts`, `useAuth.ts`, `README.md`. Static imports and throws
+> on missing env (unlike qwizzle's lazy null-client — reasoning in the log).
+> Nothing imports these yet.
+>
+> _Original text below, kept for the record._
 
 Mirror `qwizzle/src/firebase/`:
 
@@ -467,7 +562,21 @@ Note: current `src/lib/supabase.ts` **throws** if env vars are missing. Decide
 whether Firebase should throw too (recommended here — unlike qwizzle, this app
 is useless without a backend) and note it in the log.
 
-### Phase 4 — Port `src/api/*` · ~14h
+### Phase 4 — Port `src/api/*` · 🔧 IN PROGRESS
+
+> **Done:** `src/firebase/auth.ts` — the auth adapter (`currentUser`,
+> `requireUser`, `getIdToken`, sign-in/up, OAuth by popup, reset, updates,
+> `describeAuthError`).
+>
+> **Next, and it must come first:** port the 9 non-`src/api` auth files in ONE
+> commit — `SignIn`, `AuthCallback` (delete it; popup needs no callback route),
+> `ResetPassword`, `Settings`, `AppLayout`, `InviteAccept`, `Sidebar`,
+> `TemplateGallery`, `BundleEditor`. Auth cannot flip over gradually; see the
+> assumption log. **The app is broken from that commit until the last module
+> lands** — that is expected, and is why this stays on the branch.
+>
+> **Then:** the 12 modules below, using `requireUser()` where they currently
+> call `supabase.auth.getUser()`.
 
 Twelve modules, smallest first so the pattern is proven on low-risk code. **Each
 keeps its exported signatures. Each is one commit with its tests converted.**
@@ -651,19 +760,19 @@ against the imported UIDs, not fresh signups.
 
 ## Effort
 
-| Phase | Est. |
-|---|---|
-| 0 · Snapshot | 1h |
-| 1 · Firebase project | 3h |
-| 2 · Rules + emulator tests (**gate**) | 8h |
-| 3 · `src/firebase/*` | 3h |
-| 4 · Port `src/api/*` | 14h |
-| 5 · Netlify Functions | 6h |
-| 6 · Data | 3h |
-| 7 · Cutover | 3h |
-| 8 · Decommission | 2h |
-| Tests (92 refs, threaded through 4–5) | 7h |
-| **Total** | **≈50h** |
+| Phase | Est. | State |
+|---|---|---|
+| 0 · Snapshot | 1h | ✅ |
+| 1 · Firebase project | 3h | ✅ |
+| 2 · Rules + emulator tests (**gate**) | 8h | ✅ |
+| 3 · `src/firebase/*` | 3h | ✅ |
+| 4 · Port `src/api/*` | 14h | 🔧 auth adapter done; UI + 12 modules left |
+| 5 · Netlify Functions | 6h | ⬜ |
+| 6 · Data | 3h | ⬜ |
+| 7 · Cutover | 3h | ⬜ |
+| 8 · Decommission | 2h | ⬜ |
+| Tests (92 refs, threaded through 4–5) | 7h | ⬜ |
+| **Remaining** | **≈33h** | |
 
 Focused hours, not calendar. There is no deadline; the ordering matters more
 than the estimate.
@@ -674,7 +783,9 @@ than the estimate.
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Rules `get()` budget — repeated `get()`s may not be cached | **High** | Phase 2 gate. Fallback: denormalize `member_ids` onto every doc. Settle before Phase 4. |
+| ~~Rules `get()` budget~~ | ~~High~~ | ✅ **Retired.** Phase 2 gate passed with a control proving the budget is enforced. Re-confirm against real Firestore at Phase 6. |
+| **Stranding a real user at cutover** | **High** | Four other people have accounts; three sign in with GitHub. Phase 6 must carry `providerUserInfo`. Phase 7's per-account checklist is the last recovery point before Phase 8 deletes the source. |
+| **Someone else's OpenRouter key** in `model_integrations` | Medium | It is a live third-party secret, and it is now also in `.snapshot/` on disk. Do not commit `.snapshot/`; decide deliberately whether to migrate the key or drop it and let them re-enter it. |
 | **No cascade deletes** — orphans on team/folder/prompt delete | **High** | Postgres did this for free via `on delete cascade`; it is the easiest thing in this plan to forget. Explicit recursive deletes in `teams.ts`, `folders.ts`, `prompts.ts`; assert in tests; two checklist lines. |
 | Supabase pauses mid-migration | Low | Phase 0 snapshot removes the dependency entirely. |
 | Losing full-text search | Low (accepted) | In-memory filter. Revisit only if the corpus grows. |
