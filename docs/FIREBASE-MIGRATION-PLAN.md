@@ -654,7 +654,46 @@ and why. This section is the record for the next session.
   decision 2. Re-document in `src/firebase/README.md`.
 - **2026-08-09** — `shares` deleted rather than ported. `src/api/shares.ts` has
   no importers anywhere in `src/`; the schema itself calls it unimplemented.
-- **2026-08-09** — Row counts from Phase 0: _(paste here)_
+- **2026-08-09** — Row counts from Phase 0, from `.snapshot/_counts.json`:
+  teams 4, memberships 4, folders 0, prompts 12, prompt_versions 0, tags 0,
+  prompt_tags 0, shares 0, invites 0, api_keys 1, model_integrations 1,
+  bundles 1, bundle_items 8, prompt_runs 6, workflow_patterns 5,
+  workflow_pattern_steps 21, **auth.users 5**.
+
+- **2026-08-09** — 🚨 **"Nobody uses this app" is false, and the plan says to
+  stop here.** The snapshot shows **five accounts, four of them other people**,
+  with content:
+
+  | Account | Signed up | Last seen | Provider | Content |
+  |---|---|---|---|---|
+  | `ad***@gmail.com` (Adil) | 2026-05-01 | 2026-07-26 | email, google, github | 2 prompts, 6 runs, 1 API key |
+  | `jo***@pm.me` | 2026-07-26 | 2026-07-26 | github | **9 prompts, 1 bundle** |
+  | `me***@gilbertsanchez.com` | 2026-05-04 | **2026-07-09** | github | 1 prompt, **an OpenRouter key** |
+  | `he***@gmail.com` | 2026-05-26 | 2026-05-26 | google | account only |
+  | `an***@andrewpla.tech` | 2026-05-01 | 2026-05-01 | email | account only |
+
+  `jo***@pm.me` holds more content than Adil does. `me***@gilbertsanchez.com`
+  came back after two months and has stored **their own OpenRouter API key** in
+  `model_integrations` — someone else's live secret, now also sitting in
+  `.snapshot/` on disk (gitignored, but worth knowing it is there).
+
+  What this invalidates: Phase 8 step 4 deletes four other people's data, and
+  the "no rollback window, no API compatibility shim" stance was justified
+  solely by this assumption. **Do not run Phase 8 without an explicit decision.**
+  One relief: **zero public prompts**, so no shared `/p/{slug}` links break.
+
+- **2026-08-09** — 🚨 **GitHub OAuth is in use and the plan does not mention
+  it.** The plan's "Auth surface in use" lists `signInWithOAuth` as Google only.
+  Providers in the snapshot are **github ×3**, google ×2, email ×2 — GitHub is
+  the *most* used. Phase 1 enabled Email/Password and Google, which would strand
+  three of five users, including both users holding real content.
+
+  Consequences: Firebase Auth needs the **GitHub provider enabled** and a GitHub
+  OAuth app with the new callback URL, and Phase 6's `auth:import` must carry
+  **`providerUserInfo`** (the federated identities) — not just the bcrypt
+  hashes, which is all the plan discusses. Import a GitHub user without their
+  federated identity and they cannot sign in at all: there is no password to
+  reset, because they never had one.
 - **2026-08-09** — **The Phase 2 gate passes. `member_ids` does NOT need
   denormalizing onto every document; the model above stands and Phase 4 can be
   written against it.** A member listing 60 team prompts succeeds, so Firestore
