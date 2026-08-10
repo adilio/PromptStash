@@ -738,6 +738,40 @@ and why. This section is the record for the next session.
   federated identity and they cannot sign in at all: there is no password to
   reset, because they never had one.
 
+- **2026-08-09** — Phase 1 is complete including the console steps.
+  Email/Password, Google **and** GitHub are enabled, and authorized domains are
+  `localhost`, `promptstash-4dl.firebaseapp.com`, `promptstash-4dl.web.app`,
+  `promptstash.4dl.ca`, `promptstsh.netlify.app`. Verify any of this without the
+  console — the client config is public:
+
+  ```sh
+  curl -s "https://identitytoolkit.googleapis.com/v1/projects?key=$VITE_FIREBASE_API_KEY"
+  ```
+
+  Note the endpoint takes **no project id**; `/v1/projects/{id}` 404s and that
+  404 says nothing about whether Auth is configured.
+- **2026-08-09** — `SignIn.tsx` already has a **GitHub button** —
+  `handleOAuth('google' | 'github')`. The plan's "Auth surface in use" lists
+  OAuth as Google only, which understated the code as well as the users. No new
+  sign-in UI is needed for GitHub, only the provider and the import.
+- **2026-08-09** — OAuth moves to **popup** (`signInWithPopup`), not redirect.
+  Supabase redirected to `/auth/callback` and exchanged a PKCE `?code=` there;
+  Firebase's popup hands the credential back to the caller, which removes both
+  the round trip and the route that served it. `AuthCallback.tsx` should go away
+  in the Phase 4 UI port rather than shrink. Popup-blocked and popup-dismissed
+  are handled explicitly in `describeAuthError`.
+- **2026-08-09** — `currentUser()` in `src/firebase/auth.ts` awaits the first
+  `onAuthStateChanged` instead of reading `auth.currentUser` directly.
+  `auth.currentUser` is **null until the SDK finishes restoring the session**,
+  so a bare read returns null for the first moments of every hard refresh and
+  any query firing in that window throws "Not authenticated" against a valid
+  session. The Supabase call it replaces, `supabase.auth.getUser()`, was already
+  a promise and hid this. Nine of the twelve api modules depend on it.
+- **2026-08-09** — Email verification is **sent but not enforced**, where
+  Supabase refused sign-in until confirmed. Firebase signs the user in
+  immediately and treats verification as advisory. Enforcing it would be a
+  product change rather than a migration one, so it was left alone — flagging it
+  because it is a real behaviour difference, not an oversight.
 - **2026-08-09 — decisions on both, from Adil:**
   1. **Migrate all five accounts and their data, and delete the Supabase project
      at Phase 8 as originally planned.** No indefinite fallback.
